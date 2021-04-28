@@ -42,7 +42,6 @@ main1 <- main %>%
   select(site_name, NHD_STREAMORDE) %>%
   mutate(order = fct_explicit_na(factor(NHD_STREAMORDE))) # ensure NA is a level
 
-
 storder <- ggplot(main1) + # base plot
   geom_histogram(aes(x = order, fill = order), stat = "count") + # stream order histogram
   scale_fill_manual(values = cal_palette("kelp1", n = 9, type = "continuous")) + # custom colors
@@ -104,3 +103,41 @@ sitemap3
 # Takeaways - Still skewed towards eastern US, but this was true for the overall dataset. Data now only available for contiguous US. Stream orders appear to be distributed fairly evenly.
 
 # Distribution of available sites by years of data
+
+# Create intermediate dataset to summarize by year
+main3 <- main %>%
+  mutate(yearf = factor(year)) %>%
+  group_by(site_name, yearf) %>%
+  summarize(meanGPP = mean(GPP)) %>%
+  ungroup()
+
+# Count number of years (observations) per site
+main4 <- main3 %>%
+  count(site_name) %>%
+  mutate(n_f = factor(n))
+
+styears <- ggplot(main4) + # base plot
+  geom_histogram(aes(x = n_f, fill = n_f), stat = "count") + # years data histogram
+  scale_fill_manual(values = cal_palette("sbchannel", n = 9, type = "continuous")) + # custom colors
+  labs(x = "Years of Available Data",
+       y = "Site Count") +
+  theme_classic() + # remove grid
+  theme(legend.position = "none") # remove legend
+
+styears
+
+# Combine all figures into one
+
+full_fig <- (storder | styears) /
+  sitemap2 /
+  sitemap3
+
+full_fig + plot_annotation(title = "Data Availability After Initial Filtering")
+
+# ggsave(("figures/full_fig.png"),
+#        width = 15,
+#        height = 20,
+#        units = "cm"
+# )
+
+# End of script.
