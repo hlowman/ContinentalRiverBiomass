@@ -3,9 +3,9 @@
 # Heili Lowman
 
 # This script will be use for preliminary filtering
-# of the Appling et al. 2018 dataset (citation below)
-# to create a dataset of usable metabolism estimates
-# based on the following criteria:
+# of the Appling et al. 2018 dataset to create a
+# dataset of usable metabolism estimates based on
+# the following criteria:
 
 # (1) Sites should have a minimum of 275 days of data/year.
 
@@ -37,7 +37,8 @@ dailydat <- read_tsv(here("data_raw",
                           "daily_predictions.tsv"))
 # Site information from L. Koenig
 hypoxdat <- read_csv(here("data_raw",
-                          "GRDO_GEE_HA_NHD_2021_02_07.csv")) %>%
+                          "GRDO_GEE_HA_NHD_2021_02_07.csv"), guess_max = 100000) %>%
+  # added guess_max because it was reading in stream order as TRUE/FALSE
   filter(DB_Source == "PC") # filter only for Appling data
 
 
