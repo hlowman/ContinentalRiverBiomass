@@ -132,7 +132,7 @@ full_fig <- (storder | styears) /
   sitemap2 /
   sitemap3
 
-full_fig + plot_annotation(title = "Data Availability After Initial Filtering")
+full_fig + plot_annotation(title = "Data Availability After Initial Filtering (4/28/21)")
 
 # ggsave(("figures/full_fig.png"),
 #        width = 15,
