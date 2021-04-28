@@ -26,5 +26,5 @@ vignettes/*.pdf
 *.knit.md
 # R Environment Variables
 .Renviron
-# Files in the data folder 
-data
+# Files in the data folder
+data_raw
