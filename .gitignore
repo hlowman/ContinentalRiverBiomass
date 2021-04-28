@@ -28,3 +28,4 @@ vignettes/*.pdf
 .Renviron
 # Files in the data folder
 data_raw
+data_working
