@@ -6,6 +6,7 @@
 # of the Appling et al. 2018 dataset based on filtering
 # performed in the data_qaqc_prelim.R script.
 
+
 # Setup -------------------------------------------------------------------
 
 # Load packages.
@@ -13,6 +14,8 @@ library(tidyverse)
 library(lubridate)
 library(calecopal)
 library(patchwork)
+library(sf)
+library(viridis)
 library(maps)
 library(here)
 
@@ -105,6 +108,7 @@ sitemap3
 # Distribution of available sites by years of data
 
 # Create intermediate dataset to summarize by year
+# Note, data has already been filtered, so for the years included, data is AOK
 main3 <- main %>%
   mutate(yearf = factor(year)) %>%
   group_by(site_name, yearf) %>%
@@ -139,5 +143,73 @@ full_fig + plot_annotation(title = "Data Availability After Initial Filtering (4
 #        height = 20,
 #        units = "cm"
 # )
+
+
+# Gap Investigation -------------------------------------------------------
+
+# Additional data investigation re: time spans and gaps on June 2, 2021.
+
+# Re-creating the coverage plot from the data_exploration script for starters.
+coverage_plot <- main3 %>%
+  mutate(site_namef = factor(site_name),
+         year = as.numeric(as.character(yearf))) %>%
+  ggplot(aes(x = year, y = site_namef)) + # base plot
+  geom_line(aes(color = site_namef)) + # add line for every year for which we have data at site
+  labs(x = "Year",
+       y = "Site") + # label axes
+  scale_color_viridis(discrete=TRUE) + # custom color scale
+  theme_bw() + # remove grid
+  theme(axis.text.y = element_blank(), legend.position = "none") # remove site names and legend
+
+coverage_plot # It seems the sites with gaps are not displaying. Let's look into that more.
+
+# Create a table of the main_4/styears histogram.
+years_table <- main4 %>%
+  group_by(n_f) %>%
+  summarize(number_of_sites = n()) %>%
+  ungroup()
+
+# Determine which of these records are continuous.
+gaps <- main3 %>%
+  mutate(year = as.numeric(as.character(yearf))) %>% # recreate numeric year column
+  group_by(site_name) %>%
+  mutate(gap = year - lag(year, default = year[1])) %>% # calculate gaps
+  ungroup() 
+
+sites_w_gaps <- gaps %>%
+  filter(gap > 1) %>% # filter only for values that denote a gap
+  select(site_name) %>% # pull out only site names
+  unique()
+
+# Filter the main4 dataset (since there's one record per site) 
+# to remove the sites_w_gaps determined above.
+main4_cont <- anti_join(main4, sites_w_gaps)
+
+# Create a new table.
+cont_years_table <- main4_cont %>%
+  group_by(n_f) %>%
+  summarize(number_of_cont_sites = n()) %>%
+  ungroup()
+
+# And add to original table.
+years_table <- years_table %>%
+  mutate(number_of_cont_sites = cont_years_table$number_of_cont_sites)
+
+# Takeaways:
+# (1) There are 76 sites, of a total possible 202, with time gaps of some kind.
+# (2) 1 year gaps are most common (n = 58 a.k.a. 75%), although there is a gap of 6 years max.
+# ? Perhaps this means we should impose a filter of gaps no longer than 1 year, similar
+# to how we impose the filter of gaps no longer than 2 weeks at a smaller scale.
+# (3) The following table shows the number of unique sites available:
+# years of data | total | continuous
+# 1             | 62    | 62
+# 2             | 35    | 24
+# 3             | 25    | 11
+# 4             | 24    | 13
+# 5             | 16    | 4
+# 6             | 13    | 1
+# 7             | 9     | 1
+# 8             | 11    | 3
+# 9             | 7     | 7
 
 # End of script.
