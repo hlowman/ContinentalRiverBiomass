@@ -47,7 +47,7 @@ main1 <- main %>%
 
 storder <- ggplot(main1) + # base plot
   geom_histogram(aes(x = order, fill = order), stat = "count") + # stream order histogram
-  scale_fill_manual(values = cal_palette("kelp1", n = 9, type = "continuous")) + # custom colors
+  scale_fill_manual(values = cal_palette("sbchannel", n = 9, type = "continuous")) + # custom colors
   labs(x = "Stream Order",
        y = "Site Count") +
   theme_classic() + # remove grid
@@ -98,12 +98,21 @@ sitemap3 <- ggplot(states_sf) + # base plot
   geom_point(data = sites_sf, aes(x = lon, y = lat, color = order), 
              size = 2, alpha = 0.75) + # map of sites
   scale_color_manual(name = "Stream Order", 
-                     values = cal_palette("kelp1", n = 9, type = "continuous")) + # custom colors
-  theme_classic() # remove grid
+                     values = cal_palette("sbchannel", n = 9, type = "continuous")) + # custom colors
+  theme_classic() + # remove grid
+  theme(legend.position = "none") # remove legend
 
 sitemap3
 
 # Takeaways - Still skewed towards eastern US, but this was true for the overall dataset. Data now only available for contiguous US. Stream orders appear to be distributed fairly evenly.
+
+# Combine the histogram and map colored by stream order into
+# a single figure.
+
+fig_order <- storder / sitemap3
+
+fig_order # due to the scaling, I'm going to edit the 
+# figure below and use that instead
 
 # Distribution of available sites by years of data
 
@@ -122,7 +131,7 @@ main4 <- main3 %>%
 
 styears <- ggplot(main4) + # base plot
   geom_histogram(aes(x = n_f, fill = n_f), stat = "count") + # years data histogram
-  scale_fill_manual(values = cal_palette("sbchannel", n = 9, type = "continuous")) + # custom colors
+  scale_fill_manual(values = cal_palette("desert", n = 9, type = "continuous")) + # custom colors
   labs(x = "Years of Available Data",
        y = "Site Count") +
   theme_classic() + # remove grid
@@ -133,16 +142,15 @@ styears
 # Combine all figures into one
 
 full_fig <- (storder | styears) /
-  sitemap2 /
   sitemap3
 
-full_fig + plot_annotation(title = "Data Availability After Initial Filtering (4/28/21)")
+full_fig + plot_annotation(title = "Appling et al. 2018 Data Availability After Initial Filtering")
 
-# ggsave(("figures/full_fig.png"),
-#        width = 15,
-#        height = 20,
-#        units = "cm"
-# )
+ggsave(("figures/full_fig2.png"),
+       width = 16,
+       height = 19,
+       units = "cm"
+)
 
 
 # Gap Investigation -------------------------------------------------------
