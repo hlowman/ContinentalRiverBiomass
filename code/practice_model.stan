@@ -25,6 +25,7 @@ parameters {
   real intercept;
   real slope;
   real<lower=0> sigma; // standard error needs to be positive
+  // for state-space model, also need process (sigp) and observation (sigo) error
 }
 
 // The model to be estimated. We model the output
@@ -32,10 +33,16 @@ parameters {
 // and standard deviation 'sigma'.
 model {
   // Priors
-  intercept ~ normal(0,0.5); // intercept has a normal distribution
-  slope ~ normal(0,0.5); // same with slope
+  intercept ~ normal(30,5); // intercept has a normal distribution
+  slope ~ normal(0,10); // broad normal distribution
   sigma ~ normal(0,0.5); // changed this around some
+  // for datasets with greater variance, may need to consider exp()
+  // add in sigp and sigo priors here for state-space models
   
   // Likelihood
   y ~ normal(intercept + slope*x, sigma);
+  
+  // - process model describes the larger mechanism
+  // - observation model describes the error between process model results
+  // and actual observations (in the case of GPP, on a daily basis)
 }

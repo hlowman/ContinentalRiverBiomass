@@ -11,7 +11,9 @@ library(rethinking)
 
 # Run each time you load in "rstan"
 rstan_options(auto_write=TRUE)
+# auto-caches model results in the same directory
 options(mc.cores=parallel::detectCores())
+# during runs, each chain needs a dedicated core
 
 # Load and examine data
 dat <- mtcars
@@ -29,6 +31,7 @@ dat_stan <- list(
 # .stan file must end in a BLANK LINE, otherwise it will spit out an error
 test_run <- stan("code/practice_model.stan",
                  data = dat_stan)
+# default of 4 chains, 2000 chains
 
 # Examine the results
 # Model: mpg = intercept + slope*cylinders
@@ -38,6 +41,13 @@ pairs(test_run, pars = c("intercept", "slope", "lp__")) # parameters pairs plot
 
 # Using the rethinking package
 precis(test_run)
+
+# Changed the priors to make more sense with Joanna, and resulted
+# in this result:
+#            mean   sd  5.5% 94.5% n_eff Rhat4
+# intercept 37.11 1.51 34.66 39.52   971     1
+# slope     -2.76 0.24 -3.14 -2.38   946     1
+# sigma      2.44 0.19  2.15  2.76  1716     1
 
 # First time, with (0,1) priors for intercept and slope, exponential for sigma
 #           mean   sd  5.5% 94.5% n_eff Rhat4
