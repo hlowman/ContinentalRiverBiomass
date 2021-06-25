@@ -169,9 +169,11 @@ saveRDS(PM_Ricker_elapsedtime, "data_working/stan_1riv_Ricker_time_10000it_2021_
 
 ## View
 # launch_shinystan(PM_outputlist_AR$nwis_08447300)
+PM_outputlist_Ricker <- readRDS("data_working/stan_1riv_output_Ricker_10000it_2021_06_23.rds")
 launch_shinystan(PM_outputlist_Ricker$nwis_05406457)
 # launch_shinystan(PM_outputlist_Ricker_tvr$nwis_11044000)
 
-# PM_outputlist_AR$nwis_01608500$lp__
+# Extract parameters
+mparams<-extract(PM_outputlist_Ricker$nwis_05406457, c("r","lambda","s","c","B","P","pred_GPP","sig_p","sig_o"))
 
 # End of script.
