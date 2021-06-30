@@ -46,8 +46,8 @@ colnames(df)
 
 ## subset
 sub <- df[,c("site_name","long_name","StreamOrde",
-             "site_type","struct.canal_flag","struct.dam_flag","struct.npdes_flag",
-             "ORD_STRA","NHD_STREAMORDE")]
+             "site_type","struct.canal_flag","struct.dam_flag",
+             "struct.npdes_flag","ORD_STRA","NHD_STREAMORDE")]
 
 
 ##################################################
@@ -61,7 +61,8 @@ diagnostics <- diagnostics[which(diagnostics$site %in% sub$site_name),]
 highq_sites <- diagnostics[which(diagnostics$K600_daily_sigma_Rhat < 1.05 & 
                                    diagnostics$err_obs_iid_sigma_Rhat < 1.05 &
                                    diagnostics$err_proc_iid_sigma_Rhat < 1.05 &
-                                   diagnostics$neg_GPP < 15 & diagnostics$pos_ER < 15),] #229
+                                   diagnostics$neg_GPP < 15 &
+                                   diagnostics$pos_ER < 15),] #229
 highq_site_names <- unique(highq_sites$site) ## 208
 
 # Subset s based on high sites and site type and flags
@@ -77,17 +78,19 @@ NWIS$date <- as.POSIXct(as.character(NWIS$date), format="%Y-%m-%d")
 head(NWIS)
 
 ## Subset columns and sites
-NWIS_sub <- NWIS[,c("site_name","date","GPP","GPP.lower","GPP.upper", "GPP.Rhat",
-                    "ER","ER.lower","ER.upper","K600","K600.lower","K600.upper",
-                    "temp.water","discharge","shortwave","velocity")]
-colnames(NWIS_sub) <- c("site_name","date","GPP","GPP.lower","GPP.upper", "GPP.Rhat",
-                        "ER","ER.lower","ER.upper","K600","K600.lower","K600.upper",
-                        "temp","Q","light","velocity")
+NWIS_sub <- NWIS[,c("site_name","date","GPP","GPP.lower","GPP.upper", 
+                    "GPP.Rhat","ER","ER.lower","ER.upper","K600",
+                    "K600.lower","K600.upper","temp.water",
+                    "discharge","shortwave","velocity")]
+colnames(NWIS_sub) <- c("site_name","date","GPP","GPP.lower","GPP.upper", 
+                        "GPP.Rhat","ER","ER.lower","ER.upper","K600",
+                        "K600.lower","K600.upper","temp","Q","light",
+                        "velocity")
 
 ## Subset to sites in high_sites (sites with high confidence rating and limited dam interference)
 NWIS_sub <- NWIS_sub[which(NWIS_sub$site_name %in% s$site_name),]
 # Confirm
-length(levels(as.factor(NWIS_sub$site_name))) ## 97 when subsetting for s
+length(levels(as.factor(NWIS_sub$site_name))) ## 82 when subsetting for s
 
 ## Identify which sites have the most continuous data
 NWIS_sub$doy <- yday(NWIS_sub$date)
@@ -140,16 +143,14 @@ TS_site[which(TS_site$NHD_STREAMORDE %in% c(3,4,5)),]$order_group <- "mid"
 TS_site[which(TS_site$NHD_STREAMORDE >= 6),]$order_group <- "large"
 
 ###########################################################################
-## Choose two consecutive river years from small, mid, and large rivers
+## Choose one river year from a "good" river
 ###########################################################################
 
-## choose sites from different groups
-View(TS_site[which(TS_site$order_group == "small"),])
-View(TS_site[which(TS_site$order_group == "mid"),])
-View(TS_site[which(TS_site$order_group == "large"),])
-
+# looking for a medium-sized stream with appropriate-seeming
+# responses in GPP to disturbance
 ## plot
-sid <- "nwis_08447300"
+# SHAVERS FORK NR CHEAT BRIDGE, WV
+sid <- "nwis_03067510"
 two_years <- c(2012,2013)
 TS_site[which(TS_site$site_name == sid),]
 
@@ -161,21 +162,22 @@ plot_grid(
   ncol = 1)
 
 ## plot my chosen site
-ggplot(TS[which(TS$site_name == "nwis_05406457"),], 
+ggplot(TS[which(TS$site_name == "nwis_03067510"),], 
        aes(date, GPP))+
   geom_line() +
-  labs(title = "Black Earth Creek, WI")
+  labs(title = "Shavers Fork Creek, WV")
+# something appears to be happening in 2013 to make values negative
+# so going to use 2012 going forward
 
-## small: nwis_05406457 2012 (Black Earth Creek, WI)
+## "good": nwis_03067510 2012 (Shavers Fork Creek, WV)
 
-site_subset <- rbind(TS[which(TS$site_name == "nwis_05406457" & 
+site_subset <- rbind(TS[which(TS$site_name == "nwis_03067510" & 
                                 TS$year %in% c(2012)),])
 
 TS_site_subset <- df[which(df$site_name %in% site_subset$site_name),]
 
 ## Save sub_by_gap info
-site_subset_numdays <- rbind(sub_by_gap[which(sub_by_gap$site_name == "nwis_02234000" & sub_by_gap$year %in% c(2013)),],
-                             sub_by_gap[which(sub_by_gap$site_name == "nwis_10129900" & sub_by_gap$year %in% c(2013)),])
+site_subset_numdays <- rbind(sub_by_gap[which(sub_by_gap$site_name == "nwis_03067510" & sub_by_gap$year %in% c(2012)),])
 colnames(site_subset_numdays) <- c("site_name","year","max_gap","Ndays","site_year")
 
 ###################################################
@@ -229,7 +231,7 @@ plotting_covar <- function(x) {
   
 }
 
-plotting_covar(site_sub_list$nwis_05406457)
+plotting_covar(site_sub_list$nwis_03067510)
 
 lapply(site_sub_list, function(x) ggsave(plot = plotting_covar(x),filename = paste("figures/site_covariate_plots/",x$site_name[1],"covar.jpg",sep = ""), width = 8, height = 6))
 
