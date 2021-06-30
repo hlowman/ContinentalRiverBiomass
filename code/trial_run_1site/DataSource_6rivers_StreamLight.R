@@ -19,20 +19,20 @@ lapply(c("plyr","dplyr","ggplot2","cowplot",
 ##############################
 ## Data Import & Processing ##
 ##############################
-data <- readRDS("data_working/NWIS_1site_subset_SL.rds")
+data <- readRDS("data_working/NWIS_1site_subset_good_2015.rds")
 data$date <- as.POSIXct(as.character(data$date), format="%Y-%m-%d")
 
-site_info <- readRDS("data_working/NWIS_1siteinfo_subset_SL.rds")
+site_info <- readRDS("data_working/NWIS_1siteinfo_subset_good_2015.rds")
 
 # Read in StreamLight processed data (Savoy)
-SL <- readRDS("data_working/StreamLight_daily_1riv.rds")
+SL <- readRDS("data_working/StreamLight_daily_1riv_good_2015.rds")
 colnames(SL)[colnames(SL) == "Date"] <- "date"
 
 ## Join data and StreamLight
 data <- left_join(data, SL, by=c("site_name", "date"))
 
 ## Change river names to short names
-site_info$short_name <- revalue(as.character(site_info$site_name), replace = c("nwis_05406457"="Black Earth Creek, WI"))
+site_info$short_name <- revalue(as.character(site_info$site_name), replace = c("nwis_01608500"="South Branch Potomac River, WV"))
 
 ## Order for figures by stream order
 # site_order_list <- c("Proctor Creek, GA",
@@ -48,7 +48,7 @@ data_siteyears <- data %>%
   group_by(site_name, year) %>%
   tally()
 ## Select the first of two years
-data <- rbind(data[which(data$site_name == "nwis_05406457" & data$year %in% c(2012)),])
+data <- rbind(data[which(data$site_name == "nwis_01608500" & data$year %in% c(2015)),])
 
 ## small: nwis_02336526 2015,2016 (Order 2; PROCTOR CREEK AT JACKSON PARKWAY, AT ATLANTA, GA) - light
 ## small: nwis_01649190 2010,2011 (Order 2; PAINT BRANCH NEAR COLLEGE PARK, MD) - light
@@ -58,8 +58,7 @@ data <- rbind(data[which(data$site_name == "nwis_05406457" & data$year %in% c(20
 ## large: nwis_08447300 2012,2013 (Order 7: Pecos Rv at Brotherton Rh nr Pandale, TX) - no SL light
 
 ## Set any GPP < 0 to a small value between 0.05 to 0.13 g O2 m-2 d-1
-# data[which(data$GPP < 0),]$GPP <- sample(exp(-3):exp(-2), 1)
-# there are none for now
+data[which(data$GPP < 0),]$GPP <- sample(exp(-3):exp(-2), 1)
 
 ## Create a GPP SD; SD = (CI - mean)/1.96
 data$GPP_sd <- (((data$GPP.upper - data$GPP)/1.96) + ((data$GPP.lower - data$GPP)/-1.96))/2
