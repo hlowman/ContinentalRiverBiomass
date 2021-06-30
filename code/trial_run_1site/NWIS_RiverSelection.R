@@ -149,35 +149,35 @@ TS_site[which(TS_site$NHD_STREAMORDE >= 6),]$order_group <- "large"
 # looking for a medium-sized stream with appropriate-seeming
 # responses in GPP to disturbance
 ## plot
-# SHAVERS FORK NR CHEAT BRIDGE, WV
-sid <- "nwis_03067510"
-two_years <- c(2012,2013)
+# SOUTH BRANCH POTOMAC RIVER NEAR SPRINGFIELD, WV
+sid <- "nwis_01608500"
+years <- c(2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018)
 TS_site[which(TS_site$site_name == sid),]
 
 plot_grid(
   ggplot(TS[which(TS$site_name == sid),], aes(date, GPP_temp))+
     geom_line()+labs(title=TS_site[which(TS_site$site_name == sid),]$long_name),
-  ggplot(TS[which(TS$site_name == sid & TS$year %in% two_years),], aes(date, GPP_temp))+
+  ggplot(TS[which(TS$site_name == sid & TS$year %in% years),], aes(date, GPP_temp))+
     geom_line(),
   ncol = 1)
 
 ## plot my chosen site
-ggplot(TS[which(TS$site_name == "nwis_03067510"),], 
+ggplot(TS[which(TS$site_name == "nwis_01608500"),], 
        aes(date, GPP))+
   geom_line() +
-  labs(title = "Shavers Fork Creek, WV")
-# something appears to be happening in 2013 to make values negative
+  labs(title = "South Branch Potomac River, Springfield, WV")
+# something again appears to be happening to make values negative
 # so going to use 2012 going forward
 
-## "good": nwis_03067510 2012 (Shavers Fork Creek, WV)
+## "good": nwis_01608500 2012 (South Branch Potomac, WV)
 
-site_subset <- rbind(TS[which(TS$site_name == "nwis_03067510" & 
+site_subset <- rbind(TS[which(TS$site_name == "nwis_01608500" & 
                                 TS$year %in% c(2012)),])
 
 TS_site_subset <- df[which(df$site_name %in% site_subset$site_name),]
 
 ## Save sub_by_gap info
-site_subset_numdays <- rbind(sub_by_gap[which(sub_by_gap$site_name == "nwis_03067510" & sub_by_gap$year %in% c(2012)),])
+site_subset_numdays <- rbind(sub_by_gap[which(sub_by_gap$site_name == "nwis_01608500" & sub_by_gap$year %in% c(2012)),])
 colnames(site_subset_numdays) <- c("site_name","year","max_gap","Ndays","site_year")
 
 ###################################################
@@ -231,7 +231,7 @@ plotting_covar <- function(x) {
   
 }
 
-plotting_covar(site_sub_list$nwis_03067510)
+plotting_covar(site_sub_list$nwis_01608500)
 
 lapply(site_sub_list, function(x) ggsave(plot = plotting_covar(x),filename = paste("figures/site_covariate_plots/",x$site_name[1],"covar.jpg",sep = ""), width = 8, height = 6))
 
@@ -241,9 +241,9 @@ lapply(site_sub_list, function(x) ggsave(plot = plotting_covar(x),filename = pas
 ###########################
 
 ## NWIS site subset
-saveRDS(site_subset, "data_working/NWIS_1site_subset_SL.rds")
-saveRDS(TS_site_subset, "data_working/NWIS_1siteinfo_subset_SL.rds")
-saveRDS(site_subset_numdays,"data_working/NWIS_1site_Ndays_SL.rds")
+saveRDS(site_subset, "data_working/NWIS_1site_subset_good.rds")
+saveRDS(TS_site_subset, "data_working/NWIS_1siteinfo_subset_good.rds")
+saveRDS(site_subset_numdays,"data_working/NWIS_1site_Ndays_good.rds")
 
 #### Stopped here during test run on June 23, 2021.
 
