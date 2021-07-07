@@ -314,4 +314,50 @@ outputs_plot_noP
 #        width = 8,
 #        height = 6)
 
+# Also per Joanna's suggestion, going to plot results on top of one another to
+# see how things match up.
+
+outputs1 <- outputs %>%
+  # choose only gpp predictions
+  filter(parameter == "median_gpp") %>%
+  select(date_ymd, value) %>%
+  rename(date = date_ymd, 
+         GPP = value) %>%
+  # add column to denote model structure
+  mutate(model = "With P")
+
+outputs2 <- outputs_noP %>%
+  # choose only gpp predictions
+  filter(parameter == "median_gpp") %>%
+  select(date_ymd, value) %>%
+  rename(date = date_ymd, 
+         GPP = value) %>%
+  # add column to denote model structure
+  mutate(model = "Without P")
+
+outputs3 <- rawdat %>%
+  select(date, GPP) %>%
+  mutate(model = "Raw data")
+
+# bind all datasets together for plotting
+alloutputs <- rbind(outputs1, outputs2, outputs3)
+
+# Plot GPP for both models and raw data
+(comparison_plot <- ggplot(alloutputs, aes(x = date, y = GPP)) +
+  geom_point(aes(color = model)) +
+  scale_color_viridis(discrete = TRUE) +
+  facet_grid(rows = vars(model), scales = "free") +
+  labs(x = "Date",
+       y = "GPP",
+       color = " ",
+       title = "South Branch Potomac River (WV)",
+       subtitle = "Comparison of Appling Data and Ricker Model Results - 2015") +
+  theme_bw()+
+  theme(legend.position = "none"))
+
+# ggsave(plot = comparison_plot,
+#        filename = "figures/ricker_results/comparison_nwis_01608500_2015.jpg",
+#        width = 8,
+#        height = 6)
+
 # End of script.
