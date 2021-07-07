@@ -10,6 +10,11 @@
 # need to perform, and I've changed the appropriate filepaths to match my
 # repository structure.
 
+# Additional note: the "data_raw" and "data_working" folders have been ignored
+# in all iterations of the code (on various computers), so links to the raw
+# datasets are provided below and will need to be downloaded and added to a folder
+# of the appropriate name prior to running the code.
+
 ## Subset data from hypoxia database that is already linked to NHD
 ## JRB
 
@@ -32,7 +37,7 @@ SL <- read.table("data_raw/StreamLight_site_information_and_parameters.txt", hea
 colnames(SL)[colnames(SL) == "Site_ID"] <- "site_name"
 
 ## Secondary stream order source from hypoxia data set
-#https://www.sciencebase.gov/catalog/item/606f60afd34ef99870188ee5
+# https://www.sciencebase.gov/catalog/item/606f60afd34ef99870188ee5
 ## and subsetted to Appling (PC)
 hyp <- fread("data_raw/GRDO_GEE_HA_NHD_2021_02_07.csv")
 hyp <- hyp[which(hyp$DB_Source == "PC"), c("SiteID","ORD_STRA","NHD_STREAMORDE")]
