@@ -310,7 +310,7 @@ outputs_plot_noP <- ggplot(outputs_noP, aes(x = date_ymd, y = value)) +
 outputs_plot_noP
 
 # ggsave(plot = outputs_plot_noP,
-#        filename = "figures/ricker_results/nwis_01608500_2015.jpg",
+#        filename = "figures/ricker_results/nwis_01608500_noP_2015.jpg",
 #        width = 8,
 #        height = 6)
 
