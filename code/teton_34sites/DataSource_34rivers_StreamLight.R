@@ -60,19 +60,24 @@ ggplot(data, aes(date, GPP)) +
 l <- split(data, data$site_name)
 
 ## For sites without StreamLight data, set PAR_surface to light
-allsites <- unique(data$site_name)
-
-for(i in allsites){
-  l %>%
-    mutate(PAR_new = lmap(i, # mapped across all items of the list
-      ifelse(is.na(PAR_surface) == TRUE, light, #If NA, swap in light
-                                  PAR_surface))) # Otherwise use existing Savoy data
+# first create a function to map across the list
+swap_light <- function(df){
+  df %>%
+    mutate(PAR_new = case_when(is.na(PAR_surface) == TRUE ~ light,
+                               TRUE ~ PAR_surface))
 }
 
-# Stopped here...
+# test the above function on a single dataframe that doesn't have light
+# test_df <- l$nwis_01656903
+# test_output <- swap_light(test_df) # Yay! :)
+# and for one that does have light...
+# test2_df <- l$nwis_01608500
+# test2_output <- swap_light(test2_df) # Double Yay! :)
+
+l <- map(l, swap_light)
 
 rel_LQT <- function(x){
-  x$light_rel <- x$PAR_surface/max(x$PAR_surface)
+  x$light_rel <- x$PAR_new/max(x$PAR_new)
   x$temp_rel <- x$temp/max(x$temp)
   x$tQ <- x$Q/max(x$Q)
 
