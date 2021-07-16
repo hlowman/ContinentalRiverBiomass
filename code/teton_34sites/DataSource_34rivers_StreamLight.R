@@ -20,13 +20,14 @@ lapply(c("plyr","dplyr","ggplot2","cowplot",
 ## Data Import & Processing ##
 ##############################
 
-data <- readRDS("data_working/NWIS_34sites_subset.rds")
+# changed all directories to match folder in modelscape directory on Teton
+data <- readRDS("NWIS_34sites_subset.rds")
 data$date <- as.POSIXct(as.character(data$date), format="%Y-%m-%d")
 
-site_info <- readRDS("data_working/NWIS_34sitesinfo_subset.rds")
+site_info <- readRDS("NWIS_34sitesinfo_subset.rds")
 
 # Read in StreamLight processed data (Savoy)
-SL <- readRDS("data_working/StreamLight_daily_34sites.rds")
+SL <- readRDS("StreamLight_daily_34sites.rds")
 colnames(SL)[colnames(SL) == "Date"] <- "date"
 
 ## Join data and StreamLight
@@ -51,10 +52,10 @@ data[which(data$GPP < 0),]$GPP <- sample(exp(-3):exp(-2), 1)
 data$GPP_sd <- (((data$GPP.upper - data$GPP)/1.96) + ((data$GPP.lower - data$GPP)/-1.96))/2
 
 ## visualize
-ggplot(data, aes(date, GPP)) +
-  geom_point() +
-  geom_line() +
-  facet_wrap(~site_name,scales = "free_x")
+# ggplot(data, aes(date, GPP)) +
+#   geom_point() +
+#   geom_line() +
+#   facet_wrap(~site_name,scales = "free_x")
 
 ## split list by ID
 l <- split(data, data$site_name)

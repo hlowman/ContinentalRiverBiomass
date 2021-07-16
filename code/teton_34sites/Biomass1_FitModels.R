@@ -13,8 +13,8 @@
 # load packages
 lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
          "parallel","tidyverse","rstan","devtools",
-         "bayesplot","shinystan","Metrics","MCMCglmm","tictoc",
-         "here", "viridis"), require, character.only=T)
+         "bayesplot","shinystan","here", "viridis"), 
+       require, character.only=T)
 
 ## Source data - sources the file itself
 source("code/teton_34sites/DataSource_34rivers_StreamLight.R")
@@ -28,8 +28,11 @@ options(mc.cores=6)#parallel::detectCores())
 
 ## compile data
 stan_data_compile <- function(x){
-  data <- list(Ndays=length(x$GPP), light = x$light_rel, GPP = x$GPP,
-               GPP_sd = x$GPP_sd, tQ = x$tQ)
+  data <- list(Ndays=length(x$GPP), 
+               light = x$light_rel, 
+               GPP = x$GPP,
+               GPP_sd = x$GPP_sd, 
+               tQ = x$tQ)
   return(data)
 }
 
@@ -47,14 +50,15 @@ init_Ricker <- function(...) {
 
 ## export results
 PM_outputlist_Ricker <- lapply(stan_data_l,
-                               function(x) stan("code/teton_34sites/Stan_ProductivityModel2_Ricker_fixedinit_obserr.stan",
+                               function(x) stan("Stan_ProductivityModel2_Ricker_fixedinit_obserr.stan",
                                                 data=x,chains=3,iter=5000,
                                                 init = init_Ricker,
                                                 control=list(max_treedepth=12)))
 
 
-PM_Ricker_elapsedtime <- lapply(PM_outputlist_Ricker, function(x) return(get_elapsed_time(x)))
-saveRDS(PM_outputlist_Ricker, "data_working/stan_34rivers_output_Ricker_2021_07_14.rds")
-saveRDS(PM_Ricker_elapsedtime, "data_working/stan_34rivers_Ricker_time_2021_07_14.rds")
+# not going to save the elapsed time for Teton runs
+#PM_Ricker_elapsedtime <- lapply(PM_outputlist_Ricker, function(x) return(get_elapsed_time(x)))
+saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/stan_34rivers_output_Ricker_2021_07_14.rds")
+#saveRDS(PM_Ricker_elapsedtime, "data_working/stan_34rivers_Ricker_time_2021_07_14.rds")
 
 # End of script.
