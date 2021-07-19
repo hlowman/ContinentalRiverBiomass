@@ -44,6 +44,7 @@ stan_data_l <- lapply(df, function(x) stan_data_compile(x))
 
 ## PM 2 - Latent Biomass (Ricker)
 # With Persistence Term (P)
+# sets initial values of c and s to help chain converge
 init_Ricker <- function(...) {
   list(c = 0.5, s = 100)
 }
