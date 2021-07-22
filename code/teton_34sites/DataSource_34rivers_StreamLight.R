@@ -1,5 +1,5 @@
 ## 34 rivers data source
-## July 13, 2021
+## Created: July 13, 2021
 ## Heili Lowman
 
 # I'll be modifying Joanna's code from the RiverBiomass repository
@@ -21,13 +21,13 @@ lapply(c("plyr","dplyr","ggplot2","cowplot",
 ##############################
 
 # changed all directories to match folder in modelscape directory on Teton
-data <- readRDS("NWIS_34sites_subset.rds")
+data <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_34sites/NWIS_34sites_subset.rds")
 data$date <- as.POSIXct(as.character(data$date), format="%Y-%m-%d")
 
-site_info <- readRDS("NWIS_34sitesinfo_subset.rds")
+site_info <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_34sites/NWIS_34sitesinfo_subset.rds")
 
 # Read in StreamLight processed data (Savoy)
-SL <- readRDS("StreamLight_daily_34sites.rds")
+SL <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_34sites/StreamLight_daily_34sites.rds")
 colnames(SL)[colnames(SL) == "Date"] <- "date"
 
 ## Join data and StreamLight
@@ -51,12 +51,6 @@ data[which(data$GPP < 0),]$GPP <- sample(exp(-3):exp(-2), 1)
 ## Create a GPP SD; SD = (CI - mean)/1.96
 data$GPP_sd <- (((data$GPP.upper - data$GPP)/1.96) + ((data$GPP.lower - data$GPP)/-1.96))/2
 
-## visualize
-# ggplot(data, aes(date, GPP)) +
-#   geom_point() +
-#   geom_line() +
-#   facet_wrap(~site_name,scales = "free_x")
-
 ## split list by ID
 l <- split(data, data$site_name)
 
@@ -68,7 +62,7 @@ swap_light <- function(df){
                                TRUE ~ PAR_surface))
 }
 
-# test the above function on a single dataframe that doesn't have light
+# tested the above function on a single dataframe that doesn't have light
 # test_df <- l$nwis_01656903
 # test_output <- swap_light(test_df) # Yay! :)
 # and for one that does have light...

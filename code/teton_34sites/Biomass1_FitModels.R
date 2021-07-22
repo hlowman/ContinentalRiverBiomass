@@ -1,5 +1,5 @@
 ## Fitting models to data
-## July 13, 2021
+## Created: July 13, 2021
 ## Heili Lowman
 
 # I'll be modifying Joanna's code from the RiverBiomass repository
@@ -17,14 +17,14 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
        require, character.only=T)
 
 ## Source data - sources the file itself
-source("code/teton_34sites/DataSource_34rivers_StreamLight.R")
+source("/project/modelscape/users/hlowman/jobscripts/teton_34sites/DataSource_34rivers_StreamLight.R")
 
 ####################
 ## Stan data prep ##
 ####################
 rstan_options(auto_write=TRUE)
 ## specify number of cores
-options(mc.cores=6)#parallel::detectCores())
+options(mc.cores=6)
 
 ## compile data
 stan_data_compile <- function(x){
@@ -44,6 +44,7 @@ stan_data_l <- lapply(df, function(x) stan_data_compile(x))
 
 ## PM 2 - Latent Biomass (Ricker)
 # With Persistence Term (P)
+
 # sets initial values of c and s to help chain converge
 init_Ricker <- function(...) {
   list(c = 0.5, s = 100)
@@ -51,15 +52,14 @@ init_Ricker <- function(...) {
 
 ## export results
 PM_outputlist_Ricker <- lapply(stan_data_l,
-                               function(x) stan("Stan_ProductivityModel2_Ricker_fixedinit_obserr.stan",
-                                                data=x,chains=3,iter=5000,
+                               function(x) stan("/project/modelscape/users/hlowman/jobscripts/teton_34sites/Stan_ProductivityModel2_Ricker_fixedinit_obserr.stan",
+                                                data = x,chains = 3,iter = 5000,
                                                 init = init_Ricker,
-                                                control=list(max_treedepth=12)))
+                                                control = list(max_treedepth = 12)))
 
 
 # not going to save the elapsed time for Teton runs
-#PM_Ricker_elapsedtime <- lapply(PM_outputlist_Ricker, function(x) return(get_elapsed_time(x)))
-saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/stan_34rivers_output_Ricker_2021_07_14.rds")
-#saveRDS(PM_Ricker_elapsedtime, "data_working/stan_34rivers_Ricker_time_2021_07_14.rds")
+
+saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_34sites/stan_34rivers_output_Ricker_2021_07_22.rds")
 
 # End of script.
