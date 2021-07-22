@@ -16,7 +16,7 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
          "bayesplot","shinystan","here", "viridis"), require, character.only=T)
 
 ## Source data - sources the file itself
-source("/project/modelscape/users/hlowman/jobscripts/1site_run/DataSource_1river_StreamLight.R")
+source("/project/modelscape/users/hlowman/jobscripts/1site_test/DataSource_1river_StreamLight.R")
 
 ####################
 ## Stan data prep ##
@@ -46,11 +46,11 @@ init_Ricker <- function(...) {
 
 ## export results
 PM_outputlist_Ricker <- lapply(stan_data_l,
-                               function(x) stan("/project/modelscape/users/hlowman/jobscripts/1site_run/Stan_ProductivityModel2_Ricker_fixedinit_obserr.stan",
+                               function(x) stan("/project/modelscape/users/hlowman/jobscripts/1site_test/Stan_ProductivityModel2_Ricker_fixedinit_obserr.stan",
                                                 data = x,chains = 3,iter = 5000,
                                                 init = init_Ricker,
                                                 control = list(max_treedepth = 12)))
 
-saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/1site_run/stan_1riv_output_Ricker_2021_07_22.rds")
+saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/1site_test/stan_1riv_output_Ricker_2021_07_22.rds")
 
 # End of script.

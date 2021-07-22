@@ -18,14 +18,14 @@ lapply(c("plyr","dplyr","ggplot2","cowplot",
 ##############################
 ## Data Import & Processing ##
 ##############################
-data <- readRDS("/project/modelscape/users/hlowman/jobscripts/1site_run/NWIS_1site_subset_good_2015.rds")
+data <- readRDS("/project/modelscape/users/hlowman/jobscripts/1site_test/NWIS_1site_subset_good_2015.rds")
 
 data$date <- as.POSIXct(as.character(data$date), format="%Y-%m-%d")
 
-site_info <- readRDS("/project/modelscape/users/hlowman/jobscripts/1site_run/NWIS_1siteinfo_subset_good_2015.rds")
+site_info <- readRDS("/project/modelscape/users/hlowman/jobscripts/1site_test/NWIS_1siteinfo_subset_good_2015.rds")
 
 # Read in StreamLight processed data (Savoy)
-SL <- readRDS("/project/modelscape/users/hlowman/jobscripts/1site_run/StreamLight_daily_1riv_good_2015.rds")
+SL <- readRDS("/project/modelscape/users/hlowman/jobscripts/1site_test/StreamLight_daily_1riv_good_2015.rds")
 
 colnames(SL)[colnames(SL) == "Date"] <- "date"
 
