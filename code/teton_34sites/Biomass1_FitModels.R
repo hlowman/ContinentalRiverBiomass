@@ -16,8 +16,8 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
          "bayesplot","shinystan","here", "viridis"), 
        require, character.only=T)
 
-## Source data - sources the file itself
-source("/project/modelscape/users/hlowman/jobscripts/teton_34sites/DataSource_34rivers_StreamLight.R")
+## Source data
+df <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_34sites/df_34sites.rds")
 
 ####################
 ## Stan data prep ##
@@ -60,6 +60,6 @@ PM_outputlist_Ricker <- lapply(stan_data_l,
 
 # not going to save the elapsed time for Teton runs
 
-saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_34sites/stan_34rivers_output_Ricker_2021_07_22.rds")
+saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_34sites/stan_34rivers_output_Ricker_2021_07_26.rds")
 
 # End of script.

@@ -10,6 +10,8 @@
 # need to perform, and I've changed the appropriate filepaths to match my
 # repository structure.
 
+# Edited on July 26 to export the data to see if this was causing the "out of memory" issue on Teton.
+
 ## Load packages
 lapply(c("plyr","dplyr","ggplot2","cowplot",
          "lubridate","tidyverse", "reshape2",
@@ -20,14 +22,14 @@ lapply(c("plyr","dplyr","ggplot2","cowplot",
 ## Data Import & Processing ##
 ##############################
 
-# changed all directories to match folder in modelscape directory on Teton
-data <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_34sites/NWIS_34sites_subset.rds")
+# changed all directories back to match my folders
+data <- readRDS("data_working/NWIS_34sites_subset.rds")
 data$date <- as.POSIXct(as.character(data$date), format="%Y-%m-%d")
 
-site_info <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_34sites/NWIS_34sitesinfo_subset.rds")
+site_info <- readRDS("data_working/NWIS_34sitesinfo_subset.rds")
 
 # Read in StreamLight processed data (Savoy)
-SL <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_34sites/StreamLight_daily_34sites.rds")
+SL <- readRDS("data_working/StreamLight_daily_34sites.rds")
 colnames(SL)[colnames(SL) == "Date"] <- "date"
 
 ## Join data and StreamLight
@@ -84,5 +86,8 @@ dat <- lapply(l, function(x) rel_LQT(x))
 df <- dat
 
 rm(data, l, SL, data_siteyears, dat)
+
+# Exporting dataset
+saveRDS(df, "data_working/df_34sites.rds") # data for Teton run
 
 # End of script.
