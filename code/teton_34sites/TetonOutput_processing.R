@@ -365,7 +365,7 @@ plotting_covar <- function(x) {
   ggsave(p,
          filename = file.name,
          width = 8,
-         height = 6)
+         height = 8)
   
   } # close out for-loop
   
