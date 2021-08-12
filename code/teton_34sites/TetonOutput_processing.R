@@ -196,6 +196,10 @@ plotting_covar <- function(x) {
   
 } # close out function
 
-plotting_covar(data_in$nwis_01608500)
+# test to be sure the function works at a single site
+plotting_covar(data_in$nwis_02266200)
+
+# And now map this to the entire data_in list.
+map(data_in, plotting_covar)
 
 # End of script.
