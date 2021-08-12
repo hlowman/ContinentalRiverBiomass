@@ -79,6 +79,10 @@ data_together <- left_join(data_out_r_df2, data_info, by = c("id" = "site_name")
 data_together <- data_together %>%
   mutate(mean_k = mean_r/mean_l)
 
+##############################
+##          Figures         ##
+##############################
+
 # Basic plot of r values vs. stream order.
 fig1 <- ggplot(data_together, aes(x = NHD_STREAMORDE, y = mean_r, fill = NHD_STREAMORDE)) +
   geom_point(shape = 21, size = 4, alpha = 0.75) +
@@ -111,5 +115,72 @@ fig2
 #        filename = "figures/teton_34sites/fig2_k_strord.jpg",
 #        width = 8,
 #        height = 6)
+
+###################################################
+## Check other covariate data quality
+###################################################
+
+plotting_covar <- function(x) {
+  
+  # create a dataframe at each site
+  df <- x
+  
+  # create a vector of the available years of data
+  years <- unique(df$year)
+  
+  # loop over each year of data
+  for(z in years){
+    
+    # subset the data by year
+    subset <- subset(df, year == z) # subset the larger dataset by each year
+    
+    # create a 4-paneled plot with gross primary production, discharge, temperature, and light
+    # a.k.a. data inputs (prior to fitting the model)
+    p <- plot_grid(
+    
+    ggplot(subset, aes(date, GPP))+
+      geom_point(color="chartreuse4", size=2)+
+      geom_errorbar(aes(ymin = GPP.lower, ymax = GPP.upper), width=0.2,color="darkolivegreen4")+
+      labs(y=expression('GPP (g '*~O[2]~ m^-2~d^-1*')'), title=df$site_name[1])+
+      theme(legend.position = "none",
+            panel.background = element_rect(color = "black", fill=NA, size=1),
+            axis.title.x = element_blank(), axis.text.x = element_blank(),
+            axis.text.y = element_text(size=12),
+            axis.title.y = element_text(size=12)),
+    
+    ggplot(subset, aes(date, Q))+
+      geom_line(size=1.5, color="deepskyblue4")+
+      labs(y="Q (cms)")+
+      theme(legend.position = "none",
+            panel.background = element_rect(color = "black", fill=NA, size=1),
+            axis.title.x = element_blank(), axis.text.x = element_blank(),
+            axis.text.y = element_text(size=12),
+            axis.title.y = element_text(size=12)),
+    
+    ggplot(subset, aes(date, temp))+
+      geom_line(size=1.5, color="#A11F22")+
+      labs(y="Water Temp (C)")+
+      theme(legend.position = "none",
+            panel.background = element_rect(color = "black", fill=NA, size=1),
+            axis.title.x = element_blank(), axis.text.x = element_blank(),
+            axis.text.y = element_text(size=12),
+            axis.title.y = element_text(size=12)),
+    
+    ggplot(subset, aes(date, light))+
+      geom_point(size=2, color="darkgoldenrod3")+
+      labs(y="Incoming Light", x="Date")+
+      theme(legend.position = "none",
+            panel.background = element_rect(color = "black", fill=NA, size=1),
+            axis.text = element_text(size=12),
+            axis.title = element_text(size=12)),
+    ncol=1, align="hv")
+  
+  print(p) } # close out for-loop
+  
+} # close out function
+
+plotting_covar(data_in$nwis_01608500)
+
+lapply(site_sub_list, function(x) ggsave(plot = plotting_covar(x),filename = paste("figures/site_covariate_plots/",x$site_name[1],"covar.jpg",sep = ""), width = 8, height = 6))
 
 # End of script.
