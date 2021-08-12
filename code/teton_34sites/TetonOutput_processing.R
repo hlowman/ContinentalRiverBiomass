@@ -175,12 +175,22 @@ plotting_covar <- function(x) {
             axis.title = element_text(size=12)),
     ncol=1, align="hv")
   
-  print(p) } # close out for-loop
+  # display plots
+  print(p) 
+  
+  # save and export plots
+  file.name <- paste0("figures/teton_34sites/site_covariate_plots/",df$site_name[1],"_",z,"_covar.jpg",sep = "") # create file name
+  
+  # set specifications for size and resolution of your figure
+  ggsave(p,
+         filename = file.name,
+         width = 8,
+         height = 6)
+  
+  } # close out for-loop
   
 } # close out function
 
 plotting_covar(data_in$nwis_01608500)
-
-lapply(site_sub_list, function(x) ggsave(plot = plotting_covar(x),filename = paste("figures/site_covariate_plots/",x$site_name[1],"covar.jpg",sep = ""), width = 8, height = 6))
 
 # End of script.
