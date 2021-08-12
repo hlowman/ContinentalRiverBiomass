@@ -67,35 +67,39 @@ data_together <- left_join(data_means, data_info, by = "site_name")
 ##############################
 
 # Basic plot of r values vs. stream order.
-# fig1 <- ggplot(data_together, aes(x = NHD_STREAMORDE, y = mean_r, fill = NHD_STREAMORDE)) +
-#   geom_point(shape = 21, size = 4, alpha = 0.75) +
-#   labs(x = "NHD Stream Order",
-#        y = "Maximum Growth Rate (r)") +
-#   theme_bw() +
-#   theme(legend.position = "none")
-# 
-# fig1
+fig1 <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  mutate(so = factor(NHD_STREAMORDE)) %>%
+  ggplot(aes(x = so, y = r_mean, fill = NHD_STREAMORDE)) +
+  geom_boxplot(alpha = 0.75) +
+  labs(x = "NHD Stream Order",
+       y = "Maximum Growth Rate (r)") +
+  theme_bw() +
+  theme(legend.position = "none")
 
-# three outliers - right to left - are Black Earth Creek WI, Reedy Creek FL, and Au Sable River FL
+fig1
 
 # ggsave(plot = fig1,
-#        filename = "figures/teton_34sites/fig1_r_strord.jpg",
+#        filename = "figures/teton_34sites/r_strord.jpg",
 #        width = 8,
 #        height = 6)
 
-# fig2 <- ggplot(data_together, aes(x = NHD_STREAMORDE, y = mean_k, fill = NHD_STREAMORDE)) +
-#   geom_point(shape = 21, size = 4, alpha = 0.75) +
-#   labs(x = "NHD Stream Order",
-#        y = "Carrying Capacity (k)") +
-#   theme_bw() +
-#   theme(legend.position = "none")
-# 
-# fig2
+fig2 <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  mutate(so = factor(NHD_STREAMORDE)) %>%
+  ggplot(aes(x = so, y = k_mean, fill = NHD_STREAMORDE)) +
+  geom_boxplot(alpha = 0.75) +
+  labs(x = "NHD Stream Order",
+       y = "Carrying Capacity (k)") +
+  theme_bw() +
+  theme(legend.position = "none")
 
-# outlier is again Reedy Creek FL
+fig2
 
 # ggsave(plot = fig2,
-#        filename = "figures/teton_34sites/fig2_k_strord.jpg",
+#        filename = "figures/teton_34sites/k_strord.jpg",
 #        width = 8,
 #        height = 6)
 
