@@ -123,7 +123,10 @@ fig2
 plotting_covar <- function(x) {
   
   # create a dataframe at each site
-  df <- x
+  df.1 <- x
+  
+  # join with site information
+  df <- left_join(df.1, data_info, by = "site_name")
   
   # create a vector of the available years of data
   years <- unique(df$year)
@@ -141,7 +144,9 @@ plotting_covar <- function(x) {
     ggplot(subset, aes(date, GPP))+
       geom_point(color="chartreuse4", size=2)+
       geom_errorbar(aes(ymin = GPP.lower, ymax = GPP.upper), width=0.2,color="darkolivegreen4")+
-      labs(y=expression('GPP (g '*~O[2]~ m^-2~d^-1*')'), title=df$site_name[1])+
+      labs(y=expression('GPP (g '*~O[2]~ m^-2~d^-1*')'), 
+           title = df$long_name.y[1],
+           subtitle = df$site_name[1])+
       theme(legend.position = "none",
             panel.background = element_rect(color = "black", fill=NA, size=1),
             axis.title.x = element_blank(), axis.text.x = element_blank(),
