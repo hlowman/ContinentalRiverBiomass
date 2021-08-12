@@ -10,7 +10,8 @@
 lapply(c("plyr","dplyr","ggplot2","cowplot",
          "lubridate","tidyverse", "reshape2",
          "PerformanceAnalytics","jpeg","grid",
-         "rstan","bayesplot","shinystan", "here"), require, character.only=T)
+         "rstan","bayesplot","shinystan", "here",
+         "ggrepel", "patchwork"), require, character.only=T)
 
 ##############################
 ## Data Import & Processing ##
@@ -37,61 +38,43 @@ test_params <- extract(data_out$nwis_01608500, c("r","lambda","s","c",
 
 # Going to create a function of the above to pull out data of interest from
 # all sites.
-extract_params <- function(df){
-  extract(df, c("r","lambda","s","c","B","P","pred_GPP","sig_p","sig_o"))
+extract_params <- function(x){
+  df <- x
+  extract(df, c("r","lambda","s","c"))
 }
 
 # And now map this to the entire output list.
 data_out_params <- map(data_out, extract_params)
 
-# And transform into a dataframe for easier plotting/manipulation.
-# data_out_tibble <- data_out_params %>%
-#   unlist(recursive = FALSE) %>% 
-#   enframe() %>% 
-#   unnest() # this proved too large/had uncompatible list lengths.
+# And create a dataframe
+data_out_params_df <- map_df(data_out_params, ~as.data.frame(.x), .id="site_name") %>%
+  # and add "K" to it.
+  mutate(k = (-1*r)/lambda)
 
-# So, breaking it down even further just to examine "r" values first.
-# Create function to pull out "r" values and calculate means across sites.
-extract_means <- function(df){
-  new_df <- as.data.frame(df)
-  
-  new_df %>%
-    summarize(mean_r = mean(r), mean_l = mean(lambda))
-}
-
-# And now map this to the entire output list.
-data_out_means <- map(data_out_params, extract_means)
-
-# And now turn it into a dataframe.
-# First, turn all the nested lists into dataframes within a single list.
-# dfs <- lapply(data_out_meanr, data.frame, stringsAsFactors = FALSE)
-# Then, bind them all together.
-# data_out_r_df <- dfs %>%
-#   bind_rows()
-
-# Another way of doing things to include list name (for site numbers).
-data_out_r_df2 <- map_df(data_out_means, ~as.data.frame(.x), .id="id")
+# And now to calculate means by site.
+data_means <- data_out_params_df %>%
+  group_by(site_name) %>%
+  summarize(r_mean = mean(r),
+            k_mean = mean(k),
+            s_mean = mean(s),
+            c_mean = mean(c))
 
 # And now to bind the values with site attributes.
-data_together <- left_join(data_out_r_df2, data_info, by = c("id" = "site_name"))
-
-# Calculate  k.
-data_together <- data_together %>%
-  mutate(mean_k = mean_r/mean_l)
+data_together <- left_join(data_means, data_info, by = "site_name")
 
 ##############################
 ##          Figures         ##
 ##############################
 
 # Basic plot of r values vs. stream order.
-fig1 <- ggplot(data_together, aes(x = NHD_STREAMORDE, y = mean_r, fill = NHD_STREAMORDE)) +
-  geom_point(shape = 21, size = 4, alpha = 0.75) +
-  labs(x = "NHD Stream Order",
-       y = "Maximum Growth Rate (r)") +
-  theme_bw() +
-  theme(legend.position = "none")
-
-fig1
+# fig1 <- ggplot(data_together, aes(x = NHD_STREAMORDE, y = mean_r, fill = NHD_STREAMORDE)) +
+#   geom_point(shape = 21, size = 4, alpha = 0.75) +
+#   labs(x = "NHD Stream Order",
+#        y = "Maximum Growth Rate (r)") +
+#   theme_bw() +
+#   theme(legend.position = "none")
+# 
+# fig1
 
 # three outliers - right to left - are Black Earth Creek WI, Reedy Creek FL, and Au Sable River FL
 
@@ -100,14 +83,14 @@ fig1
 #        width = 8,
 #        height = 6)
 
-fig2 <- ggplot(data_together, aes(x = NHD_STREAMORDE, y = mean_k, fill = NHD_STREAMORDE)) +
-  geom_point(shape = 21, size = 4, alpha = 0.75) +
-  labs(x = "NHD Stream Order",
-       y = "Carrying Capacity (k)") +
-  theme_bw() +
-  theme(legend.position = "none")
-
-fig2
+# fig2 <- ggplot(data_together, aes(x = NHD_STREAMORDE, y = mean_k, fill = NHD_STREAMORDE)) +
+#   geom_point(shape = 21, size = 4, alpha = 0.75) +
+#   labs(x = "NHD Stream Order",
+#        y = "Carrying Capacity (k)") +
+#   theme_bw() +
+#   theme(legend.position = "none")
+# 
+# fig2
 
 # outlier is again Reedy Creek FL
 
@@ -115,6 +98,194 @@ fig2
 #        filename = "figures/teton_34sites/fig2_k_strord.jpg",
 #        width = 8,
 #        height = 6)
+
+# After updating the code on Aug 12, here are some additional figures.
+# First, a quick pairs plot.
+fig_pairs <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  select(r_mean, k_mean, s_mean, c_mean, NHD_STREAMORDE) %>%
+  pairs()
+
+# Now, to plot the growth parameters.
+fig3a <- ggplot(data_together, aes(x = r_mean, y = k_mean, 
+                                  fill = site_name, label = site_name)) +
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Maximum Growth Rate (r)",
+       y = "Carrying Capacity (K)",
+       title = "Full Dataset") +
+  geom_text_repel(size=3) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig3a
+
+# Removing negative r and K values.
+fig3b <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = r_mean, y = k_mean, 
+             fill = site_name, label = site_name)) +
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Maximum Growth Rate (r)",
+       y = "Carrying Capacity (K)",
+       title = "Negative Values Removed") +
+  geom_text_repel(size=3) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig3b
+
+# Panel by stream order with negative growth parameters removed
+fig3c <- data_together %>%
+    filter(r_mean > 0) %>%
+    filter(k_mean > 0) %>%
+    ggplot(aes(x = r_mean, y = k_mean, fill = site_name)) +
+    geom_point(shape = 21, size = 4, alpha = 0.75) +
+    labs(x = "Maximum Growth Rate (r)",
+         y = "Carrying Capacity (K)",
+         title = "Paneled by Stream Order - Negative Values Removed") +
+    facet_wrap(~NHD_STREAMORDE, scales = "free", ncol = 4)+
+    #geom_text_repel(size=3) +
+    theme_bw() +
+    theme(legend.position = "none")
+
+fig3c
+
+# creating composite figure for export
+full_fig3 <- (fig3a + fig3b) / fig3c 
+
+full_fig3
+
+# ggsave(full_fig3,
+#        filename = "figures/teton_34sites/k_vs_r.jpg",
+#        width = 8,
+#        height = 8)
+
+# and exploring disturbance metrics
+fig4a <- ggplot(data_together, aes(x = c_mean, y = s_mean, 
+                                   fill = site_name, label = site_name)) +
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Steepness of Persistence Curve (s)",
+       title = "Full Dataset") +
+  geom_text_repel(size=3) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig4a
+
+# Removing negative r and K values.
+fig4b <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = c_mean, y = s_mean, 
+             fill = site_name, label = site_name)) +
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Steepness of Persistence Curve (s)",
+       title = "Negative Values Removed") +
+  geom_text_repel(size=3) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig4b
+
+# Panel by stream order with negative growth parameters removed
+fig4c <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = c_mean, y = s_mean, fill = site_name)) +
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Steepness of Persistence Curve (s)",
+       title = "Paneled by Stream Order - Negative Values Removed") +
+  facet_wrap(~NHD_STREAMORDE, scales = "free", ncol = 4)+
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig4c
+
+# creating composite figure for export
+full_fig4 <- (fig4a + fig4b) / fig4c 
+
+full_fig4
+
+# ggsave(full_fig4,
+#        filename = "figures/teton_34sites/s_vs_c.jpg",
+#        width = 8,
+#        height = 8)
+
+# Now, to compare growth and disturbance parameters
+# r vs. c
+fig5a <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = c_mean, y = r_mean, 
+             fill = site_name)) +
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Maximum Growth Rate (r)",
+       title = "Negative r & K Values Removed from All") +
+  #geom_text_repel(size=3) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig5a
+
+# r vs. s
+fig5b <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = s_mean, y = r_mean, 
+             fill = site_name)) +
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Steepness of Persistence Curve (s)",
+       y = "Maximum Growth Rate (r)") +
+  #geom_text_repel(size=3) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig5b
+
+# k vs. c
+fig5c <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = c_mean, y = k_mean, 
+             fill = site_name)) +
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Carrying Capacity (K)") +
+  #geom_text_repel(size=3) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig5c
+
+# k vs. s
+fig5d <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = s_mean, y = k_mean, 
+             fill = site_name)) +
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Steepness of Persistence Curve (s)",
+       y = "Carrying Capacity (K)") +
+  #geom_text_repel(size=3) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig5d
+
+full_fig5 <- (fig5a + fig5b) / (fig5c + fig5d)
+
+full_fig5
+
+# ggsave(full_fig5,
+#        filename = "figures/teton_34sites/rk_vs_cs.jpg",
+#        width = 8,
+#        height = 8)
 
 ###################################################
 ## Check other covariate data quality
