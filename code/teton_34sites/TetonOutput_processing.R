@@ -62,6 +62,9 @@ data_means <- data_out_params_df %>%
 # And now to bind the values with site attributes.
 data_together <- left_join(data_means, data_info, by = "site_name")
 
+# Export dataset
+saveRDS(data_together, file = "data_working/teton_34rivers_model_parameters_090821.rds")
+
 ##############################
 ##          Figures         ##
 ##############################
@@ -376,5 +379,54 @@ plotting_covar(data_in$nwis_02266200)
 
 # And now map this to the entire data_in list.
 map(data_in, plotting_covar)
+
+###################################################
+## Check other model diagnostics
+###################################################
+
+# Using rstan documentation found at:
+# https://mc-stan.org/rstan/articles/stanfit_objects.html
+
+# Obtain summary statistics for a single site
+test_summary <- summary(data_out$nwis_01608500)
+
+# In $summary, results for all chains are merged
+print(test_summary$summary)
+# se_mean = Monte Carlo standard error
+# n_eff = effective sample size
+# Rhat = R-hat statistic
+
+# Obtain summary statistics for a single site for particular parameters
+# Essentially combining top two steps into a single one
+test_summary2 <- summary(data_out$nwis_01608500, 
+                         pars = c("r","lambda","s","c"))$summary
+
+# Need to move rownames to their own column
+test_summary3 <- as.data.frame(test_summary2) %>%
+  rownames_to_column("parameter")
+
+# Ok, so this is working, now I need to iterate over all sites
+# and combine model diagnostics for r, lambda, s, and c
+
+# Using a similar workflow as above:
+# Going to create a function of the above to pull out summaries from all sites
+extract_summary <- function(x){
+  df <- x
+  df1 <- summary(df,
+          pars = c("r", "lambda", "s", "c"))$summary
+  as.data.frame(df1) %>% rownames_to_column("parameter")
+}
+
+# And now map this to the entire output list.
+data_out_summary <- map(data_out, extract_summary)
+
+# And create a dataframe
+data_out_summary_df <- map_df(data_out_summary, ~as.data.frame(.x), .id="site_name")
+
+# And now to bind the values with site attributes.
+data_summary_siteinfo <- left_join(data_out_summary_df, data_info, by = "site_name")
+
+# Export dataset
+saveRDS(data_summary_siteinfo, file = "data_working/teton_34rivers_model_diagnostics_090821.rds")
 
 # End of script.
