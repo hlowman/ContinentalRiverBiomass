@@ -1,0 +1,65 @@
+---
+title: "Productivity Modeling - Initial Results"
+author: "Heili Lowman, Joanna Blaszczak"
+date: "9/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Continental Stream Productivity Modeling
+
+The following document walks through the initial results of applying the Ricker primary productivity model developed by Blaszczak et al. to stream sites across the continental United States.
+
+If you would like to be added to the GitHub repository that currently houses the below code, please contact Heili at hlowman *at* unr.edu. Everyone is welcome to join the repo as a collaborator!
+
+Data was combined from the following sources:
+
+- x
+- y
+- z
+
+We then applied the following rules to filter the available data:
+
+- x
+- y
+- z
+
+From the initial 356 river sites, there remains 34 sites and 140 site-years of data.
+
+```{r map, fig.align = "center", fig.cap = "Fig. 1. Summary statistics and a map of the United States with locations of all stream sites included in final dataset fit to Ricker model.", echo = FALSE}
+
+# insert UPDATED site map + histograms with available data here
+knitr::include_graphics(here::here("figures", "full_fig2.png"))
+
+```
+
+Figures of all available covariates (by site-year) as well as the full set of model diagnostics are available at this shiny app address - INSERT SHINY HTML LINK HERE.
+
+However, for today's meeting, I have assembled a few overview figures examining initial relationships between model parameter values and stream order.
+
+Fig 2 - s vs c
+
+Fig 3 - k vs r
+
+Fig 4 - rk vs cs
+
+Fig 5 - r vs order
+
+Fig 6 - k vs order
+
+#### Next Steps
+
+We intend to re-fit the model parsing out each site year, so that we may also investigate temporal trends.
+
+#### Questions for You:
+
+(1) What should the longest permissible gap in data be? It is currently set to 14 days.
+
+(2) Should we explore the feasibility of estimating missing data? Or do you imagine reviewers might respond poorly to estimated values used to fit the model (a sort-of dual-layered estimation), even if model fit is improved by the estimation of missing data?
+
+(3) What is the value of fitting the model to full time-series (e.g., if there are 7 years of data available at a given site) compared to fitting the model to singular site years (e.g., performing the temporal comparisons mentioned in the next steps)?
+
+End of RMarkdown document.
