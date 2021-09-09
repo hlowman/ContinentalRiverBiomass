@@ -37,7 +37,7 @@ knitr::include_graphics(here::here("figures", "teton_34sites", "map_fig_34sites.
 
 ```
 
-Figures of all available covariates (by site-year) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located HERE. Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order.
+Figures of all available covariates (by site-year) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order.
 
 ```{r fig2, fig.align = "center", fig.cap = "Fig. 2. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order as well as (C) mean maximum growth rates plotted against mean carrying capacities.", echo = FALSE}
 
