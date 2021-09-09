@@ -7,15 +7,13 @@
 # earlier this week.
 
 # Load packages
-lapply(c("plyr","dplyr","ggplot2","cowplot",
+lapply(c("calecopal", "cowplot",
          "lubridate","tidyverse", "reshape2",
          "PerformanceAnalytics","jpeg","grid",
          "rstan","bayesplot","shinystan", "here",
          "ggrepel", "patchwork"), require, character.only=T)
 
-##############################
-## Data Import & Processing ##
-##############################
+#### Data Import & Processing ####
 
 # Load dataset loaded into Teton.
 data_in <- readRDS("data_working/df_34sites.rds")
@@ -38,17 +36,18 @@ test_params <- extract(data_out$nwis_01608500, c("r","lambda","s","c",
 
 # Going to create a function of the above to pull out data of interest from
 # all sites.
-extract_params <- function(x){
-  df <- x
+extract_params <- function(df){
   extract(df, c("r","lambda","s","c"))
 }
 
 # And now map this to the entire output list.
 data_out_params <- map(data_out, extract_params)
+# the above line of code sometimes doesn't play nicely if R has been up and running
+# for awhile, so the fix is to exit RStudio and reopen the project/file
 
 # And create a dataframe
 data_out_params_df <- map_df(data_out_params, ~as.data.frame(.x), .id="site_name") %>%
-  # and add "K" to it.
+  # and add "K" to it, calculating for each individual iteration
   mutate(k = (-1*r)/lambda)
 
 # And now to calculate means by site.
@@ -65,21 +64,23 @@ data_together <- left_join(data_means, data_info, by = "site_name")
 # Export dataset
 saveRDS(data_together, file = "data_working/teton_34rivers_model_parameters_090821.rds")
 
-##############################
-##          Figures         ##
-##############################
+####      Figures         ####
+
+#### Max Growth Rate / Carrying Capacity ####
 
 # Basic plot of r values vs. stream order.
 fig1 <- data_together %>%
   filter(r_mean > 0) %>%
   filter(k_mean > 0) %>%
   mutate(so = factor(NHD_STREAMORDE)) %>%
-  ggplot(aes(x = so, y = r_mean, fill = NHD_STREAMORDE)) +
+  ggplot(aes(x = so, y = r_mean, fill = so)) +
+  scale_fill_manual(values = cal_palette("sbchannel", n = 7, type = "continuous")) + # custom colors
   geom_boxplot(alpha = 0.75) +
+  geom_jitter(color = "black", alpha = 0.5, width = 0.1) +
   labs(x = "NHD Stream Order",
        y = "Maximum Growth Rate (r)") +
   theme_bw() +
-  theme(legend.position = "none")
+  theme(text = element_text(size=20), legend.position = "none")
 
 fig1
 
@@ -92,12 +93,14 @@ fig2 <- data_together %>%
   filter(r_mean > 0) %>%
   filter(k_mean > 0) %>%
   mutate(so = factor(NHD_STREAMORDE)) %>%
-  ggplot(aes(x = so, y = k_mean, fill = NHD_STREAMORDE)) +
+  ggplot(aes(x = so, y = k_mean, fill = so)) +
+  scale_fill_manual(values = cal_palette("sbchannel", n = 7, type = "continuous")) + # custom colors
   geom_boxplot(alpha = 0.75) +
+  geom_jitter(color = "black", alpha = 0.5, width = 0.1) +
   labs(x = "NHD Stream Order",
-       y = "Carrying Capacity (k)") +
+       y = "Carrying Capacity (K)") +
   theme_bw() +
-  theme(legend.position = "none")
+  theme(text = element_text(size=20), legend.position = "none")
 
 fig2
 
@@ -107,6 +110,7 @@ fig2
 #        height = 6)
 
 # After updating the code on Aug 12, here are some additional figures.
+# Made additional edits to the code below for rmarkdown figure creation, 9/9/21.
 # First, a quick pairs plot.
 fig_pairs <- data_together %>%
   filter(r_mean > 0) %>%
@@ -133,15 +137,26 @@ fig3b <- data_together %>%
   filter(k_mean > 0) %>%
   ggplot(aes(x = r_mean, y = k_mean, 
              fill = site_name, label = site_name)) +
-  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) + # custom colors
   labs(x = "Maximum Growth Rate (r)",
-       y = "Carrying Capacity (K)",
-       title = "Negative Values Removed") +
-  geom_text_repel(size=3) +
+       y = "Carrying Capacity (K)") +
+  geom_text_repel(data = subset(data_together, r_mean > 0.2 | k_mean > 15), size = 4) +
   theme_bw() +
-  theme(legend.position = "none")
+  theme(text = element_text(size=20), legend.position = "none")
 
 fig3b
+
+# Create single figure of r, k, and stream order figures:
+fig1_full <- fig1 + fig2 + fig3b +
+  plot_annotation(tag_levels = 'A')
+
+fig1_full
+
+# ggsave(plot = fig1_full,
+#        filename = "figures/teton_34sites/r_k_paneled.jpg",
+#        width = 15,
+#        height = 5)
 
 # Panel by stream order with negative growth parameters removed
 fig3c <- data_together %>%
@@ -169,6 +184,8 @@ full_fig3
 #        width = 8,
 #        height = 8)
 
+#### Critical Discharge / Steepness of Persistence Curve ####
+
 # and exploring disturbance metrics
 fig4a <- ggplot(data_together, aes(x = c_mean, y = s_mean, 
                                    fill = site_name, label = site_name)) +
@@ -188,13 +205,13 @@ fig4b <- data_together %>%
   filter(k_mean > 0) %>%
   ggplot(aes(x = c_mean, y = s_mean, 
              fill = site_name, label = site_name)) +
-  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
   labs(x = "Critical Discharge (c)",
-       y = "Steepness of Persistence Curve (s)",
-       title = "Negative Values Removed") +
-  geom_text_repel(size=3) +
+       y = "Steepness of Persistence Curve (s)") +
+  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) + # custom colors
+  geom_text_repel(data = subset(data_together, c_mean < 0.25 & s_mean > 250), size = 4) +
   theme_bw() +
-  theme(legend.position = "none")
+  theme(text = element_text(size=20), legend.position = "none")
 
 fig4b
 
@@ -213,15 +230,52 @@ fig4c <- data_together %>%
 
 fig4c
 
+# Creating some boxplots for s and c as well
+
+# Basic plot of s values vs. stream order.
+fig2.1 <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  mutate(so = factor(NHD_STREAMORDE)) %>%
+  ggplot(aes(x = so, y = s_mean, fill = so)) +
+  scale_fill_manual(values = cal_palette("sbchannel", n = 7, type = "continuous")) + # custom colors
+  geom_boxplot(alpha = 0.75) +
+  geom_jitter(color = "black", alpha = 0.5, width = 0.1) +
+  labs(x = "NHD Stream Order",
+       y = "Steepness of Persistence Curve (s)") +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+
+fig2.1
+
+# Basic plot of c values vs. stream order.
+fig2.2 <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  mutate(so = factor(NHD_STREAMORDE)) %>%
+  ggplot(aes(x = so, y = c_mean, fill = so)) +
+  scale_fill_manual(values = cal_palette("sbchannel", n = 7, type = "continuous")) + # custom colors
+  geom_boxplot(alpha = 0.75) +
+  geom_jitter(color = "black", alpha = 0.5, width = 0.1) +
+  labs(x = "NHD Stream Order",
+       y = "Critical Discharge (c)") +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+
+fig2.2
+
 # creating composite figure for export
-full_fig4 <- (fig4a + fig4b) / fig4c 
+fig2_full <- fig2.1 + fig2.2 + fig4b +
+  plot_annotation(tag_levels = 'A')
 
-full_fig4
+fig2_full
 
-# ggsave(full_fig4,
-#        filename = "figures/teton_34sites/s_vs_c.jpg",
-#        width = 8,
-#        height = 8)
+# ggsave(fig2_full,
+#        filename = "figures/teton_34sites/s_c_paneled.jpg",
+#        width = 15,
+#        height = 5)
+
+#### All Parameter Comparisons ####
 
 # Now, to compare growth and disturbance parameters
 # r vs. c
@@ -229,14 +283,14 @@ fig5a <- data_together %>%
   filter(r_mean > 0) %>%
   filter(k_mean > 0) %>%
   ggplot(aes(x = c_mean, y = r_mean, 
-             fill = site_name)) +
-  geom_point(shape = 21, size = 4, alpha = 0.75) +
+             fill = site_name, label = site_name)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) + # custom colors
   labs(x = "Critical Discharge (c)",
-       y = "Maximum Growth Rate (r)",
-       title = "Negative r & K Values Removed from All") +
-  #geom_text_repel(size=3) +
+       y = "Maximum Growth Rate (r)") +
+  geom_text_repel(data = subset(data_together, r_mean > 0.25), size = 4) +
   theme_bw() +
-  theme(legend.position = "none")
+  theme(text = element_text(size=20), legend.position = "none")
 
 fig5a
 
@@ -245,13 +299,14 @@ fig5b <- data_together %>%
   filter(r_mean > 0) %>%
   filter(k_mean > 0) %>%
   ggplot(aes(x = s_mean, y = r_mean, 
-             fill = site_name)) +
-  geom_point(shape = 21, size = 4, alpha = 0.75) +
+             fill = site_name, label = site_name)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
   labs(x = "Steepness of Persistence Curve (s)",
        y = "Maximum Growth Rate (r)") +
-  #geom_text_repel(size=3) +
+  geom_text_repel(data = subset(data_together, r_mean > 0.3 | s_mean > 300), size = 4) +
   theme_bw() +
-  theme(legend.position = "none")
+  theme(text = element_text(size=20), legend.position = "none")
 
 fig5b
 
@@ -260,13 +315,14 @@ fig5c <- data_together %>%
   filter(r_mean > 0) %>%
   filter(k_mean > 0) %>%
   ggplot(aes(x = c_mean, y = k_mean, 
-             fill = site_name)) +
-  geom_point(shape = 21, size = 4, alpha = 0.75) +
+             fill = site_name, label = site_name)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
   labs(x = "Critical Discharge (c)",
        y = "Carrying Capacity (K)") +
-  #geom_text_repel(size=3) +
+  geom_text_repel(data = subset(data_together, k_mean > 30), size = 4) +
   theme_bw() +
-  theme(legend.position = "none")
+  theme(text = element_text(size=20), legend.position = "none")
 
 fig5c
 
@@ -275,28 +331,28 @@ fig5d <- data_together %>%
   filter(r_mean > 0) %>%
   filter(k_mean > 0) %>%
   ggplot(aes(x = s_mean, y = k_mean, 
-             fill = site_name)) +
-  geom_point(shape = 21, size = 4, alpha = 0.75) +
+             fill = site_name, label = site_name)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
   labs(x = "Steepness of Persistence Curve (s)",
        y = "Carrying Capacity (K)") +
-  #geom_text_repel(size=3) +
+  geom_text_repel(data = subset(data_together, k_mean > 30 | s_mean > 300), size = 4) +
   theme_bw() +
-  theme(legend.position = "none")
+  theme(text = element_text(size=20), legend.position = "none")
 
 fig5d
 
-full_fig5 <- (fig5a + fig5b) / (fig5c + fig5d)
+full_fig5 <- (fig5a + fig5b) / (fig5c + fig5d) +
+  plot_annotation(tag_levels = 'A')
 
 full_fig5
 
 # ggsave(full_fig5,
 #        filename = "figures/teton_34sites/rk_vs_cs.jpg",
-#        width = 8,
-#        height = 8)
+#        width = 10,
+#        height = 10)
 
-###################################################
-## Check other covariate data quality
-###################################################
+#### Covariate data quality ####
 
 plotting_covar <- function(x) {
   
@@ -380,9 +436,7 @@ plotting_covar(data_in$nwis_02266200)
 # And now map this to the entire data_in list.
 map(data_in, plotting_covar)
 
-###################################################
-## Check other model diagnostics
-###################################################
+#### Check model diagnostics ####
 
 # Using rstan documentation found at:
 # https://mc-stan.org/rstan/articles/stanfit_objects.html

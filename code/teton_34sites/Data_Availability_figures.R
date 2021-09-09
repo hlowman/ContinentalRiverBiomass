@@ -130,11 +130,11 @@ full_fig <- (storder | styears) /
 
 full_fig
 
-ggsave(("figures/teton_34sites/map_fig_34sites.png"),
-       width = 16,
-       height = 19,
-       units = "cm"
-)
+# ggsave(("figures/teton_34sites/map_fig_34sites.png"),
+#        width = 16,
+#        height = 19,
+#        units = "cm"
+# )
 
 
 # Gap Investigation -------------------------------------------------------

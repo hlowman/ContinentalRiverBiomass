@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 The following document walks through the initial results of applying the Ricker primary productivity model initially developed by Blaszczak et al. to stream sites across the continental United States.
 
-*Note: If you would like to be added to the GitHub repository that currently houses the below code, please contact Heili at hlowman *at* unr.edu. Everyone is welcome to join the repo as a collaborator!*
+*Note: If you would like to be added to the GitHub repository that currently houses the below code, please contact Heili at hlowman at unr.edu. Everyone is welcome to join the repo as a collaborator!*
 
 Data was combined from the following sources:
 
@@ -31,24 +31,32 @@ We then applied the following rules to filter the available data:
 
 From the initial 356 river sites in the Appling dataset, our filtered dataset consists of **34 sites** and **135 site-years** of data.
 
-```{r map, fig.align = "center", fig.cap = "Fig. 1. Summary statistics of (A) stream order and (B) years of data above (C) a map of the United States with locations of all stream sites included in the dataset.", out.width = "50%", echo = FALSE}
+```{r fig1, fig.align = "center", fig.cap = "Fig. 1. Summary statistics of (A) stream order and (B) years of data above (C) a map of the United States with locations of all stream sites included in the dataset.", out.width = "50%", echo = FALSE}
 
-# insert UPDATED site map + histograms with available data here
 knitr::include_graphics(here::here("figures", "teton_34sites", "map_fig_34sites.png"))
 
 ```
 
-Figures of all available covariates (by site-year) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located HERE. Below are a few overview figures examining initial relationships between model parameter values and stream order.
+Figures of all available covariates (by site-year) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located HERE. Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order.
 
-Fig 2 - s vs c
+```{r fig2, fig.align = "center", fig.cap = "Fig. 2. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order as well as (C) mean maximum growth rates plotted against mean carrying capacities.", echo = FALSE}
 
-Fig 3 - k vs r
+knitr::include_graphics(here::here("figures", "teton_34sites", "r_k_paneled.jpg"))
 
-Fig 4 - rk vs cs
+```
 
-Fig 5 - r vs order
 
-Fig 6 - k vs order
+```{r fig3, fig.align = "center", fig.cap = "Fig. 3. Boxplots of (A) mean steepness of persistence curves (s) and (B) mean critical discharge (c) for individual sites grouped by stream order as well as (C) mean steepness of persistence curves plotted against mean critical discharges.", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_34sites", "s_c_paneled.jpg"))
+
+```
+
+```{r fig4, fig.align = "center", fig.cap = "Fig. 4. Productivity-related parameters (r, K) plotted against disturbance-related parameters (s, c).", out.width = "75%", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_34sites", "rk_vs_cs.jpg"))
+
+```
 
 *Next Steps:* Following this meeting, we intend to re-fit the model parsing out each site year, so that we may also investigate temporal trends.
 
