@@ -1,0 +1,11 @@
+name: shiny
+title:
+username:
+account: hlowman
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4624558
+bundleId: 5017566
+url: https://hlowman.shinyapps.io/shiny/
+when: 1631228813.27925
+lastSyncTime: 1631228813.27925

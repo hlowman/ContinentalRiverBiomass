@@ -13,7 +13,7 @@ library(here)
 # All data will be pulled from this project.
 
 # Dataset of available sites/years.
-dat <- readRDS(here("data_working/teton_34rivers_sitesyrsgpp.rds")) %>%
+dat <- readRDS("teton_34rivers_sitesyrsgpp.rds") %>%
   select(site_name, yearf)
 
 #### UI ####
@@ -41,7 +41,7 @@ ui <- fluidPage(
                                      htmlOutput("secondSelection"))), # year dropdown
                        hr(),
                        column(width = 12,
-                       imageOutput("covplot",  width = "2%", height = "auto"))),
+                       imageOutput("covplot"))),
               
               # Tab 2: Table Display of Model Output
               tabPanel(h4("Summarized Model Results & Diagnostics")))
@@ -70,7 +70,7 @@ server <- function(input, output){
   
   output$covplot <- renderImage({
     
-    filename <- normalizePath(here("figures/teton_34sites/site_covariate_plots",
+    filename <- normalizePath(file.path("site_covariate_plots",
                                         paste(input$select_site, 
                                               input$select_year, 
                                               'covar.jpg', sep='_')))
@@ -91,5 +91,9 @@ shinyApp(ui = ui, server = server)
 # https://shiny.rstudio.com/gallery/widget-gallery.html
 # http://shinyapps.dreamrs.fr/shinyWidgets/
 # https://shiny.rstudio.com/gallery/#user-showcase
+
+# To deploy, use the following code:
+# deployApp(here("code/teton_34sites/shiny"))
+# ... so that I don't deploy the whole project.
 
 # End of script.
