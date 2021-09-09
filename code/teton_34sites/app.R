@@ -39,7 +39,8 @@ ui <- fluidPage(
                               
                               column(width = 3,
                                      htmlOutput("secondSelection"))), # year dropdown
-                       hr()),
+                       hr(),
+                       plotOutput("covplot")),
               
               # Tab 2: Table Display of Model Output
               tabPanel(h4("Summarized Model Results & Diagnostics")))
@@ -50,7 +51,7 @@ ui <- fluidPage(
 # Server:
 server <- function(input, output){
   
-  #Create dependent dropdown menu:
+  # Create dependent dropdown menu:
   
   output$secondSelection <- renderUI({
     
@@ -63,6 +64,20 @@ server <- function(input, output){
     selectInput(inputId ="select_year", 
                 label = h3("Select year:"), # site dropdown
                 choices = unique(dat_new$yearf_new))})
+  
+  # Spit out the appropriate figure
+  
+  output$covplot <- renderImage({
+    
+    filename <- normalizePath(here("figures/teton_34sites/site_covariate_plots",
+                                        paste(input$select_site, 
+                                              input$select_year, 
+                                              'covar.jpg', sep='_')))
+    
+    # Return a list containing the filename and alt text
+    list(src = filename)
+    
+  }, deleteFile = FALSE)
   
 }
 
