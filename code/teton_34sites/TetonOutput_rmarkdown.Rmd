@@ -52,7 +52,7 @@ knitr::include_graphics(here::here("figures", "teton_34sites", "s_c_paneled.jpg"
 
 ```
 
-```{r fig4, fig.align = "center", fig.cap = "Fig. 4. Productivity-related parameters (r, K) plotted against disturbance-related parameters (s, c).", out.width = "75%", echo = FALSE}
+```{r fig4, fig.align = "center", fig.cap = "Fig. 4. Productivity-related parameters (r, K) plotted against disturbance-related parameters (c, s).", out.width = "75%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_34sites", "rk_vs_cs.jpg"))
 

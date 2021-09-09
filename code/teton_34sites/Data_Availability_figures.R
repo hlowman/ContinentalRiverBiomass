@@ -106,6 +106,9 @@ main3 <- main %>%
   summarize(meanGPP = mean(GPP)) %>%
   ungroup()
 
+# Export for shiny app use:
+saveRDS(main3, "data_working/teton_34rivers_sitesyrsgpp.rds")
+
 # Count number of years (observations) per site
 main4 <- main3 %>%
   count(site_name) %>%
