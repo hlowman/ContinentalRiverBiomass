@@ -40,7 +40,8 @@ ui <- fluidPage(
                               column(width = 3,
                                      htmlOutput("secondSelection"))), # year dropdown
                        hr(),
-                       plotOutput("covplot")),
+                       column(width = 12,
+                       imageOutput("covplot",  width = "2%", height = "auto"))),
               
               # Tab 2: Table Display of Model Output
               tabPanel(h4("Summarized Model Results & Diagnostics")))
@@ -75,7 +76,9 @@ server <- function(input, output){
                                               'covar.jpg', sep='_')))
     
     # Return a list containing the filename and alt text
-    list(src = filename)
+    list(src = filename,
+         width = "600",
+         height = "600")
     
   }, deleteFile = FALSE)
   
