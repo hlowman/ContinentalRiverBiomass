@@ -141,7 +141,7 @@ fig3b <- data_together %>%
   scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) + # custom colors
   labs(x = "Maximum Growth Rate (r)",
        y = "Carrying Capacity (K)") +
-  geom_text_repel(data = subset(data_together, r_mean > 0.2 | k_mean > 15), size = 4) +
+  geom_text_repel(data = subset(data_together, r_mean > 0.4), size = 4) +
   theme_bw() +
   theme(text = element_text(size=20), legend.position = "none")
 
@@ -288,7 +288,7 @@ fig5a <- data_together %>%
   scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) + # custom colors
   labs(x = "Critical Discharge (c)",
        y = "Maximum Growth Rate (r)") +
-  geom_text_repel(data = subset(data_together, r_mean > 0.25), size = 4) +
+  geom_text_repel(data = subset(data_together, r_mean > 0.3), size = 4) +
   theme_bw() +
   theme(text = element_text(size=20), legend.position = "none")
 
