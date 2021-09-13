@@ -47,7 +47,7 @@ Outliers in the following figures may include:
      
 - Little Muskegon River (Oak Grove, MI), nwis 04121944
      - GPP does not always appear to respond to high discharge events.
-     - Data skips from 2011 to 2015.
+     - Data skips from 2011 to 2015, and timing of dataset does not always correspond with Jan through Dec.
      
 - Santa Margarita River (Temecula, CA), nwis 11044000
      - Discharge is at or near zero nearly the entire year for all 5 years of data available (intermittent/ephemeral?).
