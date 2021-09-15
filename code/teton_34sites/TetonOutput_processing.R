@@ -37,7 +37,7 @@ test_params <- extract(data_out$nwis_01608500, c("r","lambda","s","c",
 # Going to create a function of the above to pull out data of interest from
 # all sites.
 extract_params <- function(df){
-  extract(df, c("r","lambda","s","c"))
+  extract(df, c("r","lambda","s","c","sig_p","sig_o"))
 }
 
 # And now map this to the entire output list.
@@ -56,7 +56,9 @@ data_means <- data_out_params_df %>%
   summarize(r_mean = mean(r),
             k_mean = mean(k),
             s_mean = mean(s),
-            c_mean = mean(c))
+            c_mean = mean(c),
+            sigp_mean = mean(sig_p),
+            sigo_mean = mean(sig_o))
 
 # And now to bind the values with site attributes.
 data_together <- left_join(data_means, data_info, by = "site_name")
