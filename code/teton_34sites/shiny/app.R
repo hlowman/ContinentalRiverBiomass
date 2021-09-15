@@ -16,6 +16,9 @@ library(here)
 dat <- readRDS("teton_34rivers_sitesyrsgpp.rds") %>%
   select(site_name, yearf)
 
+# Model diagnostics dataset
+model_dat <- readRDS("teton_34rivers_model_diagnostics_090821.rds")
+
 #### UI ####
 
 # User interface:
@@ -29,7 +32,9 @@ ui <- fluidPage(
               # Tab 1: Covariate Figures
               tabPanel(h4("Sampling Site Covariate Figures"),
                        br(),
-                       p("This application allows you to sort through the available stream sites and display the original covariate data used to fit the Ricker model. You may use the drop down menu to select your site of interest, and the corresponding covariate figures should populate below, with one figure per year of data available."),
+                       p("This part of the application allows you to sort through the available stream sites and display the original covariate data used to fit the Ricker model."),
+                       br(),
+                       p("You may use the drop down menu to select your site of interest, and the corresponding covariate figures should populate below, with one figure per year of data available."),
                        br(),
                        column(width = 12,
                               
@@ -44,7 +49,19 @@ ui <- fluidPage(
                        imageOutput("covplot"))),
               
               # Tab 2: Table Display of Model Output
-              tabPanel(h4("Summarized Model Results & Diagnostics")))
+              tabPanel(h4("Summarized Model Results & Diagnostics"),
+                       br(),
+                       p("This part of the application allows you to view the model results of fitting the Ricker model to the dataset."),
+                       br(),
+                       p("You may toggle through the column headers to sort in an ascending/descending manner, or you may used the 'Search' bar to search for a particular site."),
+                       br(),
+                       fluidRow(
+                         column(width = 12,
+                                dataTableOutput('table')
+                         )
+                       )
+                       )
+              )
 )
 
 #### Server ####
@@ -81,6 +98,10 @@ server <- function(input, output){
          height = "600")
     
   }, deleteFile = FALSE)
+  
+  # Display model diagnostics
+  
+  output$table <- renderDataTable(model_dat)
   
 }
 

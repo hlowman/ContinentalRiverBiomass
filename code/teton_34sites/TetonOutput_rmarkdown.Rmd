@@ -44,13 +44,16 @@ Outliers in the following figures may include:
 - Pecos River (Pandale, TX), nwis 08447300
      - Few high discharge events per year.
      - Data available only in 2012 and 2013.
+     - 2,401 divergent transitions.
      
 - Little Muskegon River (Oak Grove, MI), nwis 04121944
      - GPP does not always appear to respond to high discharge events.
      - Data skips from 2011 to 2015, and timing of dataset does not always correspond with Jan through Dec.
+     - No divergent transitions.
      
 - Santa Margarita River (Temecula, CA), nwis 11044000
      - Discharge is at or near zero nearly the entire year for all 5 years of data available (intermittent/ephemeral?).
+     - 41 divergent transitions.
 
 ```{r fig2, fig.align = "center", fig.cap = "Fig. 2. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order as well as (C) mean maximum growth rates plotted against mean carrying capacities.", echo = FALSE}
 
@@ -88,4 +91,5 @@ Maximum growth rate (r) decreases with increasing critical discharge (c, Figure 
 
 (3) What is the value of fitting the model to full time-series (e.g., if there are 7 years of data available at a given site) compared to fitting the model to singular site years (e.g., performing the temporal comparisons mentioned in the next steps)?
 
-End of RMarkdown document.
+(4) Is there anything else you feel I should consider examining moving forward?
+
