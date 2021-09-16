@@ -66,6 +66,31 @@ data_together <- left_join(data_means, data_info, by = "site_name")
 # Export dataset
 saveRDS(data_together, file = "data_working/teton_34rivers_model_parameters_090821.rds")
 
+# Also, need to extract divergence information from the sites.
+# Code available at : mc-stan.org/users/documentation/case-studies/divergences_and_bias.html
+# Doing this at one site first to make sure it works - note nwis_01608500 has 0 divergences.
+# Note - you need TWO underscores after 'divergent'
+divergent <- get_sampler_params(data_out$nwis_01608500, inc_warmup=FALSE)[[1]][,'divergent__']
+sum(divergent)
+# Yay, it works!!
+
+# Now, to map this to the whole dataset
+extract_divergences <- function(df){
+  divergent <- get_sampler_params(df, inc_warmup=FALSE)[[1]][,'divergent__']
+  sum(divergent)
+}
+
+# And now map this to the entire output list.
+data_out_divs <- map(data_out, extract_divergences)
+# WOOHOO!!
+
+# And create a dataframe
+data_out_divs_df <- map_df(data_out_divs, ~as.data.frame(.x), .id="site_name") %>%
+  rename(divergences = `.x`)
+
+# Export dataset
+saveRDS(data_out_divs_df, file = "data_working/teton_34rivers_model_divergences_091621.rds")
+
 ####      Figures         ####
 
 #### Max Growth Rate / Carrying Capacity ####
@@ -437,6 +462,36 @@ plotting_covar(data_in$nwis_02266200)
 
 # And now map this to the entire data_in list.
 map(data_in, plotting_covar)
+
+#### Divergences ####
+
+# Adding category to make a nicer looking histogram
+data_out_divs_df <- data_out_divs_df %>%
+  mutate(bin_cat = factor(case_when(divergences == 0 ~ "0",
+                             divergences > 0 & divergences <= 10 ~ "0-10",
+                             divergences > 10 & divergences <= 20 ~ "10-20",
+                             divergences > 20 & divergences <= 50 ~ "20-50",
+                             divergences > 50 & divergences <= 100 ~ "50-100",
+                             divergences > 100 & divergences <= 1000 ~ "100-1000",
+                             divergences > 1000 ~ "1000+",
+                             TRUE ~ "NA"),
+         levels = c("0", "0-10", "10-20", "20-50", "50-100", "100-1000", "1000+")))
+
+fig_div <- ggplot(data_out_divs_df, aes(x = bin_cat, fill = bin_cat)) + # base plot
+  geom_histogram(stat = "count") + # divergences histogram
+  scale_fill_manual(values = cal_palette("fire", n = 7, type = "continuous")) + # custom colors
+  labs(x = "Number of Divergences",
+       y = "Site Count") +
+  scale_y_continuous(breaks=seq(0, 10, 1)) + # fix y axis labels
+  theme_classic() + # remove grid
+  theme(legend.position = "none")
+
+fig_div
+
+# DONT USE THIS FIGURE YET - for whatever reason, the 
+# number of divergences on the shinystan app does not
+# match the output of the above function from the mc-stan
+# help document....
 
 #### Check model diagnostics ####
 
