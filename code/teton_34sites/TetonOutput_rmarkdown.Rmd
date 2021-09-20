@@ -15,7 +15,7 @@ The following document walks through the initial results of applying the primary
 
 *Note: If you would like to be added to the GitHub repository that currently houses the below code, please contact Heili at hlowman at unr.edu. Everyone is welcome to join the repo as a collaborator!*
 
-###### Model Structure
+##### Model Structure
 
 Prior to presenting our initial results, I've included the equations used in the modeling efforts below. These three equations combine to create the latent biomass time-series model first described in Blaszczak et al. (*in prep*).
 
@@ -59,7 +59,7 @@ We then applied the following rules to filter the available data:
 - For any GPP values below zero, they were assigned a value between 0.05 and 0.13.
 - For sites that did not have stream light data available from Savoy and Harvey, 2021, light values were set to surface PAR.
 
-From the initial 356 river sites in the Appling dataset, our filtered dataset consists of **34 sites** and **135 site-years** of data (Figure 1).
+From the initial 356 river sites in the Appling dataset, our filtered dataset consists of **34 sites** and **135 site-years** of data (Figure 1). We plan to use the StreamLight model ([Savoy and Harvey, 2021](https://www.sciencebase.gov/catalog/item/5f974adfd34e198cb77db168)) to model additional sites where light data is not currently available.
 
 ```{r fig1, fig.align = "center", fig.cap = "Fig. 1. Summary statistics of (A) stream order and (B) years of data above (C) a map of the United States with locations of all stream sites included in the dataset.", out.width = "50%", echo = FALSE}
 
@@ -95,13 +95,13 @@ knitr::include_graphics(here::here("figures", "teton_34sites", "r_k_paneled.jpg"
 
 Both carrying capacity (K) and maximum growth rate (r) appear to increase with increasing stream order (Figure 2A & B). Furthermore, Blaszczak et al. found greater variation in K than in r, which appears to be true for this larger dataset as well (Figure 2C).
 
-```{r fig3, fig.align = "center", fig.cap = "Fig. 3. Boxplots of (A) mean steepness of persistence curves (s) and (B) mean critical discharge (c) for individual sites grouped by stream order as well as (C) mean steepness of persistence curves plotted against mean critical discharges.", echo = FALSE}
+```{r fig3, fig.align = "center", fig.cap = "Fig. 3. Boxplots of (A) mean sensitivity of persistence curves (s) and (B) mean critical discharge (c) for individual sites grouped by stream order as well as (C) mean sensitivity of persistence curves plotted against mean critical discharges.", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_34sites", "s_c_paneled.jpg"))
 
 ```
 
-As critical discharge (c) increases, the steepness of the persistence curve (s) also appears to increase (Figure 3C).
+As critical discharge (c) increases, the sensitivity of the persistence curve (s) also appears to increase (Figure 3C).
 
 ```{r fig4, fig.align = "center", fig.cap = "Fig. 4. Productivity-related parameters (r, K) plotted against disturbance-related parameters (c, s).", out.width = "75%", echo = FALSE}
 
@@ -109,7 +109,7 @@ knitr::include_graphics(here::here("figures", "teton_34sites", "rk_vs_cs.jpg"))
 
 ```
 
-Maximum growth rate (r) decreases with increasing critical discharge (c, Figure 4A) as well as with increasing steepness of the persistence curve (s, Figure 4B). There was less of a clear trend between carrying capacity and disturbance-related parameters (Figure 4C & D).
+Maximum growth rate (r) decreases with increasing critical discharge (c, Figure 4A) as well as with increasing sensitivity of the persistence curve (s, Figure 4B). There was less of a clear trend between carrying capacity and disturbance-related parameters (Figure 4C & D).
 
 *Next Steps:* Following this meeting, we intend to re-fit the model parsing out each site year, so that we may also investigate temporal trends.
 
