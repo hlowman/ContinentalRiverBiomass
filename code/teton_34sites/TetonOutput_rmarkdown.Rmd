@@ -11,9 +11,39 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Continental Stream Productivity Modeling
 
-The following document walks through the initial results of applying the Ricker primary productivity model initially developed by Blaszczak et al. to stream sites across the continental United States.
+The following document walks through the initial results of applying the primary productivity model initially developed by Blaszczak et al. (*in prep*) to stream sites across the continental United States.
 
 *Note: If you would like to be added to the GitHub repository that currently houses the below code, please contact Heili at hlowman at unr.edu. Everyone is welcome to join the repo as a collaborator!*
+
+###### Model Structure
+
+Prior to presenting our initial results, I've included the equations used in the modeling efforts below. These three equations combine to create the latent biomass time-series model first described in Blaszczak et al. (*in prep*).
+
+The first equation presents daily persistence of autotrophic biomass (P) as a function of discharge (Q), specifically daily mean discharge relative to annual maximum discharge. The remaining terms refer to the sensitivity of the persistence transition from presence to removal of biomass (s) and the critical discharge threshold at which benthic biomass is removed (c).
+
+```{r first eq, fig.align = "center", out.width = "27.5%", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "p_eq.jpg"))
+
+```
+
+The second equation presents a density-dependent growth function for biomass (B) in a given stream, and it is a modified version of a Ricker population model. The equation is evaluated on a daily time step (t) and includes the persistence term (P) presented in the first equation as well as a process error term (ε). The remaining terms refer to the maximum growth rate (r) and the constant, lambda (λ), which is equal to the maximum growth rate divided by the carrying capacity (K).
+
+```{r second eq, fig.align = "center", out.width = "65%", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "b_eq.jpg"))
+
+```
+
+In the third and final equation, gross primary production (g) is again modeled on a daily time step (t) as a function of light availability (L) and biomass (B), presented in the previous equation. This equation also contains an observation error term (ε).
+
+```{r third eq, fig.align = "center", out.width = "30%", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "g_eq.jpg"))
+
+```
+
+##### Data Acquisition
 
 Data was combined from the following sources:
 
@@ -36,6 +66,8 @@ From the initial 356 river sites in the Appling dataset, our filtered dataset co
 knitr::include_graphics(here::here("figures", "teton_34sites", "map_fig_34sites.png"))
 
 ```
+
+##### Initial Results
 
 Figures of all available covariates (by site-year) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order.
 
@@ -81,7 +113,7 @@ Maximum growth rate (r) decreases with increasing critical discharge (c, Figure 
 
 *Next Steps:* Following this meeting, we intend to re-fit the model parsing out each site year, so that we may also investigate temporal trends.
 
-#### Questions for You:
+##### Questions for You:
 
 (1) What should the longest permissible gap in data be? It is currently set to 14 days.
 
