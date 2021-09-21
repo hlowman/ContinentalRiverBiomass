@@ -211,14 +211,14 @@ full_fig3
 #        width = 8,
 #        height = 8)
 
-#### Critical Discharge / Steepness of Persistence Curve ####
+#### Critical Discharge / Sensitivity of Persistence Curve ####
 
 # and exploring disturbance metrics
 fig4a <- ggplot(data_together, aes(x = c_mean, y = s_mean, 
                                    fill = site_name, label = site_name)) +
   geom_point(shape = 21, size = 4, alpha = 0.75) +
   labs(x = "Critical Discharge (c)",
-       y = "Steepness of Persistence Curve (s)",
+       y = "Sensitivity of Persistence Curve (s)",
        title = "Full Dataset") +
   geom_text_repel(size=3) +
   theme_bw() +
@@ -234,7 +234,7 @@ fig4b <- data_together %>%
              fill = site_name, label = site_name)) +
   geom_point(shape = 21, size = 5, alpha = 0.75) +
   labs(x = "Critical Discharge (c)",
-       y = "Steepness of Persistence Curve (s)") +
+       y = "Sensitivity of Persistence Curve (s)") +
   scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) + # custom colors
   geom_text_repel(data = subset(data_together, c_mean < 0.25 & s_mean > 250), size = 4) +
   theme_bw() +
@@ -269,7 +269,7 @@ fig2.1 <- data_together %>%
   geom_boxplot(alpha = 0.75) +
   geom_jitter(color = "black", alpha = 0.5, width = 0.1) +
   labs(x = "NHD Stream Order",
-       y = "Steepness of Persistence Curve (s)") +
+       y = "Sensitivity of Persistence Curve (s)") +
   theme_bw() +
   theme(text = element_text(size=20), legend.position = "none")
 
@@ -329,7 +329,7 @@ fig5b <- data_together %>%
              fill = site_name, label = site_name)) +
   geom_point(shape = 21, size = 5, alpha = 0.75) +
   scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
-  labs(x = "Steepness of Persistence Curve (s)",
+  labs(x = "Sensitivity of Persistence Curve (s)",
        y = "Maximum Growth Rate (r)") +
   geom_text_repel(data = subset(data_together, r_mean > 0.3 | s_mean > 300), size = 4) +
   theme_bw() +
@@ -361,7 +361,7 @@ fig5d <- data_together %>%
              fill = site_name, label = site_name)) +
   geom_point(shape = 21, size = 5, alpha = 0.75) +
   scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
-  labs(x = "Steepness of Persistence Curve (s)",
+  labs(x = "Sensitivity of Persistence Curve (s)",
        y = "Carrying Capacity (K)") +
   geom_text_repel(data = subset(data_together, k_mean > 30 | s_mean > 300), size = 4) +
   theme_bw() +
@@ -376,8 +376,8 @@ full_fig5
 
 # ggsave(full_fig5,
 #        filename = "figures/teton_34sites/rk_vs_cs.jpg",
-#        width = 10,
-#        height = 10)
+#        width = 11,
+#        height = 11)
 
 #### Covariate data quality ####
 

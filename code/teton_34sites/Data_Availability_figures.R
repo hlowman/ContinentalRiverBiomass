@@ -135,7 +135,7 @@ full_fig
 
 # ggsave(("figures/teton_34sites/map_fig_34sites.png"),
 #        width = 16,
-#        height = 19,
+#        height = 20,
 #        units = "cm"
 # )
 
