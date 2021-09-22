@@ -76,16 +76,13 @@ Outliers in the following figures may include:
 - Pecos River (Pandale, TX), nwis 08447300
      - Few high discharge events per year.
      - Data available only in 2012 and 2013.
-     - 2,401 divergent transitions.
      
 - Little Muskegon River (Oak Grove, MI), nwis 04121944
      - GPP does not always appear to respond to high discharge events.
      - Data skips from 2011 to 2015, and timing of dataset does not always correspond with Jan through Dec.
-     - No divergent transitions.
      
 - Santa Margarita River (Temecula, CA), nwis 11044000
      - Discharge is at or near zero nearly the entire year for all 5 years of data available (intermittent/ephemeral?).
-     - 41 divergent transitions.
 
 ```{r fig2, fig.align = "center", fig.cap = "Fig. 2. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order as well as (C) mean maximum growth rates plotted against mean carrying capacities.", echo = FALSE}
 
@@ -109,7 +106,7 @@ knitr::include_graphics(here::here("figures", "teton_34sites", "rk_vs_cs.jpg"))
 
 ```
 
-Maximum growth rate (r) decreases with increasing critical discharge (c, Figure 4A) as well as with increasing sensitivity of the persistence curve (s, Figure 4B). There was less of a clear trend between carrying capacity and disturbance-related parameters (Figure 4C & D).
+Maximum growth rate (r) decreases with increasing critical discharge (c, Figure 4A) as well as with increasing sensitivity of the persistence curve (s, Figure 4B). There was less of a clear trend between carrying capacity (K) and disturbance-related parameters (Figure 4C & D).
 
 *Next Steps:* Following this meeting, we intend to re-fit the model parsing out each site year, so that we may also investigate temporal trends.
 
@@ -125,3 +122,4 @@ Maximum growth rate (r) decreases with increasing critical discharge (c, Figure 
 
 (4) Is there anything else you feel I should consider examining moving forward?
 
+###### End of RMarkdown document.
