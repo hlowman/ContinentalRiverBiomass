@@ -25,7 +25,7 @@ data_out <- readRDS("data_teton/stan_34rivers_output_Ricker_2021_08_03.rds")
 data_info <- readRDS("data_working/NWIS_34sitesinfo_subset.rds")
 
 # Make sure shinystan is working properly by testing at one site.
-launch_shinystan(data_out$nwis_01608500)
+launch_shinystan(data_out$nwis_01632900)
 # It is working! Although I am getting an error message suggesting I trim
 # the data down a bit before launching Shiny STAN.
 
@@ -68,9 +68,9 @@ saveRDS(data_together, file = "data_working/teton_34rivers_model_parameters_0908
 
 # Also, need to extract divergence information from the sites.
 # Code available at : mc-stan.org/users/documentation/case-studies/divergences_and_bias.html
-# Doing this at one site first to make sure it works - note nwis_01608500 has 0 divergences.
+# Doing this at one site first to make sure it works - note nwis_01632900 has 8 divergences.
 # Note - you need TWO underscores after 'divergent'
-divergent <- get_sampler_params(data_out$nwis_01608500, inc_warmup=FALSE)[[1]][,'divergent__']
+divergent <- get_sampler_params(data_out$nwis_01632900, inc_warmup=FALSE)[[1]][,'divergent__']
 sum(divergent)
 # Yay, it works!!
 
@@ -81,6 +81,7 @@ extract_divergences <- function(df){
 }
 
 # And now map this to the entire output list.
+# this function can also be finicky, and require you to quit R and re-load everything back in.
 data_out_divs <- map(data_out, extract_divergences)
 # WOOHOO!!
 
@@ -90,6 +91,14 @@ data_out_divs_df <- map_df(data_out_divs, ~as.data.frame(.x), .id="site_name") %
 
 # Export dataset
 saveRDS(data_out_divs_df, file = "data_working/teton_34rivers_model_divergences_091621.rds")
+
+# Save out two additional datasets for use in the divergences reprex script.
+# Commenting these out, because they ended up being too large to push to GitHub.
+# site1 <- data_out$nwis_01632900
+# saveRDS(site1, file = "code/teton_34sites/div_reprex/output_nwis_01632900.rds")
+# 
+# site2 <- data_out$nwis_01645704
+# saveRDS(site2, file = "code/teton_34sites/div_reprex/output_nwis_01645704.rds")
 
 ####      Figures         ####
 
@@ -487,6 +496,7 @@ fig_div <- ggplot(data_out_divs_df, aes(x = bin_cat, fill = bin_cat)) + # base p
   theme(legend.position = "none")
 
 fig_div
+
 
 # DONT USE THIS FIGURE YET - for whatever reason, the 
 # number of divergences on the shinystan app does not
