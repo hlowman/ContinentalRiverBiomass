@@ -108,6 +108,14 @@ knitr::include_graphics(here::here("figures", "teton_34sites", "rk_vs_cs.jpg"))
 
 Maximum growth rate (r) decreases with increasing critical discharge (c, Figure 4A) as well as with increasing sensitivity of the persistence curve (s, Figure 4B). There was less of a clear trend between carrying capacity (K) and disturbance-related parameters (Figure 4C & D).
 
+```{r fig5, fig.align = "center", fig.cap = "Fig. 5. Divergent transitions for each site plotted against (A) the number of years of available data and (B) the coefficient of variation of discharge at that site.", out.width = "80%", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_34sites", "divergences_paneled.jpg"))
+
+```
+
+Divergent transitions generally decreased with more years of data as well as increased coefficients of variation (suggesting more storm events).
+
 *Next Steps:* Following this meeting, we intend to re-fit the model parsing out each site year, so that we may also investigate temporal trends.
 
 ##### Questions for You:
