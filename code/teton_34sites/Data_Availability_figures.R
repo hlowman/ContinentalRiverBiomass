@@ -114,6 +114,9 @@ main4 <- main3 %>%
   count(site_name) %>%
   mutate(n_f = factor(n))
 
+# Export for rmarkdown use:
+saveRDS(main4, "data_working/teton_34rivers_sitesyears.rds")
+
 styears <- ggplot(main4) + # base plot
   geom_histogram(aes(x = n_f, fill = n_f), stat = "count") + # years data histogram
   scale_fill_manual(values = cal_palette("desert", n = 8, type = "continuous")) + # custom colors

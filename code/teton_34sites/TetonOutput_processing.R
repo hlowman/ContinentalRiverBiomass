@@ -24,8 +24,11 @@ data_out <- readRDS("data_teton/stan_34rivers_output_Ricker_2021_08_03.rds")
 # Load dataset with site information.
 data_info <- readRDS("data_working/NWIS_34sitesinfo_subset.rds")
 
+# Load dataset with years of data coverage at each site.
+data_years <- readRDS("data_working/teton_34rivers_sitesyears.rds")
+
 # Make sure shinystan is working properly by testing at one site.
-launch_shinystan(data_out$nwis_01608500)
+launch_shinystan(data_out$nwis_01632900)
 # It is working! Although I am getting an error message suggesting I trim
 # the data down a bit before launching Shiny STAN.
 
@@ -68,9 +71,9 @@ saveRDS(data_together, file = "data_working/teton_34rivers_model_parameters_0908
 
 # Also, need to extract divergence information from the sites.
 # Code available at : mc-stan.org/users/documentation/case-studies/divergences_and_bias.html
-# Doing this at one site first to make sure it works - note nwis_01608500 has 0 divergences.
+# Doing this at one site first to make sure it works - note nwis_01632900 has 8 divergences.
 # Note - you need TWO underscores after 'divergent'
-divergent <- get_sampler_params(data_out$nwis_01608500, inc_warmup=FALSE)[[1]][,'divergent__']
+divergent <- get_sampler_params(data_out$nwis_01632900, inc_warmup=FALSE)[[1]][,'divergent__']
 sum(divergent)
 # Yay, it works!!
 
@@ -81,6 +84,7 @@ extract_divergences <- function(df){
 }
 
 # And now map this to the entire output list.
+# this function can also be finicky, and require you to quit R and re-load everything back in.
 data_out_divs <- map(data_out, extract_divergences)
 # WOOHOO!!
 
@@ -90,6 +94,17 @@ data_out_divs_df <- map_df(data_out_divs, ~as.data.frame(.x), .id="site_name") %
 
 # Export dataset
 saveRDS(data_out_divs_df, file = "data_working/teton_34rivers_model_divergences_091621.rds")
+
+# Import dataset with divergences from two different methods
+data_out_diff_divs <- read_csv("data_working/divergences_09_21_21.csv")
+
+# Save out two additional datasets for use in the divergences reprex script.
+# Commenting these out, because they ended up being too large to push to GitHub.
+# site1 <- data_out$nwis_01632900
+# saveRDS(site1, file = "code/teton_34sites/div_reprex/output_nwis_01632900.rds")
+# 
+# site2 <- data_out$nwis_01645704
+# saveRDS(site2, file = "code/teton_34sites/div_reprex/output_nwis_01645704.rds")
 
 ####      Figures         ####
 
@@ -465,33 +480,106 @@ map(data_in, plotting_covar)
 
 #### Divergences ####
 
-# Adding category to make a nicer looking histogram
-data_out_divs_df <- data_out_divs_df %>%
-  mutate(bin_cat = factor(case_when(divergences == 0 ~ "0",
-                             divergences > 0 & divergences <= 10 ~ "0-10",
-                             divergences > 10 & divergences <= 20 ~ "10-20",
-                             divergences > 20 & divergences <= 50 ~ "20-50",
-                             divergences > 50 & divergences <= 100 ~ "50-100",
-                             divergences > 100 & divergences <= 1000 ~ "100-1000",
-                             divergences > 1000 ~ "1000+",
-                             TRUE ~ "NA"),
-         levels = c("0", "0-10", "10-20", "20-50", "50-100", "100-1000", "1000+")))
-
-fig_div <- ggplot(data_out_divs_df, aes(x = bin_cat, fill = bin_cat)) + # base plot
-  geom_histogram(stat = "count") + # divergences histogram
-  scale_fill_manual(values = cal_palette("fire", n = 7, type = "continuous")) + # custom colors
-  labs(x = "Number of Divergences",
-       y = "Site Count") +
-  scale_y_continuous(breaks=seq(0, 10, 1)) + # fix y axis labels
-  theme_classic() + # remove grid
-  theme(legend.position = "none")
-
-fig_div
-
+# fig_div <- ggplot(data_out_divs_df, aes(x = bin_cat, fill = bin_cat)) + # base plot
+#   geom_histogram(stat = "count") + # divergences histogram
+#   scale_fill_manual(values = cal_palette("fire", n = 7, type = "continuous")) + # custom colors
+#   labs(x = "Number of Divergences",
+#        y = "Site Count") +
+#   scale_y_continuous(breaks=seq(0, 10, 1)) + # fix y axis labels
+#   theme_classic() + # remove grid
+#   theme(legend.position = "none")
+# 
+# fig_div
 # DONT USE THIS FIGURE YET - for whatever reason, the 
 # number of divergences on the shinystan app does not
 # match the output of the above function from the mc-stan
 # help document....
+
+# For the meeting on 9/27/2021, I will be using the output of shinystan since,
+# it's the larger/more conservative
+
+data_divs_join <- left_join(data_years, data_out_diff_divs, by = "site_name")
+
+# Adding category to make a nicer looking plots
+data_divs_join <- data_divs_join %>%
+  mutate(bin_cat = factor(case_when(div_shinyStan == 0 ~ "0",
+                                    div_shinyStan > 0 & div_shinyStan <= 50 ~ "0-50",
+                                    div_shinyStan > 50 & div_shinyStan <= 100 ~ "50-100",
+                                    div_shinyStan > 100 & div_shinyStan <= 1000 ~ "100-1000",
+                                    div_shinyStan > 1000 & div_shinyStan <= 2500 ~ "1000-2500",
+                                    div_shinyStan > 2500 ~ "2500+",
+                                    TRUE ~ "NA"),
+                          levels = c("0", "0-50", "50-100", "100-1000", "1000-2500", "2500+")))
+
+fig_yrs_divs <- ggplot(data_divs_join,
+                       aes(x = n, y = div_shinyStan, fill = bin_cat, label = site_name)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("fire", n = 6, type = "continuous")) + # custom colors
+  labs(x = "Years of Available Data",
+       y = "Divergent Transitions") +
+  geom_text_repel(data = subset(data_divs_join, n > 5 & div_shinyStan > 2000), size = 4) +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+
+fig_yrs_divs
+
+# Also creating figure of hydrology vs. divergences
+
+# Calculate coefficient of variation (sd/mean) for each site
+test_site <- data_in$nwis_01608500
+test_sd <- sd(test_site$Q)
+test_mean <- mean(test_site$Q)
+test_cv <- test_sd/test_mean
+
+# Now, to create a function...
+calc_coeff_var <- function(df){
+  sd <- sd(df$Q)
+  mean <- mean(df$Q)
+  sd/mean
+}
+
+# And now map this to the entire output list.
+data_cvs <- map(data_in, calc_coeff_var)
+# yipee
+
+# And create a dataframe
+data_cvs_divs <- map_df(data_cvs, ~as.data.frame(.x), .id="site_name") %>%
+  rename(coeff_var = `.x`) %>%
+  left_join(data_out_diff_divs, by = "site_name")
+
+# Adding same categories as above to make a nicer looking plots
+data_cvs_divs <- data_cvs_divs %>%
+  mutate(bin_cat = factor(case_when(div_shinyStan == 0 ~ "0",
+                                    div_shinyStan > 0 & div_shinyStan <= 50 ~ "0-50",
+                                    div_shinyStan > 50 & div_shinyStan <= 100 ~ "50-100",
+                                    div_shinyStan > 100 & div_shinyStan <= 1000 ~ "100-1000",
+                                    div_shinyStan > 1000 & div_shinyStan <= 2500 ~ "1000-2500",
+                                    div_shinyStan > 2500 ~ "2500+",
+                                    TRUE ~ "NA"),
+                          levels = c("0", "0-50", "50-100", "100-1000", "1000-2500", "2500+")))
+
+fig_cv_divs <- ggplot(data_cvs_divs,
+                       aes(x = coeff_var, y = div_shinyStan, fill = bin_cat, label = site_name)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("fire", n = 6, type = "continuous")) + # custom colors
+  labs(x = "Coefficient of Variation in Discharge",
+       y = "Divergent Transitions") +
+  geom_text_repel(data = subset(data_cvs_divs, coeff_var > 3 | div_shinyStan > 3000), size = 4) +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+
+fig_cv_divs
+
+# creating composite figure for export
+fig_div_full <- fig_yrs_divs + fig_cv_divs +
+  plot_annotation(tag_levels = 'A')
+
+fig_div_full
+
+# ggsave(fig_div_full,
+#        filename = "figures/teton_34sites/divergences_paneled.jpg",
+#        width = 12,
+#        height = 5)
 
 #### Check model diagnostics ####
 
@@ -538,6 +626,59 @@ data_out_summary_df <- map_df(data_out_summary, ~as.data.frame(.x), .id="site_na
 data_summary_siteinfo <- left_join(data_out_summary_df, data_info, by = "site_name")
 
 # Export dataset
-saveRDS(data_summary_siteinfo, file = "data_working/teton_34rivers_model_diagnostics_090821.rds")
+#saveRDS(data_summary_siteinfo, file = "data_working/teton_34rivers_model_diagnostics_090821.rds")
+
+# Load in this dataset
+data_summary_siteinfo <- readRDS("data_working/teton_34rivers_model_diagnostics_090821.rds")
+
+# Mimic the s vs. c plot created above, but this time with confidence intervals added.
+# Careful, I am not filtering out negative r and k values here for now (just for a rough
+# estimate of intervals about the mean).
+data_summary_wide <- data_summary_siteinfo %>%
+  filter(parameter == "s" | parameter == "c") %>%
+  select(site_name, parameter, mean, `2.5%`, `97.5%`) %>%
+  pivot_wider(names_from = parameter, values_from = c(mean, `2.5%`, `97.5%`))
+
+fig_sc_ci.1 <- ggplot(data_summary_wide, aes(x = mean_c, y = mean_s, 
+                                   fill = site_name)) + # , label = site_name
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Sensitivity of Persistence Curve (s)") +
+  xlim(0, 3) +
+  ylim(0, 600) +
+  geom_errorbar(aes(ymin = `2.5%_s`,ymax = `97.5%_s`)) + 
+  #geom_errorbarh(aes(xmin = `2.5%_c`,xmax = `97.5%_c`)) +
+  #geom_text_repel(size=3) +
+  scale_fill_manual(values = cal_palette("creek", n = 34, type = "continuous")) + # custom colors
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig_sc_ci.1
+
+fig_sc_ci.2 <- ggplot(data_summary_wide, aes(x = mean_c, y = mean_s, 
+                                             fill = site_name)) + # , label = site_name
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Sensitivity of Persistence Curve (s)") +
+  xlim(0, 3) +
+  ylim(0, 600) +
+  #geom_errorbar(aes(ymin = `2.5%_s`,ymax = `97.5%_s`)) + 
+  geom_errorbarh(aes(xmin = `2.5%_c`,xmax = `97.5%_c`)) +
+  #geom_text_repel(size=3) +
+  scale_fill_manual(values = cal_palette("creek", n = 34, type = "continuous")) + # custom colors
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig_sc_ci.2
+
+fig_sc_ci_full <- fig_sc_ci.1 + fig_sc_ci.2
+
+fig_sc_ci_full
+
+# Export figure, but don't include in RMarkdown for clarity's sake.
+# ggsave(fig_sc_ci_full,
+#        filename = "figures/teton_34sites/s_vs_c_withcis.jpg",
+#        width = 12,
+#        height = 5)
 
 # End of script.
