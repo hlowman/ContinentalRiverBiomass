@@ -136,6 +136,8 @@ Divergent transitions generally decreased with more years of data as well as inc
 
 *Next Steps:* Following this meeting, we intend to re-fit the model parsing out each site year, so that we may also investigate temporal trends.
 
+***
+
 ##### Questions for You:
 
 (1) What should the longest permissible gap in data be? It is currently set to 14 days.
@@ -149,3 +151,5 @@ Divergent transitions generally decreased with more years of data as well as inc
 (4) Is there anything else you feel I should consider examining moving forward?
 
 ###### End of RMarkdown document.
+
+***
