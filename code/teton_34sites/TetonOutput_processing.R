@@ -626,6 +626,59 @@ data_out_summary_df <- map_df(data_out_summary, ~as.data.frame(.x), .id="site_na
 data_summary_siteinfo <- left_join(data_out_summary_df, data_info, by = "site_name")
 
 # Export dataset
-saveRDS(data_summary_siteinfo, file = "data_working/teton_34rivers_model_diagnostics_090821.rds")
+#saveRDS(data_summary_siteinfo, file = "data_working/teton_34rivers_model_diagnostics_090821.rds")
+
+# Load in this dataset
+data_summary_siteinfo <- readRDS("data_working/teton_34rivers_model_diagnostics_090821.rds")
+
+# Mimic the s vs. c plot created above, but this time with confidence intervals added.
+# Careful, I am not filtering out negative r and k values here for now (just for a rough
+# estimate of intervals about the mean).
+data_summary_wide <- data_summary_siteinfo %>%
+  filter(parameter == "s" | parameter == "c") %>%
+  select(site_name, parameter, mean, `2.5%`, `97.5%`) %>%
+  pivot_wider(names_from = parameter, values_from = c(mean, `2.5%`, `97.5%`))
+
+fig_sc_ci.1 <- ggplot(data_summary_wide, aes(x = mean_c, y = mean_s, 
+                                   fill = site_name)) + # , label = site_name
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Sensitivity of Persistence Curve (s)") +
+  xlim(0, 3) +
+  ylim(0, 600) +
+  geom_errorbar(aes(ymin = `2.5%_s`,ymax = `97.5%_s`)) + 
+  #geom_errorbarh(aes(xmin = `2.5%_c`,xmax = `97.5%_c`)) +
+  #geom_text_repel(size=3) +
+  scale_fill_manual(values = cal_palette("creek", n = 34, type = "continuous")) + # custom colors
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig_sc_ci.1
+
+fig_sc_ci.2 <- ggplot(data_summary_wide, aes(x = mean_c, y = mean_s, 
+                                             fill = site_name)) + # , label = site_name
+  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Sensitivity of Persistence Curve (s)") +
+  xlim(0, 3) +
+  ylim(0, 600) +
+  #geom_errorbar(aes(ymin = `2.5%_s`,ymax = `97.5%_s`)) + 
+  geom_errorbarh(aes(xmin = `2.5%_c`,xmax = `97.5%_c`)) +
+  #geom_text_repel(size=3) +
+  scale_fill_manual(values = cal_palette("creek", n = 34, type = "continuous")) + # custom colors
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig_sc_ci.2
+
+fig_sc_ci_full <- fig_sc_ci.1 + fig_sc_ci.2
+
+fig_sc_ci_full
+
+# Export figure, but don't include in RMarkdown for clarity's sake.
+# ggsave(fig_sc_ci_full,
+#        filename = "figures/teton_34sites/s_vs_c_withcis.jpg",
+#        width = 12,
+#        height = 5)
 
 # End of script.
