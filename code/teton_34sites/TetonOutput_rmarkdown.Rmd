@@ -15,6 +15,20 @@ The following document walks through the initial results of applying the primary
 
 *Note: If you would like to be added to the GitHub repository that currently houses the below code, please contact Heili at hlowman at unr.edu. Everyone is welcome to join the repo as a collaborator!*
 
+***
+
+##### Initial Hypotheses
+
+**How does the maximum growth rate (r) and carrying capacity (K) vary in streams and rivers across the country as a function of stream order, disturbance, and light availability?**
+
+*H~1~*: As **stream order** increases, the maximum growth rate will decrease (due to size, water depth, light attenuation and sediment load in water) and the carrying capacity will increase (due to size and space availability).
+
+*H~2~*: The maximum growth rate will be greatest immediately following **disturbance** events that scour existing biomass. Carrying capacity will be altered if the **disturbance** is of large enough scale to alter the physical structure of the stream (e.g., could decrease due to infill with sediment or increase due to increase in surface area).
+
+*H~3~*: As **light availability** increases, the maximum growth rate will increase (photoinhibition will likely not be a concern except in intermittent/ephemeral and low order streams) and the carrying capacity will also increase (up until a certain point, where the demand for light is fulfilled and no space remains).
+
+***
+
 ##### Model Structure
 
 Prior to presenting our initial results, I've included the equations used in the modeling efforts below. These three equations combine to create the latent biomass time-series model first described in Blaszczak et al. (*in prep*).
@@ -43,6 +57,8 @@ knitr::include_graphics(here::here("figures", "g_eq.jpg"))
 
 ```
 
+***
+
 ##### Data Acquisition
 
 Data was combined from the following sources:
@@ -67,6 +83,8 @@ knitr::include_graphics(here::here("figures", "teton_34sites", "map_fig_34sites.
 
 ```
 
+***
+
 ##### Initial Results
 
 Figures of all available covariates (by site-year) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order.
@@ -90,7 +108,7 @@ knitr::include_graphics(here::here("figures", "teton_34sites", "r_k_paneled.jpg"
 
 ```
 
-Both carrying capacity (K) and maximum growth rate (r) appear to increase with increasing stream order (Figure 2A & B). Furthermore, Blaszczak et al. found greater variation in K than in r, which appears to be true for this larger dataset as well (Figure 2C).
+Both carrying capacity (K) and maximum growth rate (r) appear to increase with increasing stream order (Figure 2A & B). Furthermore, Blaszczak et al. found greater variation in K than in r, which appears to be true for this larger dataset as well (Figure 2C).  
 
 ```{r fig3, fig.align = "center", fig.cap = "Fig. 3. Boxplots of (A) mean sensitivity of persistence curves (s) and (B) mean critical discharge (c) for individual sites grouped by stream order as well as (C) mean sensitivity of persistence curves plotted against mean critical discharges.", echo = FALSE}
 
