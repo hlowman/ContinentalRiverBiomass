@@ -70,4 +70,29 @@ precis(test_run)
 # Using the shiny app
 launch_shinystan(test_run)
 
+# Extract parameters per Dan Ovando's suggestion:
+library(rstan)
+showClass("stanfit")
+ecode <- '
+  parameters {
+    real<lower=0> y[2];
+  } 
+  model {
+    y ~ exponential(1);
+  }
+'
+fit <- stan(model_code = ecode, iter = 1000, chains = 2, warmup = 1)
+
+rstan::check_hmc_diagnostics(fit)
+
+list_way = get_sampler_params(fit, inc_warmup = FALSE)
+
+n_divergent <- sum(sapply(list_way, function(x) sum(x[,"divergent__"])))
+
+n_divergent
+
+other_way_to_get_n_divergent <- rstan::get_num_divergent(fit)
+
+other_way_to_get_n_divergent
+
 # End of script.
