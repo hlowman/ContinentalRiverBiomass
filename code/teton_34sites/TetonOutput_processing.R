@@ -27,6 +27,9 @@ data_info <- readRDS("data_working/NWIS_34sitesinfo_subset.rds")
 # Load dataset with years of data coverage at each site.
 data_years <- readRDS("data_working/teton_34rivers_sitesyears.rds")
 
+# Load dataset with all parameters included (code to generate this dataset is below).
+data_together <- readRDS("data_working/teton_34rivers_model_parameters_090821.rds")
+
 # Make sure shinystan is working properly by testing at one site.
 launch_shinystan(data_out$nwis_01632900)
 # It is working! Although I am getting an error message suggesting I trim
@@ -477,6 +480,53 @@ plotting_covar(data_in$nwis_02266200)
 
 # And now map this to the entire data_in list.
 map(data_in, plotting_covar)
+
+#### Light vs. Growth Parameters ####
+
+# Create a function to calculate mean light availability
+calc_mean_light <- function(df){
+  mean(df$PAR_new) # this column either pulls light from Appling or PAR_surface from Savoy
+}
+
+# And now map this to the entire output list.
+data_light <- map(data_in, calc_mean_light)
+
+# And create a dataframe
+data_light_params <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
+  rename(light_mean = `.x`) %>%
+  left_join(data_together, by = "site_name")
+
+# Light vs.maximum growth rate
+# light vs. r
+fig_light1 <- data_light_params %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  mutate(light_cat = factor(light_mean)) %>% # adding column for coloration purposes
+  ggplot(aes(x = light_mean, y = r_mean, fill = light_cat)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("canary", n = 28, type = "continuous")) + # custom colors
+  labs(x = "Light Availability (ppfd?)",
+       y = "Maximum Growth Rate (r)") +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+
+fig_light1
+
+# Light vs.carrying capacity
+# light vs. K
+fig_light2 <- data_light_params %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  mutate(light_cat = factor(light_mean)) %>% # adding column for coloration purposes
+  ggplot(aes(x = light_mean, y = k_mean, fill = light_cat)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("canary", n = 28, type = "continuous")) + # custom colors
+  labs(x = "Light Availability (ppfd?)",
+       y = "Carrying Capacity (K)") +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+
+fig_light2
 
 #### Divergences ####
 
