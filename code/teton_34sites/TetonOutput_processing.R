@@ -27,6 +27,9 @@ data_info <- readRDS("data_working/NWIS_34sitesinfo_subset.rds")
 # Load dataset with years of data coverage at each site.
 data_years <- readRDS("data_working/teton_34rivers_sitesyears.rds")
 
+# Load dataset with all parameters included (code to generate this dataset is below).
+data_together <- readRDS("data_working/teton_34rivers_model_parameters_090821.rds")
+
 # Make sure shinystan is working properly by testing at one site.
 launch_shinystan(data_out$nwis_01632900)
 # It is working! Although I am getting an error message suggesting I trim
@@ -317,6 +320,125 @@ fig2_full
 #        width = 15,
 #        height = 5)
 
+#### Persistence Curves ####
+
+# Adapted from Joanna's code in: 
+# RiverBiomass/code/Biomass5_Fig_PersistenceCurves.R
+
+## Extract and summarize parameters
+par_Ricker <- lapply(data_out, function(x) rstan::extract(x, c("r","lambda","s","c","B","P","pred_GPP","sig_p","sig_o")))
+
+## mean parameter
+par_mean <- function(par) {
+  ## Find the mean
+  mean_par <- lapply(par, function(x) mean(x))
+  
+  mean_pred_GPP_ts <- apply(par$pred_GPP,2,mean)
+  mean_P_ts <- apply(par$P,2,mean)
+  mean_B_ts <- apply(par$B,2,mean)
+  
+  ## Compile in list and return
+  mean_par_ts <- list(mean_par, mean_pred_GPP_ts, mean_P_ts, mean_B_ts)
+  names(mean_par_ts) <- c("par","pred_GPP","P","B")
+  return(mean_par_ts)
+}
+
+meanpar_R <- lapply(par_Ricker, function(x) par_mean(x))
+
+## Plot persistence
+persistence_list <- function(y, data){
+  Ppars <- list()
+  
+  for(i in 1:length(y)){
+    df <- y[[i]]
+    dat <- data[[i]]
+    Ppars[[i]] <- list("tQ"=dat$tQ,"range"=range(dat$tQ),
+                       "c"=df$c,"s"=df$s, 
+                       "site_name"=dat$site_name[1])
+  }
+  
+  names(Ppars) <- names(y)
+  
+  return(Ppars)
+  
+}
+
+# NOT WORKING FROM HERE ON DOWN TO THE END OF THE SECTION SO PLEASE DISREGARD
+# And now map this to the entire output list.
+P_R <- persistence_list(par_Ricker, df)
+
+## plot
+plotting_P_dat <- function(x){
+  pq <- seq(x$range[1],x$range[2], length=length(x$s))
+  p_median <- numeric()
+  p_up <- numeric()
+  p_down <- numeric()
+  name <- substring(deparse(substitute(x)),7)
+  for(i in 1:length(pq)){
+    temp <- exp(-exp(x$s*(pq[i]-x$c)))
+    p_median[i] <- median(temp)
+    p_up[i] <- quantile(temp, probs = 0.975)
+    p_down[i] <- quantile(temp, probs = 0.025)
+  }
+  df <- as.data.frame(as.matrix(cbind(pq,p_median, p_up, p_down)))
+  df$site_name <- x$site_name
+  
+  return(df)
+}
+
+P_dat_R1 <- lapply(P_R, function(z) plotting_P_dat(z))
+
+P_dat_R$PM <- "Ricker"
+
+P_df <- P_dat_R
+
+Persistence_plots <- function(site, df, site_info, P_df){
+  
+  Q_sub <- df[[site]]
+  #Q_sub$pq <- Q_sub$tQ
+  Q_sub$p_for_q <- 0.5
+  
+  ## critical Q based on velocity
+  crit_Q <- site_info[which(site_info$site_name == site),]$RI_2yr_Q
+  
+  ## convert relativized Q to original values
+  P <- P_df[which(P_df$site_name == site),]
+  P$Q <- P$pq*max(Q_sub$Q, na.rm = T)
+  
+  ## critical Q based on GPP - Q correction needed
+  c <- meanpar_R[[site]]$par$c*max(Q_sub$Q, na.rm = T)
+  
+  scaleFUN <- function(x) sprintf("%.1f", x)
+  
+  ## Plot
+  Persist_plot <- ggplot(P, aes(Q, p_median))+
+    scale_x_continuous(trans = "log", labels = scaleFUN)+
+    geom_point(data=Q_sub, aes(Q, p_for_q), color="white")+
+    geom_line(size=1.5, alpha=0.9, color="chartreuse4")+
+    geom_ribbon(data=P, aes(ymin=p_down, ymax=p_up), alpha=0.3, fill="chartreuse4", color=NA)+
+    theme(panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.text.y = element_text(size=12),
+          axis.text.x = element_text(size=12, angle=45, hjust=1),
+          axis.title = element_blank(), 
+          strip.background = element_rect(fill="white", color="black"),
+          strip.text = element_text(size=15))+
+    #annotate("text", label=as.character(P$short_name[1]),
+    #         x = 1.2*c, 
+    #         y= 0.9, size=3.75, hjust=0)+
+    labs(x="Range of Standardized Discharge",y="Persistence")+
+    scale_y_continuous(limits=c(0,1))+
+    #geom_vline(xintercept = crit_Q, size=1, linetype="dotted", color="grey25")+
+    geom_vline(xintercept = c, size=1, linetype="dashed")
+  
+  
+  # Persist_plot2 <- ggExtra::ggMarginal(Persist_plot, data=Q_sub, type="histogram",
+  #                                      size=4, x = Q, margins = "x", color="black",
+  #                                      fill="deepskyblue4", xparams = list(alpha=0.8))
+  
+  return(Persist_plot)
+  
+}
+
 #### All Parameter Comparisons ####
 
 # Now, to compare growth and disturbance parameters
@@ -477,6 +599,53 @@ plotting_covar(data_in$nwis_02266200)
 
 # And now map this to the entire data_in list.
 map(data_in, plotting_covar)
+
+#### Light vs. Growth Parameters ####
+
+# Create a function to calculate mean light availability
+calc_mean_light <- function(df){
+  mean(df$PAR_new) # this column either pulls light from Appling or PAR_surface from Savoy
+}
+
+# And now map this to the entire output list.
+data_light <- map(data_in, calc_mean_light)
+
+# And create a dataframe
+data_light_params <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
+  rename(light_mean = `.x`) %>%
+  left_join(data_together, by = "site_name")
+
+# Light vs.maximum growth rate
+# light vs. r
+fig_light1 <- data_light_params %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  mutate(light_cat = factor(light_mean)) %>% # adding column for coloration purposes
+  ggplot(aes(x = light_mean, y = r_mean, fill = light_cat)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("canary", n = 28, type = "continuous")) + # custom colors
+  labs(x = "Light Availability (ppfd?)",
+       y = "Maximum Growth Rate (r)") +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+
+fig_light1
+
+# Light vs.carrying capacity
+# light vs. K
+fig_light2 <- data_light_params %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  mutate(light_cat = factor(light_mean)) %>% # adding column for coloration purposes
+  ggplot(aes(x = light_mean, y = k_mean, fill = light_cat)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  scale_fill_manual(values = cal_palette("canary", n = 28, type = "continuous")) + # custom colors
+  labs(x = "Light Availability (ppfd?)",
+       y = "Carrying Capacity (K)") +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+
+fig_light2
 
 #### Divergences ####
 
