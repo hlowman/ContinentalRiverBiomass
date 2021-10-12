@@ -135,15 +135,17 @@ annualdat <- dailydat2 %>%
   summarize(meanGPP = mean(GPP, na.rm = TRUE)) %>%
   ungroup() # calculate mean GPP by site & year
 
-coverage_plot <- ggplot(annualdat, aes(x = year, y = site_namef)) + # base plot
+daily_coverage_plot <- dailydat2 %>%
+  filter(year == 2014) %>%
+  ggplot(aes(x = datez, y = site_namef)) + # base plot
   geom_line(aes(color = site_namef)) + # add line for every year for which we have data at a given site
-  labs(x = "Year",
+  labs(x = "Date",
        y = "Site") + # label axes
   scale_color_viridis(discrete=TRUE) + # custom color scale
   theme_bw() + # remove grid
   theme(axis.text.y = element_blank(), legend.position = "none") # remove site names and legend
 
-coverage_plot
+daily_coverage_plot
 
 # 2011 really seems to be a turning point in terms of data availability.
 # Roughly half of the sites should have at least 5 years worth of data.
