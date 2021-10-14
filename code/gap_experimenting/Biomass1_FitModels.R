@@ -118,6 +118,6 @@ PM_outputlist_Ricker_y <- lapply(stan_data_l_y,
                                                   init = init_Ricker,
                                                   control = list(max_treedepth = 12)))
 
-saveRDS(PM_outputlist_Ricker, "data_working/stan_1river_years_output_Ricker_2021_10_13.rds")
+saveRDS(PM_outputlist_Ricker_y, "data_working/stan_1river_years_output_Ricker_2021_10_13.rds")
 
 # End of script.

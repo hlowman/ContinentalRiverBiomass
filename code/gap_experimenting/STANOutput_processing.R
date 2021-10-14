@@ -22,38 +22,48 @@ data_in <- readRDS("data_working/df_3sites.rds")
 # output using full timeseries
 data_out <- readRDS("data_working/stan_3rivers_output_Ricker_2021_10_13.rds")
 # output using timeseries with gaps
-data_out_g <- readRDS("data_teton/stan_3rivers_gaps_output_Ricker_2021_10_13.rds")
+data_out_g <- readRDS("data_working/stan_3rivers_gaps_output_Ricker_2021_10_13.rds")
 # output of grouped yearly data for one site
-data_out_y <- readRDS("data_teton/stan_1river_years_output_Ricker_2021_10_13.rds")
+data_out_y <- readRDS("data_working/stan_1river_years_output_Ricker_2021_10_13.rds")
 
 # Load dataset with site information.
 data_info <- readRDS("data_working/NWIS_3sitesinfo_subset.rds")
 
 # Check out shinystan to see how things compare
-# First, for the nwis_02266300 a.k.a. NAME HERE site
+# First, for the nwis_02266300 a.k.a. Reedy Creek, FL site
+# Bad site
 # where 3 years of data were removed
 launch_shinystan(data_out$nwis_02266300)
 launch_shinystan(data_out_g$nwis_02266300)
-# And we can compare these to the outcomes for each site-year
-launch_shinystan(data_out_y$nwis_02266300-2008)
-launch_shinystan(data_out_y$nwis_02266300-2009)
-launch_shinystan(data_out_y$nwis_02266300-2010)
-launch_shinystan(data_out_y$nwis_02266300-2011)
-launch_shinystan(data_out_y$nwis_02266300-2012)
-launch_shinystan(data_out_y$nwis_02266300-2013)
-launch_shinystan(data_out_y$nwis_02266300-2014)
-launch_shinystan(data_out_y$nwis_02266300-2015)
-launch_shinystan(data_out_y$nwis_02266300-2016)
+# things were a mess, and still look a mess after removing 3 yrs
+# although divergences have decreased by 1000
 
-# Next, for the nwis_14206950 a.k.a. NAME HERE site
+# Next, for the nwis_14206950 a.k.a. Fanno Creek, OR site
+# Medium site
 # where 2 years of data were removed
 launch_shinystan(data_out$nwis_14206950)
 launch_shinystan(data_out_g$nwis_14206950)
+# ~100 divergences before data removal, 
+# none(!) after
 
-# And finally for the nwis_01608500 a.k.a. NAME HERE site
+# And finally for the nwis_01608500 a.k.a. South Branch Potomac
+# River, WV site
+# Good site
 # where 1 year of data was removed
 launch_shinystan(data_out$nwis_01608500)
 launch_shinystan(data_out_g$nwis_01608500)
+# none before, none after!!
+
+# And we can compare these to the outcomes for each site-year
+launch_shinystan(data_out_y$nwis_01608500-2008)
+launch_shinystan(data_out_y$nwis_01608500-2009)
+launch_shinystan(data_out_y$nwis_01608500-2010)
+launch_shinystan(data_out_y$nwis_01608500-2011)
+launch_shinystan(data_out_y$nwis_01608500-2012)
+launch_shinystan(data_out_y$nwis_01608500-2013)
+launch_shinystan(data_out_y$nwis_01608500-2014)
+launch_shinystan(data_out_y$nwis_01608500-2015)
+launch_shinystan(data_out_y$nwis_01608500-2016)
 
 # Function of the above to pull out data of interest from
 # all sites.
