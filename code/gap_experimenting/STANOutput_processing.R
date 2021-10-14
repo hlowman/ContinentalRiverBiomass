@@ -126,16 +126,18 @@ fig_sy <- data_means %>%
                                          type = "continuous")) +
   labs(x = "Site-Years",
        y = "Mean value of parameter") +
-  facet_grid(.~parameter) +
+  facet_wrap(.~parameter, scales = "free") +
   theme_bw() +
   theme(text = element_text(size=20), legend.position = "none")
 
 fig_sy
 
 # ggsave(plot = fig_sy,
-#        filename = "figures/gap_experimenting/fig_sy_nwis_01608500.jpg",
-#        width = 30,
-#        height = 5)
+#        filename = "figures/gap_experimenting/fig_sy_nwis_01608500_2.jpg",
+#        width = 15,
+#        height = 10)
+
+# ...
 
 # This time trying code suggested by Dan Ovando to extract divergences.
 
