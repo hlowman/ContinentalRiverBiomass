@@ -236,9 +236,9 @@ plotting_covar <- function(x) {
 }
 
 # plotting them all
-plotting_covar(site_sub_list$nwis_02266300) # remove 3yrs
-plotting_covar(site_sub_list$nwis_14206950) # remove 2yrs
-plotting_covar(site_sub_list$nwis_01608500) # remove 1yr
+p1 <- plotting_covar(site_sub_list$nwis_02266300) # remove 3yrs
+p2 <- plotting_covar(site_sub_list$nwis_14206950) # remove 2yrs
+p3 <- plotting_covar(site_sub_list$nwis_01608500) # remove 1yr
 
 ###########################
 ## Export
@@ -248,5 +248,21 @@ plotting_covar(site_sub_list$nwis_01608500) # remove 1yr
 saveRDS(site_subset, "data_working/NWIS_3sites_subset.rds") # GPP data
 saveRDS(TS_site_subset, "data_working/NWIS_3sitesinfo_subset.rds") # Site data
 saveRDS(site_subset_numdays,"data_working/NWIS_3sites_Ndays.rds") # Gaps in data
+
+## Covariate figures
+# ggsave(plot = p1,
+#        filename = "figures/gap_experimenting/nwis_02266300_2008_2016_covar.jpg",
+#        width = 8,
+#        height = 6)
+
+# ggsave(plot = p2,
+#        filename = "figures/gap_experimenting/nwis_14206950_2008_2016_covar.jpg",
+#        width = 8,
+#        height = 6)
+
+# ggsave(plot = p3,
+#        filename = "figures/gap_experimenting/nwis_01608500_2008_2016_covar.jpg",
+#        width = 8,
+#        height = 6)
 
 # End of script.

@@ -55,15 +55,14 @@ launch_shinystan(data_out_g$nwis_01608500)
 # none before, none after!!
 
 # And we can compare these to the outcomes for each site-year
-launch_shinystan(data_out_y$nwis_01608500-2008)
-launch_shinystan(data_out_y$nwis_01608500-2009)
-launch_shinystan(data_out_y$nwis_01608500-2010)
-launch_shinystan(data_out_y$nwis_01608500-2011)
-launch_shinystan(data_out_y$nwis_01608500-2012)
-launch_shinystan(data_out_y$nwis_01608500-2013)
-launch_shinystan(data_out_y$nwis_01608500-2014)
-launch_shinystan(data_out_y$nwis_01608500-2015)
-launch_shinystan(data_out_y$nwis_01608500-2016)
+# divergences following each site-year
+launch_shinystan(data_out_y$nwis_01608500_2008) # 13
+launch_shinystan(data_out_y$nwis_01608500_2010) # 258
+launch_shinystan(data_out_y$nwis_01608500_2012) # 24
+launch_shinystan(data_out_y$nwis_01608500_2013) # 41
+launch_shinystan(data_out_y$nwis_01608500_2014) # 32
+launch_shinystan(data_out_y$nwis_01608500_2015) # 8
+launch_shinystan(data_out_y$nwis_01608500_2016) # 676
 
 # Function of the above to pull out data of interest from
 # all sites.
@@ -90,8 +89,8 @@ data_out_params_y_df <- map_df(data_out_params_y, ~as.data.frame(.x), .id="site_
   mutate(k = (-1*r)/lambda) %>%
   mutate(Run = "Individual Site-Years")
 
-df1 <- cbind(data_out_params_df, data_out_params_g_df)
-df2 <- cbind(df1, data_out_params_y_df)
+df1 <- rbind(data_out_params_df, data_out_params_g_df)
+df2 <- rbind(df1, data_out_params_y_df)
 
 # And now to calculate means by site.
 data_means <- df2 %>%
@@ -103,11 +102,40 @@ data_means <- df2 %>%
             sigp_mean = mean(sig_p),
             sigo_mean = mean(sig_o))
 
-# And now to bind the values with site attributes.
-# data_together <- left_join(data_means, data_info, by = "site_name")
-
 # Export dataset
-saveRDS(data_together, file = "data_working/teton_3rivers_model_parameters_101321.rds")
+saveRDS(data_means, file = "data_working/stan_3rivers_model_parameters_101421.rds")
+
+# And create a figure to display differences by site-year
+
+fig_sy <- data_means %>%
+  filter(Run == "Individual Site-Years") %>%
+  pivot_longer(cols = r_mean:sigo_mean,
+               names_to = "parameter",
+               values_to = "value") %>%
+  mutate(year = case_when(site_name == "nwis_01608500_2008" ~ 2008,
+                          site_name == "nwis_01608500_2010" ~ 2010,
+                          site_name == "nwis_01608500_2012" ~ 2012,
+                          site_name == "nwis_01608500_2013" ~ 2013,
+                          site_name == "nwis_01608500_2014" ~ 2014,
+                          site_name == "nwis_01608500_2015" ~ 2015,
+                          site_name == "nwis_01608500_2016" ~ 2016)) %>%
+  ggplot(aes(x = year, y = value, 
+             fill = site_name)) +
+  geom_point(shape = 21, size = 5) +
+  scale_fill_manual(values = cal_palette("lake", n = 7, 
+                                         type = "continuous")) +
+  labs(x = "Site-Years",
+       y = "Mean value of parameter") +
+  facet_grid(.~parameter) +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+
+fig_sy
+
+# ggsave(plot = fig_sy,
+#        filename = "figures/gap_experimenting/fig_sy_nwis_01608500.jpg",
+#        width = 30,
+#        height = 5)
 
 # This time trying code suggested by Dan Ovando to extract divergences.
 
@@ -144,166 +172,5 @@ data_out_divs_df <- map_df(data_out_divs, ~as.data.frame(.x), .id="site_name") %
 
 # Export dataset
 saveRDS(data_out_divs_df, file = "data_working/teton_34rivers_model_divergences_091621.rds")
-
-#### All Parameter Comparisons ####
-
-# Now, to compare growth and disturbance parameters
-# r vs. c
-fig5a <- data_together %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  ggplot(aes(x = c_mean, y = r_mean, 
-             fill = site_name, label = site_name)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) + # custom colors
-  labs(x = "Critical Discharge (c)",
-       y = "Maximum Growth Rate (r)") +
-  geom_text_repel(data = subset(data_together, r_mean > 0.3), size = 4) +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig5a
-
-# r vs. s
-fig5b <- data_together %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  ggplot(aes(x = s_mean, y = r_mean, 
-             fill = site_name, label = site_name)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
-  labs(x = "Sensitivity of Persistence Curve (s)",
-       y = "Maximum Growth Rate (r)") +
-  geom_text_repel(data = subset(data_together, r_mean > 0.3 | s_mean > 300), size = 4) +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig5b
-
-# k vs. c
-fig5c <- data_together %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  ggplot(aes(x = c_mean, y = k_mean, 
-             fill = site_name, label = site_name)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
-  labs(x = "Critical Discharge (c)",
-       y = "Carrying Capacity (K)") +
-  geom_text_repel(data = subset(data_together, k_mean > 30), size = 4) +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig5c
-
-# k vs. s
-fig5d <- data_together %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  ggplot(aes(x = s_mean, y = k_mean, 
-             fill = site_name, label = site_name)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
-  labs(x = "Sensitivity of Persistence Curve (s)",
-       y = "Carrying Capacity (K)") +
-  geom_text_repel(data = subset(data_together, k_mean > 30 | s_mean > 300), size = 4) +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig5d
-
-full_fig5 <- (fig5a + fig5b) / (fig5c + fig5d) +
-  plot_annotation(tag_levels = 'A')
-
-full_fig5
-
-# ggsave(full_fig5,
-#        filename = "figures/teton_34sites/rk_vs_cs.jpg",
-#        width = 11,
-#        height = 11)
-
-#### Covariate data quality ####
-
-plotting_covar <- function(x) {
-  
-  # create a dataframe at each site
-  df.1 <- x
-  
-  # join with site information
-  df <- left_join(df.1, data_info, by = "site_name")
-  
-  # create a vector of the available years of data
-  years <- unique(df$year)
-  
-  # loop over each year of data
-  for(z in years){
-    
-    # subset the data by year
-    subset <- subset(df, year == z) # subset the larger dataset by each year
-    
-    # create a 4-paneled plot with gross primary production, discharge, temperature, and light
-    # a.k.a. data inputs (prior to fitting the model)
-    p <- plot_grid(
-    
-    ggplot(subset, aes(date, GPP))+
-      geom_point(color="chartreuse4", size=2)+
-      geom_errorbar(aes(ymin = GPP.lower, ymax = GPP.upper), width=0.2,color="darkolivegreen4")+
-      labs(y=expression('GPP (g '*~O[2]~ m^-2~d^-1*')'), 
-           title = df$long_name.y[1],
-           subtitle = df$site_name[1])+
-      theme(legend.position = "none",
-            panel.background = element_rect(color = "black", fill=NA, size=1),
-            axis.title.x = element_blank(), axis.text.x = element_blank(),
-            axis.text.y = element_text(size=12),
-            axis.title.y = element_text(size=12)),
-    
-    ggplot(subset, aes(date, Q))+
-      geom_line(size=1.5, color="deepskyblue4")+
-      labs(y="Q (cms)")+
-      theme(legend.position = "none",
-            panel.background = element_rect(color = "black", fill=NA, size=1),
-            axis.title.x = element_blank(), axis.text.x = element_blank(),
-            axis.text.y = element_text(size=12),
-            axis.title.y = element_text(size=12)),
-    
-    ggplot(subset, aes(date, temp))+
-      geom_line(size=1.5, color="#A11F22")+
-      labs(y="Water Temp (C)")+
-      theme(legend.position = "none",
-            panel.background = element_rect(color = "black", fill=NA, size=1),
-            axis.title.x = element_blank(), axis.text.x = element_blank(),
-            axis.text.y = element_text(size=12),
-            axis.title.y = element_text(size=12)),
-    
-    ggplot(subset, aes(date, light))+
-      geom_point(size=2, color="darkgoldenrod3")+
-      labs(y="Incoming Light", x="Date")+
-      theme(legend.position = "none",
-            panel.background = element_rect(color = "black", fill=NA, size=1),
-            axis.text = element_text(size=12),
-            axis.title = element_text(size=12)),
-    ncol=1, align="hv")
-  
-  # display plots
-  print(p) 
-  
-  # save and export plots
-  file.name <- paste0("figures/teton_34sites/site_covariate_plots/",df$site_name[1],"_",z,"_covar.jpg",sep = "") # create file name
-  
-  # set specifications for size and resolution of your figure
-  ggsave(p,
-         filename = file.name,
-         width = 8,
-         height = 8)
-  
-  } # close out for-loop
-  
-} # close out function
-
-# test to be sure the function works at a single site
-plotting_covar(data_in$nwis_02266200)
-
-# And now map this to the entire data_in list.
-map(data_in, plotting_covar)
 
 # End of script.
