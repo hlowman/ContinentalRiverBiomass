@@ -60,8 +60,8 @@ data_w_gaps$GPP_sd <- (((data_w_gaps$GPP.upper - data_w_gaps$GPP)/1.96) + ((data
 ## split list by ID
 l <- split(data, data$site_name)
 l_gap <- split(data_w_gaps, data_w_gaps$site_name)
-## and for temporal comparison, year-ID
-one_site <- data %>% filter(site_name == "nwis_02266300")
+## and for temporal comparison, year-ID of site that performs well
+one_site <- data %>% filter(site_name == "nwis_01608500")
 l_yrs <- split(one_site, one_site$site_year)
 
 ## For sites without StreamLight data, set PAR_surface to light

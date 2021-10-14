@@ -88,12 +88,12 @@ PM_outputlist_Ricker_g <- lapply(stan_data_l_g,
                                                 init = init_Ricker,
                                                 control = list(max_treedepth = 12)))
 
-saveRDS(PM_outputlist_Ricker, "data_working/stan_3rivers_gaps_output_Ricker_2021_10_13.rds")
+saveRDS(PM_outputlist_Ricker_g, "data_working/stan_3rivers_gaps_output_Ricker_2021_10_13.rds")
 
 #### Run 3 ####
 # again repurposing some of the functions from above
 ## Source data
-df_y <- readRDS("data_working/df_1siteyrs.rds")
+df_y <- readRDS("data_working/df_1site_allyrs.rds")
 
 ####################
 ## Stan data prep ##
