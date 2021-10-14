@@ -29,8 +29,31 @@ data_out_y <- readRDS("data_teton/stan_1river_years_output_Ricker_2021_10_13.rds
 # Load dataset with site information.
 data_info <- readRDS("data_working/NWIS_3sitesinfo_subset.rds")
 
-# Make sure shinystan is working properly by testing at one site.
+# Check out shinystan to see how things compare
+# First, for the nwis_02266300 a.k.a. NAME HERE site
+# where 3 years of data were removed
 launch_shinystan(data_out$nwis_02266300)
+launch_shinystan(data_out_g$nwis_02266300)
+# And we can compare these to the outcomes for each site-year
+launch_shinystan(data_out_y$nwis_02266300-2008)
+launch_shinystan(data_out_y$nwis_02266300-2009)
+launch_shinystan(data_out_y$nwis_02266300-2010)
+launch_shinystan(data_out_y$nwis_02266300-2011)
+launch_shinystan(data_out_y$nwis_02266300-2012)
+launch_shinystan(data_out_y$nwis_02266300-2013)
+launch_shinystan(data_out_y$nwis_02266300-2014)
+launch_shinystan(data_out_y$nwis_02266300-2015)
+launch_shinystan(data_out_y$nwis_02266300-2016)
+
+# Next, for the nwis_14206950 a.k.a. NAME HERE site
+# where 2 years of data were removed
+launch_shinystan(data_out$nwis_14206950)
+launch_shinystan(data_out_g$nwis_14206950)
+
+# And finally for the nwis_01608500 a.k.a. NAME HERE site
+# where 1 year of data was removed
+launch_shinystan(data_out$nwis_01608500)
+launch_shinystan(data_out_g$nwis_01608500)
 
 # Function of the above to pull out data of interest from
 # all sites.
@@ -43,14 +66,26 @@ data_out_params <- map(data_out, extract_params)
 data_out_params_g <- map(data_out_g, extract_params)
 data_out_params_y <- map(data_out_y, extract_params)
 
-# And create a dataframe
+# And create these lists into dataframes
 data_out_params_df <- map_df(data_out_params, ~as.data.frame(.x), .id="site_name") %>%
   # and add "K" to it, calculating for each individual iteration
-  mutate(k = (-1*r)/lambda)
+  mutate(k = (-1*r)/lambda) %>%
+  mutate(Run = "Full Timeseries")
+
+data_out_params_g_df <- map_df(data_out_params_g, ~as.data.frame(.x), .id="site_name") %>%
+  mutate(k = (-1*r)/lambda) %>%
+  mutate(Run = "Gappy Timeseries")
+
+data_out_params_y_df <- map_df(data_out_params_y, ~as.data.frame(.x), .id="site_name") %>%
+  mutate(k = (-1*r)/lambda) %>%
+  mutate(Run = "Individual Site-Years")
+
+df1 <- cbind(data_out_params_df, data_out_params_g_df)
+df2 <- cbind(df1, data_out_params_y_df)
 
 # And now to calculate means by site.
-data_means <- data_out_params_df %>%
-  group_by(site_name) %>%
+data_means <- df2 %>%
+  group_by(Run, site_name) %>%
   summarize(r_mean = mean(r),
             k_mean = mean(k),
             s_mean = mean(s),
@@ -59,25 +94,36 @@ data_means <- data_out_params_df %>%
             sigo_mean = mean(sig_o))
 
 # And now to bind the values with site attributes.
-data_together <- left_join(data_means, data_info, by = "site_name")
+# data_together <- left_join(data_means, data_info, by = "site_name")
 
 # Export dataset
-saveRDS(data_together, file = "data_working/teton_34rivers_model_parameters_090821.rds")
+saveRDS(data_together, file = "data_working/teton_3rivers_model_parameters_101321.rds")
 
-# Also, need to extract divergence information from the sites.
-# Code available at : mc-stan.org/users/documentation/case-studies/divergences_and_bias.html
-# Doing this at one site first to make sure it works - note nwis_01632900 has 8 divergences.
-# Note - you need TWO underscores after 'divergent'
-divergent <- get_sampler_params(data_out$nwis_01632900, inc_warmup=FALSE)[[1]][,'divergent__']
-sum(divergent)
-# Yay, it works!!
+# This time trying code suggested by Dan Ovando to extract divergences.
 
-# Now, to map this to the whole dataset
-extract_divergences <- function(df){
-  divergent <- get_sampler_params(df, inc_warmup=FALSE)[[1]][,'divergent__']
-  sum(divergent)
-}
+showClass("stanfit")
+ecode <- '
+  parameters {
+    real<lower=0> y[2];
+  } 
+  model {
+    y ~ exponential(1);
+  }
+'
+fit <- stan(model_code = ecode, iter = 1000, chains = 2, warmup = 1)
 
+rstan::check_hmc_diagnostics(fit)
+
+list_way = get_sampler_params(fit, inc_warmup = FALSE)
+
+n_divergent <- sum(sapply(list_way, function(x) sum(x[,"divergent__"])))
+
+n_divergent
+
+other_way_to_get_n_divergent <- rstan::get_num_divergent(fit)
+
+other_way_to_get_n_divergent
+# ...
 # And now map this to the entire output list.
 # this function can also be finicky, and require you to quit R and re-load everything back in.
 data_out_divs <- map(data_out, extract_divergences)
@@ -88,8 +134,6 @@ data_out_divs_df <- map_df(data_out_divs, ~as.data.frame(.x), .id="site_name") %
 
 # Export dataset
 saveRDS(data_out_divs_df, file = "data_working/teton_34rivers_model_divergences_091621.rds")
-
-####      Figures         ####
 
 #### All Parameter Comparisons ####
 
@@ -251,110 +295,5 @@ plotting_covar(data_in$nwis_02266200)
 
 # And now map this to the entire data_in list.
 map(data_in, plotting_covar)
-
-#### Divergences ####
-
-# fig_div <- ggplot(data_out_divs_df, aes(x = bin_cat, fill = bin_cat)) + # base plot
-#   geom_histogram(stat = "count") + # divergences histogram
-#   scale_fill_manual(values = cal_palette("fire", n = 7, type = "continuous")) + # custom colors
-#   labs(x = "Number of Divergences",
-#        y = "Site Count") +
-#   scale_y_continuous(breaks=seq(0, 10, 1)) + # fix y axis labels
-#   theme_classic() + # remove grid
-#   theme(legend.position = "none")
-# 
-# fig_div
-# DONT USE THIS FIGURE YET - for whatever reason, the 
-# number of divergences on the shinystan app does not
-# match the output of the above function from the mc-stan
-# help document....
-
-# For the meeting on 9/27/2021, I will be using the output of shinystan since,
-# it's the larger/more conservative
-
-data_divs_join <- left_join(data_years, data_out_diff_divs, by = "site_name")
-
-# Adding category to make a nicer looking plots
-data_divs_join <- data_divs_join %>%
-  mutate(bin_cat = factor(case_when(div_shinyStan == 0 ~ "0",
-                                    div_shinyStan > 0 & div_shinyStan <= 50 ~ "0-50",
-                                    div_shinyStan > 50 & div_shinyStan <= 100 ~ "50-100",
-                                    div_shinyStan > 100 & div_shinyStan <= 1000 ~ "100-1000",
-                                    div_shinyStan > 1000 & div_shinyStan <= 2500 ~ "1000-2500",
-                                    div_shinyStan > 2500 ~ "2500+",
-                                    TRUE ~ "NA"),
-                          levels = c("0", "0-50", "50-100", "100-1000", "1000-2500", "2500+")))
-
-fig_yrs_divs <- ggplot(data_divs_join,
-                       aes(x = n, y = div_shinyStan, fill = bin_cat, label = site_name)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("fire", n = 6, type = "continuous")) + # custom colors
-  labs(x = "Years of Available Data",
-       y = "Divergent Transitions") +
-  geom_text_repel(data = subset(data_divs_join, n > 5 & div_shinyStan > 2000), size = 4) +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig_yrs_divs
-
-# Also creating figure of hydrology vs. divergences
-
-# Calculate coefficient of variation (sd/mean) for each site
-test_site <- data_in$nwis_01608500
-test_sd <- sd(test_site$Q)
-test_mean <- mean(test_site$Q)
-test_cv <- test_sd/test_mean
-
-# Now, to create a function...
-calc_coeff_var <- function(df){
-  sd <- sd(df$Q)
-  mean <- mean(df$Q)
-  sd/mean
-}
-
-# And now map this to the entire output list.
-data_cvs <- map(data_in, calc_coeff_var)
-# yipee
-
-# And create a dataframe
-data_cvs_divs <- map_df(data_cvs, ~as.data.frame(.x), .id="site_name") %>%
-  rename(coeff_var = `.x`) %>%
-  left_join(data_out_diff_divs, by = "site_name")
-
-# Adding same categories as above to make a nicer looking plots
-data_cvs_divs <- data_cvs_divs %>%
-  mutate(bin_cat = factor(case_when(div_shinyStan == 0 ~ "0",
-                                    div_shinyStan > 0 & div_shinyStan <= 50 ~ "0-50",
-                                    div_shinyStan > 50 & div_shinyStan <= 100 ~ "50-100",
-                                    div_shinyStan > 100 & div_shinyStan <= 1000 ~ "100-1000",
-                                    div_shinyStan > 1000 & div_shinyStan <= 2500 ~ "1000-2500",
-                                    div_shinyStan > 2500 ~ "2500+",
-                                    TRUE ~ "NA"),
-                          levels = c("0", "0-50", "50-100", "100-1000", "1000-2500", "2500+")))
-
-fig_cv_divs <- ggplot(data_cvs_divs,
-                       aes(x = coeff_var, y = div_shinyStan, fill = bin_cat, label = site_name)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("fire", n = 6, type = "continuous")) + # custom colors
-  labs(x = "Coefficient of Variation in Discharge",
-       y = "Divergent Transitions") +
-  geom_text_repel(data = subset(data_cvs_divs, coeff_var > 3 | div_shinyStan > 3000), size = 4) +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig_cv_divs
-
-# creating composite figure for export
-fig_div_full <- fig_yrs_divs + fig_cv_divs +
-  plot_annotation(tag_levels = 'A')
-
-fig_div_full
-
-# ggsave(fig_div_full,
-#        filename = "figures/teton_34sites/divergences_paneled.jpg",
-#        width = 12,
-#        height = 5)
-
-
 
 # End of script.

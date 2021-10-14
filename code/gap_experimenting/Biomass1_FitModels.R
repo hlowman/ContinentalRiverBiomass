@@ -61,7 +61,7 @@ PM_outputlist_Ricker <- lapply(stan_data_l,
 saveRDS(PM_outputlist_Ricker, "data_working/stan_3rivers_output_Ricker_2021_10_13.rds")
 
 #### Run 2 ####
-
+# some of the functions from above will be re-used
 ## Source data
 df_g <- readRDS("data_working/df_3sites_gappy.rds")
 
@@ -72,16 +72,6 @@ rstan_options(auto_write=TRUE)
 ## specify number of cores
 options(mc.cores=6)
 
-## compile data
-stan_data_compile <- function(x){
-  data <- list(Ndays=length(x$GPP), 
-               light = x$light_rel, 
-               GPP = x$GPP,
-               GPP_sd = x$GPP_sd, 
-               tQ = x$tQ)
-  return(data)
-}
-
 stan_data_l_g <- lapply(df_g, function(x) stan_data_compile(x))
 
 #########################################
@@ -90,11 +80,6 @@ stan_data_l_g <- lapply(df_g, function(x) stan_data_compile(x))
 
 # Latent Biomass (Ricker population) Model
 # With Persistence Term (P)
-
-# sets initial values of c and s to help chains converge
-init_Ricker <- function(...) {
-  list(c = 0.5, s = 100)
-}
 
 ## export results
 PM_outputlist_Ricker_g <- lapply(stan_data_l_g,
@@ -106,7 +91,7 @@ PM_outputlist_Ricker_g <- lapply(stan_data_l_g,
 saveRDS(PM_outputlist_Ricker, "data_working/stan_3rivers_gaps_output_Ricker_2021_10_13.rds")
 
 #### Run 3 ####
-
+# again repurposing some of the functions from above
 ## Source data
 df_y <- readRDS("data_working/df_1siteyrs.rds")
 
@@ -117,16 +102,6 @@ rstan_options(auto_write=TRUE)
 ## specify number of cores
 options(mc.cores=6)
 
-## compile data
-stan_data_compile <- function(x){
-  data <- list(Ndays=length(x$GPP), 
-               light = x$light_rel, 
-               GPP = x$GPP,
-               GPP_sd = x$GPP_sd, 
-               tQ = x$tQ)
-  return(data)
-}
-
 stan_data_l_y <- lapply(df_y, function(x) stan_data_compile(x))
 
 #########################################
@@ -135,11 +110,6 @@ stan_data_l_y <- lapply(df_y, function(x) stan_data_compile(x))
 
 # Latent Biomass (Ricker population) Model
 # With Persistence Term (P)
-
-# sets initial values of c and s to help chains converge
-init_Ricker <- function(...) {
-  list(c = 0.5, s = 100)
-}
 
 ## export results
 PM_outputlist_Ricker_y <- lapply(stan_data_l_y,

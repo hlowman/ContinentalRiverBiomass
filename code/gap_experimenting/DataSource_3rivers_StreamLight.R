@@ -62,7 +62,7 @@ l <- split(data, data$site_name)
 l_gap <- split(data_w_gaps, data_w_gaps$site_name)
 ## and for temporal comparison, year-ID
 one_site <- data %>% filter(site_name == "nwis_02266300")
-l_yrs <- split(one_site, one_site$site_name-year)
+l_yrs <- split(one_site, one_site$site_year)
 
 ## For sites without StreamLight data, set PAR_surface to light
 # first create a function to map across the list
@@ -100,6 +100,6 @@ df_yrs <- dat_yrs
 # Exporting dataset
 saveRDS(df, "data_working/df_3sites.rds") # first dataset for test run
 saveRDS(df_gap, "data_working/df_3sites_gappy.rds") # second dataset for test run
-saveRDS(df_yrs, "data_working/df_1siteyrs.rds") # third dataset for test run - separated by year rather than site name
+saveRDS(df_yrs, "data_working/df_1site_allyrs.rds") # third dataset for test run - separated by year rather than site name
 
 # End of script.
