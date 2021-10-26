@@ -328,11 +328,13 @@ fig2_full
 ## Extract and summarize parameters
 par_Ricker <- lapply(data_out, function(x) rstan::extract(x, c("r","lambda","s","c","B","P","pred_GPP","sig_p","sig_o")))
 
-## mean parameter
+## mean parameter function
 par_mean <- function(par) {
   ## Find the mean
+  # of all iterations for all parameters
   mean_par <- lapply(par, function(x) mean(x))
   
+  # of each iteration for GPP, P, and B parameters
   mean_pred_GPP_ts <- apply(par$pred_GPP,2,mean)
   mean_P_ts <- apply(par$P,2,mean)
   mean_B_ts <- apply(par$B,2,mean)
@@ -343,15 +345,20 @@ par_mean <- function(par) {
   return(mean_par_ts)
 }
 
+# Apply to dataset of extracted parameters
 meanpar_R <- lapply(par_Ricker, function(x) par_mean(x))
 
 ## Plot persistence
+# function to pull out information of interest (i.e., discharge and persistence data)
 persistence_list <- function(y, data){
   Ppars <- list()
   
   for(i in 1:length(y)){
+    # treat each site as a new dataframe
     df <- y[[i]]
+    # same for input data, each site is a new df
     dat <- data[[i]]
+    # pull out info re: discharge (Q), critical discharge (c), & sensitivity of the curve (s)
     Ppars[[i]] <- list("tQ"=dat$tQ,"range"=range(dat$tQ),
                        "c"=df$c,"s"=df$s, 
                        "site_name"=dat$site_name[1])
@@ -363,11 +370,12 @@ persistence_list <- function(y, data){
   
 }
 
-# NOT WORKING FROM HERE ON DOWN TO THE END OF THE SECTION SO PLEASE DISREGARD
-# And now map this to the entire output list.
-P_R <- persistence_list(par_Ricker, df)
+# And now map this to the output parameter data and the input raw data
+P_R <- persistence_list(par_Ricker, data_in)
 
 ## plot
+# function calculating 97.5%, 50%, and 2.5% percentiles
+# of the persistence term (temp)
 plotting_P_dat <- function(x){
   pq <- seq(x$range[1],x$range[2], length=length(x$s))
   p_median <- numeric()
@@ -386,11 +394,14 @@ plotting_P_dat <- function(x){
   return(df)
 }
 
+# use percentile-calculating function on aggregated persistence/discharge dataset
+# create in the step above
 P_dat_R1 <- lapply(P_R, function(z) plotting_P_dat(z))
 
-P_dat_R$PM <- "Ricker"
+#P_dat_R1$PM <- "Ricker" # removed since the Ricker model is the only kind of model I'm running
 
-P_df <- P_dat_R
+# rename said file
+P_df <- P_dat_R1
 
 Persistence_plots <- function(site, df, site_info, P_df){
   
@@ -398,8 +409,9 @@ Persistence_plots <- function(site, df, site_info, P_df){
   #Q_sub$pq <- Q_sub$tQ
   Q_sub$p_for_q <- 0.5
   
-  ## critical Q based on velocity
-  crit_Q <- site_info[which(site_info$site_name == site),]$RI_2yr_Q
+  ## critical Q based on velocity # removed for now since I don't have bankfull discharge data
+  # at all 34 sites, and already commented out of plot created below
+  #crit_Q <- site_info[which(site_info$site_name == site),]$RI_2yr_Q
   
   ## convert relativized Q to original values
   P <- P_df[which(P_df$site_name == site),]
@@ -438,6 +450,55 @@ Persistence_plots <- function(site, df, site_info, P_df){
   return(Persist_plot)
   
 }
+
+# create the full list of 34 sites
+site_list <- levels(as.factor(data_info$site_name))
+
+# apply function above to create plots at each site
+plots <- lapply(site_list, function(x) Persistence_plots(x,data_in,data_info,P_df))
+# Joanna uses the structure: function(site, df, site_info, P_df)
+
+# So, this function isn't working, so going to try working through it step by step below, at a single site:
+Q_sub <- data_in[["nwis_01608500"]]
+Q_sub$p_for_q <- 0.5
+
+## convert relativized Q to original values
+#P <- P_df[which(P_df$site_name == "nwis_01608500"),] # here was the error I was getting before
+P <- P_df[["nwis_01608500"]] # trying this instead to see if it works the same...it seems to.
+P$Q <- P$pq*max(Q_sub$Q, na.rm = T)
+
+## critical Q based on GPP - Q correction needed
+# critical discharge * maximum discharge at a site
+c <- meanpar_R[["nwis_01608500"]]$par$c*max(Q_sub$Q, na.rm = T)
+
+scaleFUN <- function(x) sprintf("%.1f", x)
+
+## Plot
+Persist_plot <- ggplot(P, aes(Q, p_median))+
+  scale_x_continuous(trans = "log", labels = scaleFUN)+
+  geom_point(data=Q_sub, aes(Q, p_for_q), color="white")+
+  geom_line(size=1.5, alpha=0.9, color="chartreuse4")+
+  geom_ribbon(data=P, aes(ymin=p_down, ymax=p_up), alpha=0.3, fill="chartreuse4", color=NA)+
+  theme(panel.background = element_rect(color = "black", fill=NA, size=1),
+        axis.text.y = element_text(size=12),
+        axis.text.x = element_text(size=12, angle=45, hjust=1),
+        axis.title = element_blank(), 
+        strip.background = element_rect(fill="white", color="black"),
+        strip.text = element_text(size=15))+
+  labs(x="Range of Standardized Discharge",y="Persistence")+
+  scale_y_continuous(limits=c(0,1))+
+  geom_vline(xintercept = c, size=1, linetype="dashed")
+
+
+Persist_plot2 <- ggExtra::ggMarginal(Persist_plot, data=Q_sub, type="histogram",
+                                     size=4, x = Q, margins = "x", color="black",
+                                     fill="deepskyblue4", xparams = list(alpha=0.8))
+
+Persist_plot
+Persist_plot2 # WOOT!
+
+
+names(plots) <- site_list
 
 #### All Parameter Comparisons ####
 
