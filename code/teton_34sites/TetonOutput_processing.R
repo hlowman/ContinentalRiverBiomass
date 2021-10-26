@@ -414,7 +414,7 @@ Persistence_plots <- function(site, df, site_info, P_df){
   #crit_Q <- site_info[which(site_info$site_name == site),]$RI_2yr_Q
   
   ## convert relativized Q to original values
-  P <- P_df[which(P_df$site_name == site),]
+  P <- P_df[[site]] # changed this line based on troubleshooting below
   P$Q <- P$pq*max(Q_sub$Q, na.rm = T)
   
   ## critical Q based on GPP - Q correction needed
@@ -422,32 +422,40 @@ Persistence_plots <- function(site, df, site_info, P_df){
   
   scaleFUN <- function(x) sprintf("%.1f", x)
   
-  ## Plot
+  ## Plot creation
+  # use percentile dataset, discharge on x, persistence values on y
   Persist_plot <- ggplot(P, aes(Q, p_median))+
     scale_x_continuous(trans = "log", labels = scaleFUN)+
-    geom_point(data=Q_sub, aes(Q, p_for_q), color="white")+
-    geom_line(size=1.5, alpha=0.9, color="chartreuse4")+
-    geom_ribbon(data=P, aes(ymin=p_down, ymax=p_up), alpha=0.3, fill="chartreuse4", color=NA)+
+    geom_point(data=Q_sub, aes(Q, p_for_q), color="white")+ # ???
+    geom_line(size=1.5, alpha=0.9, color="chartreuse4")+ # median p values
+    geom_ribbon(data=P, aes(ymin=p_down, ymax=p_up), alpha=0.3, fill="chartreuse4", color=NA)+ # confidence intervals of p values
     theme(panel.background = element_rect(color = "black", fill=NA, size=1),
           axis.text.y = element_text(size=12),
           axis.text.x = element_text(size=12, angle=45, hjust=1),
-          axis.title = element_blank(), 
+          # axis.title = element_blank(), # want to keep axis labels in for now
           strip.background = element_rect(fill="white", color="black"),
           strip.text = element_text(size=15))+
-    #annotate("text", label=as.character(P$short_name[1]),
-    #         x = 1.2*c, 
-    #         y= 0.9, size=3.75, hjust=0)+
-    labs(x="Range of Standardized Discharge",y="Persistence")+
+    labs(x="Range of Standardized Discharge",y="Persistence", title = P$site_name[1])+
     scale_y_continuous(limits=c(0,1))+
-    #geom_vline(xintercept = crit_Q, size=1, linetype="dotted", color="grey25")+
     geom_vline(xintercept = c, size=1, linetype="dashed")
   
   
-  # Persist_plot2 <- ggExtra::ggMarginal(Persist_plot, data=Q_sub, type="histogram",
-  #                                      size=4, x = Q, margins = "x", color="black",
-  #                                      fill="deepskyblue4", xparams = list(alpha=0.8))
+  Persist_plot2 <- ggExtra::ggMarginal(Persist_plot, data=Q_sub, type="histogram",
+                                       size=4, x = Q, margins = "x", color="black",
+                                       fill="deepskyblue4", xparams = list(alpha=0.8))
   
-  return(Persist_plot)
+  # display combined plot
+  print(Persist_plot2)
+  
+  # save and export plots
+  file.name <- paste0("figures/teton_34sites/site_persistence_curves/",
+                      Q_sub$site_name[1],"_persist.jpg",sep = "") # create file name
+  
+  # set specifications for size and resolution of your figure
+  ggsave(Persist_plot2,
+         filename = file.name,
+         width = 8,
+         height = 8)
   
 }
 
@@ -457,7 +465,12 @@ site_list <- levels(as.factor(data_info$site_name))
 # apply function above to create plots at each site
 plots <- lapply(site_list, function(x) Persistence_plots(x,data_in,data_info,P_df))
 # Joanna uses the structure: function(site, df, site_info, P_df)
+# which caused me some confusion initially, since it's sourcing data files from other scripts
+# in the same repository. Instead, I've chosen to name the files the same as they are named
+# in the import steps at the very beginning of *this* script, for consistency.
+# Keep this in mind when troubleshooting future scripts!
 
+#### Persistence Curve Troubleshooting ####
 # So, this function isn't working, so going to try working through it step by step below, at a single site:
 Q_sub <- data_in[["nwis_01608500"]]
 Q_sub$p_for_q <- 0.5
@@ -482,10 +495,10 @@ Persist_plot <- ggplot(P, aes(Q, p_median))+
   theme(panel.background = element_rect(color = "black", fill=NA, size=1),
         axis.text.y = element_text(size=12),
         axis.text.x = element_text(size=12, angle=45, hjust=1),
-        axis.title = element_blank(), 
+        #axis.title = element_blank(), 
         strip.background = element_rect(fill="white", color="black"),
         strip.text = element_text(size=15))+
-  labs(x="Range of Standardized Discharge",y="Persistence")+
+  labs(x="Range of Standardized Discharge",y="Persistence", title = "nwis_01608500")+
   scale_y_continuous(limits=c(0,1))+
   geom_vline(xintercept = c, size=1, linetype="dashed")
 
