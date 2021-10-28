@@ -11,7 +11,7 @@ lapply(c("calecopal", "cowplot",
          "lubridate","tidyverse", "reshape2",
          "PerformanceAnalytics","jpeg","grid",
          "rstan","bayesplot","shinystan", "here",
-         "ggrepel", "patchwork"), require, character.only=T)
+         "ggrepel", "patchwork", "grid","gridExtra"), require, character.only=T)
 
 #### Data Import & Processing ####
 
