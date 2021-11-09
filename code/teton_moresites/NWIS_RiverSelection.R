@@ -59,35 +59,57 @@ sub <- df[,c("site_name","long_name","StreamOrde",
 # diagnostics from Appling et al.
 
 # Import and subset model diagnostics
-# https://www.sciencebase.gov/catalog/item/59eb9bafe4b0026a55ffe382
+# https://www.sciencebase.gov/catalog/item/59eb9bafe4b0026a55ffe382 
 diagnostics <- read.table("data_raw/diagnostics.tsv",sep = "\t", header=T)
 diagnostics <- diagnostics[which(diagnostics$site %in% sub$site_name),]
 
 # Filtering for Rhat (Gelman-Rubin statistic) below 1.05, because this provides
 # an indication for how well the streamMetabolizer output performed
 # 356 sites at the start
-highq_sites <- diagnostics[which(diagnostics$K600_daily_sigma_Rhat < 1.05 & # 7 records drop off
-                                   diagnostics$err_obs_iid_sigma_Rhat < 1.05 & # 78 records drop off
-                                   diagnostics$err_proc_iid_sigma_Rhat < 1.05 & # 1 record drops off
+
+# quick histograms to visualize the thresholds at which I'm filtering
+hist(diagnostics$err_obs_iid_sigma_Rhat)
+hist(diagnostics$err_proc_iid_sigma_Rhat)
+hist(diagnostics$neg_GPP)
+hist(diagnostics$pos_ER)
+
+highq_sites <- diagnostics[which(#diagnostics$K600_daily_sigma_Rhat < 1.05 & 
+  # Instead of filtering by K600 Rhat values for the whole site, going to filter for daily
+  # records using the "NWIS" dataframe below
+  
+                                   diagnostics$err_obs_iid_sigma_Rhat < 1.05 & # 66 sites drop off
+                                   diagnostics$err_proc_iid_sigma_Rhat < 1.05 & # 2 sites drops off
+                                     
                                    # the following two filters refer to "percent of GPP estimates < -0.5 
                                    # and the percent of ER estimates > 0.5 
                                    # (both are biologically unrealistic outcomes)"
-                                   diagnostics$neg_GPP < 15 & # 9 records drop off
-                                   diagnostics$pos_ER < 15),] # 32 records drop off
-# 229 records remaining after diagnostic filtering
+                                   # at neg_GPP < 5, 48 more sites disappear
+                                   # at neg_GPP < 25, 5 sites disappear
+                                   # at neg_GPP < 50, only 2 sites drop off
+                                   diagnostics$neg_GPP < 25 &
+                                     
+                                   # at pos_ER < 5, 62 more sites disappear
+                                   # at pos_ER < 25, 20 sites disappear
+                                   # at pos_ER < 50, 5 sites drop off
+                                   diagnostics$pos_ER < 25),]
 
-highq_site_names <- unique(highq_sites$site) ## 208 sites at the end
+# 294 records remaining after diagnostic filtering
+
+highq_site_names <- unique(highq_sites$site) ## 294 sites at the end
 
 # Subset s based on high sites and site type and flags
 s <- sub[which(sub$site_name %in% highq_site_names),]
 
 # Removing all except stream sites. Possible categories include:
 # ST (stream), ST-CA (canal), ST-DCH (ditch), ST-TS (tidal stream), or SP (spring)
-s <- s[which(s$site_type == "ST"),] ## 4 sites drop off
+s <- s[which(s$site_type == "ST"),] ## 8 sites drop off
+
+# NOTE: REMOVING THE DAM FILTER. This will instead be addressed with variable application of the
+# "P" term in future model fits.
 
 # Removing possible interference from dams. From the Appling site_data.xml file:
 # "a value of 95 indicates the least probable interference from a structure of a given type"
-s <- s[which(s$struct.dam_flag %in% c(NA,"95")),] ## 122 sites drop off, 82 left
+# s <- s[which(s$struct.dam_flag %in% c(NA,"95")),] ## 122 sites drop off, 82 left
 #s_test <-  s[which(s$struct.dam_flag %in% c(NA,"80", "95")),] ## 100 sites drop off, 104 left
 #s_test2 <-  s[which(s$struct.dam_flag %in% c(NA, "50", "80", "95")),] ## 81 sites drop off, 123 left
 
@@ -98,14 +120,26 @@ s <- s[which(s$struct.dam_flag %in% c(NA,"95")),] ## 122 sites drop off, 82 left
 # 4c. Distances between the site and upstream features were compared with the percentiles of 80% O2 turnover distance. Site flags are numeric to indicate whether the nearest feature of each type was farther than the 95th, 80th, 50th, or 0th percentile; those four cases are represented by site flag values of 95, 80, 50, or 0, respectively, such that a value of 95 indicates the least probable interference from a structure of a given type."
 
 # which have light from Phil, this isn't so much a filter as a possibility
-s_l <- s[!is.na(s$StreamOrde),] # 36 sites have StreamLight data
+# s_l <- s[!is.na(s$StreamOrde),] # 36 sites have StreamLight data
 
 # Import time series of streamMetabolizer-generated predictions
 NWIS <- read.table("data_raw/daily_predictions.tsv", sep='\t', header = TRUE)
-NWIS$date <- as.POSIXct(as.character(NWIS$date), format="%Y-%m-%d")
+NWIS$date <- ymd(NWIS$date)
+# Due to date issues below, forcing the dataframe to represent dates in ascending order
+NWIS <- NWIS %>%
+  group_by(site_name) %>%
+  arrange(date) %>% # ascending is the default
+  ungroup()
+
+# Instead of filtering by site-level diagnostics above, now filtering by daily Rhat values
+NWIS_ed <- NWIS %>%
+  filter(GPP.Rhat < 1.05) %>% # remove days on which Rhat > 1.05
+  filter(K600.Rhat < 1.05) # same
+
+# Removed 5% of days (470,763 records remaining of the original 490,907)
 
 ## Subset columns and sites
-NWIS_sub <- NWIS[,c("site_name","date","GPP","GPP.lower","GPP.upper", 
+NWIS_sub <- NWIS_ed[,c("site_name","date","GPP","GPP.lower","GPP.upper", 
                     "GPP.Rhat","ER","ER.lower","ER.upper","K600",
                     "K600.lower","K600.upper","temp.water",
                     "discharge","shortwave","velocity")]
@@ -114,12 +148,12 @@ colnames(NWIS_sub) <- c("site_name","date","GPP","GPP.lower","GPP.upper",
                         "K600.lower","K600.upper","temp","Q","light",
                         "velocity")
 
-## Subset to sites in high_sites (sites with high confidence rating and limited dam interference)
+## Subset to sites in highq_sites
 NWIS_sub <- NWIS_sub[which(NWIS_sub$site_name %in% s$site_name),]
-# So, with diagnostics/site-specific info filters only, removed ~75% of daily data records already
+# So, with diagnostics/site-specific filters revised, removed 28% of data records
 
 # Confirm remaining number of sites
-length(levels(as.factor(NWIS_sub$site_name))) ## still 82 sites
+length(levels(as.factor(NWIS_sub$site_name))) ## 253 sites
 
 #### SECOND FILTERS ####
 # time-series evaluation for gaps and quantity of days
@@ -139,26 +173,31 @@ hist(dat_per_year$n)
 ## identify the max day gap per year
 gap_per_year <- NWIS_sub %>%
   group_by(site_name, year) %>%
-  mutate(gap = doy - lag(doy, default=doy[1])) 
-# something weird is happening here, generating negative numbers
-# filter on site nwis_040871488 to see some examples
+  mutate(gap = doy - lag(doy, default=doy[1], order_by = doy))
+# now, no more negative values in the gap column - woohoo!
+
+# So, the following code shows that the dates are now arranged in ascending order
+# When earlier this was not the case using the same code
+test <- gap_per_year %>% filter(site_name == "nwis_040871488" & year == 2011) # YAY! It's working.
+# Switching the above code to lubridate's ymd() function alone didn't seem to help
+# so I'm going to force it to be in ascending order above using arrange().
 
 maxgap <- gap_per_year %>%
   group_by(site_name, year) %>%
   summarize_at(.vars = "gap", .funs = max)
 
 # Making some changes, because the shortened time frames (3 months)
-# need to be included prior to filtering out for long gaps (since upwards
-# of 9 months a.k.a. 270 days could be)
+# need to be included prior to filtering out for long gaps
 
 ## merge with number of days per year
-sub_by_gap <- merge(maxgap, dat_per_year, by=c("site_name","year")) # 506 site-years
+sub_by_gap <- merge(maxgap, dat_per_year, by=c("site_name","year")) # 1619 site-years
 
 # Changing to allow for season-long data to try and up the number of sites
 ## at least 90 days per year (minimum possible 3 month period)
-sub_by_gap1 <- sub_by_gap[which(sub_by_gap$n > 90),] # 435 site-years
-sub_by_gap_sum <- sub_by_gap1 %>% group_by(site_name) %>% count() # 82 unique sites
+sub_by_gap1 <- sub_by_gap[which(sub_by_gap$n > 90),] # 1327 site-years
+sub_by_gap_sum <- sub_by_gap1 %>% group_by(site_name) %>% count() # 242 unique sites
 
+# STOPPED HERE 11/9/2021 - this filter doesn't seem quite right...
 ## subset for sites with a max gap of 14 days
 sub_by_gap2 <- sub_by_gap1[which(sub_by_gap1$gap <= 14),] # 249 site-years
 length(levels(as.factor(sub_by_gap2$site_name))) # 73 unique sites
