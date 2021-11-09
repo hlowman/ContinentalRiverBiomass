@@ -197,10 +197,9 @@ sub_by_gap <- merge(maxgap, dat_per_year, by=c("site_name","year")) # 1619 site-
 sub_by_gap1 <- sub_by_gap[which(sub_by_gap$n > 90),] # 1327 site-years
 sub_by_gap_sum <- sub_by_gap1 %>% group_by(site_name) %>% count() # 242 unique sites
 
-# STOPPED HERE 11/9/2021 - this filter doesn't seem quite right...
 ## subset for sites with a max gap of 14 days
-sub_by_gap2 <- sub_by_gap1[which(sub_by_gap1$gap <= 14),] # 249 site-years
-length(levels(as.factor(sub_by_gap2$site_name))) # 73 unique sites
+sub_by_gap2 <- sub_by_gap1[which(sub_by_gap1$gap <= 14),] # 784 site-years
+length(levels(as.factor(sub_by_gap2$site_name))) # 207 unique sites
 
 # Commenting out the below, since having more than 1 year of data doesn't matter
 # for our purposes
@@ -236,7 +235,7 @@ TS_site[which(TS_site$NHD_STREAMORDE >= 6),]$order_group <- "large"
 ## Choose river-years
 ###########################################################################
 
-# There are 73 unique sites in the TS_site dataset, with these new filters imposed.
+# There are 207 unique sites in the TS_site dataset, with these new filters imposed.
 
 # first, I'm joining the full names to the TS dataset to better ID them when plotting
 name_bridge <- TS_site %>%
@@ -246,15 +245,12 @@ TS <- TS %>%
   left_join(name_bridge)
 
 # plot all site-years of GPP data
-ggplot(TS, aes(date, GPP_temp)) +
-  geom_line() +
-  labs(x = "Date",
-       y = "GPP",
-       title = "Site-Years for Second Teton Job") +
-  facet_wrap(.~long_name, scales = "free")
-
-# ok, wonky ones are gone. make sure to trim dates down to 90 day minimum, and 
-# only THEN parse out for maximum 14 days gaps.
+# ggplot(TS, aes(date, GPP_temp)) +
+#   geom_line() +
+#   labs(x = "Date",
+#        y = "GPP",
+#        title = "Site-Years for Second Teton Job") +
+#   facet_wrap(.~long_name, scales = "free")
 
 # subset necessary data
 site_subset <- TS # GPP data
@@ -331,8 +327,8 @@ plotting_covar(site_sub_list$nwis_14206950)
 ###########################
 
 ## NWIS site subset
-saveRDS(site_subset, "data_working/NWIS_73sites_subset.rds") # GPP data
-saveRDS(TS_site_subset, "data_working/NWIS_73sitesinfo_subset.rds") # Site data
-saveRDS(site_subset_numdays,"data_working/NWIS_73sites_Ndays.rds") # Gaps in data
+saveRDS(site_subset, "data_working/NWIS_207sites_subset.rds") # GPP data
+saveRDS(TS_site_subset, "data_working/NWIS_207sitesinfo_subset.rds") # Site data
+saveRDS(site_subset_numdays,"data_working/NWIS_207sites_Ndays.rds") # Gaps in data
 
 # End of script.
