@@ -11,11 +11,13 @@
 # Load packages.
 library(tidyverse)
 library(lubridate)
+library(data.table)
 library(calecopal)
 library(patchwork)
 library(sf)
 library(viridis)
 library(maps)
+library(mapproj)
 library(here)
 
 # Double check working directory
@@ -23,10 +25,10 @@ here()
 
 # Load datasets.
 # Main dataset containing site information from Appling + Koenig
-sitesjoin <- readRDS("data_working/NWIS_73sitesinfo_subset.rds")
+sitesjoin <- readRDS("data_working/NWIS_207sitesinfo_subset.rds")
 
 # Dataset with data itself
-site_subset <- readRDS("data_working/NWIS_73sites_subset.rds")
+site_subset <- readRDS("data_working/NWIS_207sites_subset.rds")
 
 # Figures -----------------------------------------------------------------
 
@@ -37,17 +39,15 @@ main1 <- sitesjoin %>%
   select(site_name, NHD_STREAMORDE) %>%
   mutate(order = fct_explicit_na(factor(NHD_STREAMORDE))) # ensure NA is a level
 
-storder <- ggplot(main1) + # base plot
+(storder <- ggplot(main1) + # base plot
   geom_histogram(aes(x = order, fill = order), stat = "count") + # stream order histogram
-  scale_fill_manual(values = cal_palette("sbchannel", n = 9, type = "continuous")) + # custom colors
+  scale_fill_manual(values = cal_palette("sbchannel", n = 10, type = "continuous")) + # custom colors
   labs(x = "Stream Order",
        y = "Site Count") +
   theme_classic() + # remove grid
-  theme(legend.position = "none") # remove legend
+  theme(legend.position = "none")) # remove legend
 
-storder
-
-# Takeaway - Stream Order of 2 is still most represented.
+# Takeaway - Stream Order of 5 is now most represented.
 
 # Distribution of available sites by geography
 
@@ -69,21 +69,22 @@ states_sf <- st_as_sf(states,
                      crs = 4269)
 
 # site map colored by stream order
-sitemap <- ggplot(states_sf) + # base plot
+(sitemap <- ggplot(states_sf) + # base plot
   geom_polygon(aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") + # map of states
-  geom_point(data = sites_sf, aes(x = lon, y = lat, color = order), 
+  geom_point(data = sites_sf %>% 
+               filter(site_name != "nwis_15298040"), # removing 1 alaska site for now
+             aes(x = lon, y = lat, color = order), 
              size = 4, alpha = 0.8) + # map of sites
   scale_color_manual(name = "Stream Order", 
-                     values = cal_palette("sbchannel", n = 9, type = "continuous")) + # custom colors
+                     values = cal_palette("sbchannel", n = 10, type = "continuous")) + # custom colors
   theme_classic() + # remove grid
   labs(x = "Longitude",
        y = "Latitude") +
-  theme(legend.position = "bottom") # reposition legend
+  theme(legend.position = "bottom") + # reposition legend
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45))   
 
-sitemap
-
-# Takeaways - Still skewed towards northeastern US, but this was true for the past run.
+# Takeaways - Still skewed towards northeastern/midwestern US.
 
 # Distribution of available sites by years of data
 
@@ -96,7 +97,7 @@ main3 <- site_subset %>%
   ungroup()
 
 # Export for shiny app use:
-saveRDS(main3, "data_working/teton_73rivers_sitesyrsgpp.rds")
+saveRDS(main3, "data_working/teton_207rivers_sitesyrsgpp.rds")
 
 # Count number of years (observations) per site
 main4 <- main3 %>%
@@ -104,17 +105,15 @@ main4 <- main3 %>%
   mutate(n_f = factor(n))
 
 # Export for rmarkdown use:
-saveRDS(main4, "data_working/teton_73rivers_sitesyears.rds")
+saveRDS(main4, "data_working/teton_207rivers_sitesyears.rds")
 
-styears <- ggplot(main4) + # base plot
+(styears <- ggplot(main4) + # base plot
   geom_histogram(aes(x = n_f, fill = n_f), stat = "count") + # years data histogram
   scale_fill_manual(values = cal_palette("desert", n = 9, type = "continuous")) + # custom colors
   labs(x = "Years of Available Data",
        y = "Site Count") +
   theme_classic() + # remove grid
-  theme(legend.position = "none") # remove legend
-
-styears
+  theme(legend.position = "none")) # remove legend
 
 # Combine all figures into one
 
@@ -124,8 +123,140 @@ full_fig <- (storder | styears) /
 
 full_fig
 
-# ggsave(("figures/teton_moresites/map_fig_73sites.png"),
+# ggsave(("figures/teton_moresites/map_fig_207sites.png"),
 #        width = 16,
+#        height = 20,
+#        units = "cm"
+# )
+
+# Time Sequences ------------------------------------------------------------
+
+# Borrowing some code from Joanna to calculate sequences of dates
+
+# create placeholder columns for day to day differences and sequences
+df <- site_subset %>%
+  mutate(diff_time = 0, seq = 1)
+
+# Need to add some more groupings since I'm iterating over more than 1 site...
+
+# First, I'm going to get this working on a single site
+d1 <- df %>%
+  filter(site_name == "nwis_01124000")
+
+d <- d1
+
+# set the first day to 0
+#d$diff_time[1] <- 0
+
+# calculate the difference from one day to the next
+for(i in 2:nrow(d)){
+  d$diff_time[i] = difftime(time1 = d$date[i], time2 = d$date[(i-1)],
+                            units = "days")
+}
+
+# convert to character
+#d$diff_time <- as.character(as.numeric(d$diff_time))
+
+# set the first in the sequence to 1
+#d$seq[1] <- 1
+
+# delineate sequenced time frames based on day to day differences
+# anything less than 14 day gaps is permissible
+for(i in 2:nrow(d)){
+  if(d$diff_time[i] < 14){
+    d$seq[i] = d$seq[(i-1)]
+  } else {
+    d$seq[i] = d$seq[(i-1)] + 1
+  }
+}
+
+# split into a list based on events
+l1 <- split(d, as.factor(d$seq))
+
+# create larger dataframe as list
+my_list <- split(df, f = df$site_name)
+
+# create function for application to all sites
+seqFUN <- function(d){
+  
+  # calculate the difference from one day to the next
+  for(i in 2:nrow(d)){
+    d$diff_time[i] = difftime(time1 = d$date[i], time2 = d$date[(i-1)],
+                              units = "days")
+  }
+  
+  # delineate sequenced time frames based on day to day differences
+  # anything less than 14 day gaps is permissible
+  for(i in 2:nrow(d)){
+    if(d$diff_time[i] < 14){
+      d$seq[i] = d$seq[(i-1)]
+    } else {
+      d$seq[i] = d$seq[(i-1)] + 1
+    }
+  }
+  
+  # split into a list based on events
+  l <- split(d, as.factor(d$seq))
+  
+  return(l)
+  
+}
+
+# And now map this to the entire site list.
+events_dat <- lapply(my_list, seqFUN)
+
+# trying out a first figure to try and visualize individual events
+# first, make the output list back into a dataframe
+# need to unnest the doubly nested list, so this is the first round
+events_dat1 <- lapply(events_dat, rbindlist)
+
+# and then unnest the final list level
+events_df <- rbindlist(events_dat1)
+
+# calculate some summary stats for plotting
+events_summary <- events_df %>%
+  count(site_name, seq)
+
+mean(events_summary$n) #458
+
+(evyears <- ggplot(events_summary) + # base plot
+    geom_point(aes(x = site_name, y = n, color = site_name), size = 2) +
+    scale_color_manual(values = cal_palette("collinsia", n = 207, type = "continuous")) +
+    labs(x = "Sites",
+         y = "Event Lengths (days)") +
+    geom_hline(yintercept = 458, linetype = "dotted") +
+    geom_hline(yintercept = 365, linetype = "solid") +
+    theme_classic() + # remove grid
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          legend.position = "none")) # remove legend
+
+# ggsave(("figures/teton_moresites/events_fig_207sites.png"),
+#        width = 20,
+#        height = 20,
+#        units = "cm"
+# )
+
+# some more summary stats for plotting
+events_summary2 <- events_summary %>%
+  group_by(site_name) %>%
+  summarize(max_seq = max(seq, na.rm=TRUE), mean_event = mean(n, na.rm=TRUE)) %>%
+  ungroup()
+
+(evcounts <- ggplot(events_summary2) + # base plot
+    geom_point(aes(x = max_seq, y = mean_event, color = site_name), size = 2) +
+    scale_color_manual(values = cal_palette("collinsia", n = 207, type = "continuous")) +
+    labs(x = "Max. # of Events",
+         y = "Mean Event Length (days)") +
+    geom_hline(yintercept = 458, linetype = "dotted") +
+    geom_hline(yintercept = 365, linetype = "solid") +
+    theme_classic() + # remove grid
+    theme(#axis.text.x = element_blank(),
+          #axis.ticks.x = element_blank(),
+          legend.position = "none")) # remove legend
+
+# ggsave(("figures/teton_moresites/events2_fig_207sites.png"),
+#        width = 20,
 #        height = 20,
 #        units = "cm"
 # )

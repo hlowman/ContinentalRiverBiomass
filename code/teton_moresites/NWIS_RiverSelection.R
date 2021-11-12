@@ -125,7 +125,7 @@ s <- s[which(s$site_type == "ST"),] ## 8 sites drop off
 # Import time series of streamMetabolizer-generated predictions
 NWIS <- read.table("data_raw/daily_predictions.tsv", sep='\t', header = TRUE)
 NWIS$date <- ymd(NWIS$date)
-# Due to date issues below, forcing the dataframe to represent dates in ascending order
+# Due to date issues below, forcing the dataframe to present dates in ascending order
 NWIS <- NWIS %>%
   group_by(site_name) %>%
   arrange(date) %>% # ascending is the default
