@@ -180,17 +180,28 @@ data_out_diff_divs <- read_csv("data_working/divergences_09_21_21.csv")
     geom_point(aes(color = site_name)) +
     scale_color_manual(values = cal_palette("figmtn", n = 34, type = "continuous")) +
     labs(x = "Maximum Growth Rate (r)",
-         y = "Log of Carrying Capacity (K)") +
+         y = "Carrying Capacity (K)") +
     theme_bw() +
     theme(text = element_text(size=20), legend.position = "none") +
     facet_wrap(.~site_name, scales = "free"))
+
+# So roughly 13 of the 34 appear to be covarying?
 
 # ggsave(plot = fig0_all,
 #        filename = "figures/teton_34sites/r_k_iterations.png",
 #        width = 30,
 #        height = 30)
 
-# So roughly 13 of the 34 appear to be covarying?
+(fig0_alltogether <- data_out_params_df %>%
+  filter(k < 100 & k > -100) %>% # really zeroing in for nicer plotting
+  ggplot(aes(x = r, y = k)) +
+  geom_point(aes(color = site_name)) +
+  scale_color_manual(values = cal_palette("figmtn", n = 34, type = "continuous")) +
+  labs(x = "Maximum Growth Rate (r)",
+       y = "Carrying Capacity (K)") +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none"))
+# hard to tell at this resolution - they're all such different magnitudes
 
 #### Max Growth Rate / Carrying Capacity ####
 
