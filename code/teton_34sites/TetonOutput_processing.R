@@ -56,6 +56,10 @@ data_out_params_df <- map_df(data_out_params, ~as.data.frame(.x), .id="site_name
   # and add "K" to it, calculating for each individual iteration
   mutate(k = (-1*r)/lambda)
 
+# Export dataset
+saveRDS(data_out_params_df, 
+        file = "data_working/teton_34rivers_model_parameters_alliterations_111621.rds")
+
 # And now to calculate means by site.
 data_means <- data_out_params_df %>%
   group_by(site_name) %>%
@@ -110,6 +114,83 @@ data_out_diff_divs <- read_csv("data_working/divergences_09_21_21.csv")
 # saveRDS(site2, file = "code/teton_34sites/div_reprex/output_nwis_01645704.rds")
 
 ####      Figures         ####
+
+#### Examining Potential Covariation between r & k ####
+
+# Creating this figure following discussions had at the FLBS meeting 0ct 2021.
+(fig0 <- data_out_params_df %>%
+   mutate(logK = log10(k)) %>% # creating log(K) column for better plotting
+  ggplot(aes(x = r, y = logK)) +
+  geom_point(aes(color = site_name)) +
+  xlim(0, 2.5) +
+  scale_color_manual(values = cal_palette("figmtn", n = 34, type = "continuous")) +
+  labs(x = "Maximum Growth Rate (r)",
+       y = "Log of Carrying Capacity (K)") +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none"))
+
+# There doesn't appear to be strong evidence for values co-varying, but I'm going
+# to pick out a few sites at random just to see.
+
+# Reedy Creek, FL - nwis_02266300
+(fig0.1 <- data_out_params_df %>%
+    filter(site_name == "nwis_02266300" & k > -300000) %>% # removing the crazy outlier
+    ggplot(aes(x = r, y = k)) +
+    geom_point(aes(color = site_name)) +
+    scale_color_manual(values = "#E29244") +
+    labs(title = "Reedy Creek, FL (nwis_02266300)",
+         x = "Maximum Growth Rate (r)",
+         y = "Carrying Capacity (K)") +
+    theme_bw() +
+    theme(text = element_text(size=20), legend.position = "none"))
+# Can I have a negative carrying capacity?
+
+# Fanno Creek, OR - nwis_14206950
+(fig0.2 <- data_out_params_df %>%
+    filter(site_name == "nwis_14206950") %>%
+    ggplot(aes(x = r, y = k)) +
+    geom_point(aes(color = site_name)) +
+    scale_color_manual(values = "#FFAA00") +
+    labs(title = "Fanno Creek, OR (nwis_14206950)",
+         x = "Maximum Growth Rate (r)",
+         y = "Carrying Capacity (K)") +
+    theme_bw() +
+    theme(text = element_text(size=20), legend.position = "none"))
+# Hmmm, so this looks like they're co-varying.
+
+# South Branch Potomac, WV - nwis_01608500
+(fig0.3 <- data_out_params_df %>%
+    filter(site_name == "nwis_01608500") %>%
+    ggplot(aes(x = r, y = k)) +
+    geom_point(aes(color = site_name)) +
+    scale_color_manual(values = "#D46F10") +
+    labs(title = "South Branch Potomac, WV (nwis_01608500)",
+         x = "Maximum Growth Rate (r)",
+         y = "Carrying Capacity (K)") +
+    theme_bw() +
+    theme(text = element_text(size=20), legend.position = "none"))
+# But this looks like a blob...
+
+# Since these seem to run the gamut, I'm going to create one large paneled figure with them all.
+
+(fig0_all <- data_out_params_df %>%
+    filter(k > -300000) %>% # removing the outlier from the Reedy Creek site
+    #mutate(logK = log10(k)) %>% # creating log(K) column for better plotting
+    ggplot(aes(x = r, y = k)) +
+    geom_point(aes(color = site_name)) +
+    scale_color_manual(values = cal_palette("figmtn", n = 34, type = "continuous")) +
+    labs(x = "Maximum Growth Rate (r)",
+         y = "Log of Carrying Capacity (K)") +
+    theme_bw() +
+    theme(text = element_text(size=20), legend.position = "none") +
+    facet_wrap(.~site_name, scales = "free"))
+
+# ggsave(plot = fig0_all,
+#        filename = "figures/teton_34sites/r_k_iterations.png",
+#        width = 30,
+#        height = 30)
+
+# So roughly 13 of the 34 appear to be covarying?
 
 #### Max Growth Rate / Carrying Capacity ####
 
