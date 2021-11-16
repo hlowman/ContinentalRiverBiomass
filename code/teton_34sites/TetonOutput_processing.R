@@ -172,6 +172,12 @@ data_out_diff_divs <- read_csv("data_working/divergences_09_21_21.csv")
 # But this looks like a blob...
 
 # Since these seem to run the gamut, I'm going to create one large paneled figure with them all.
+# For increased clarity, this figure will also be ordered by model divergence.
+
+df_join <- left_join(data_out_params_df, data_out_diff_divs, by = "site_name") %>%
+  mutate(site_name_f = factor(site_name, levels = unique(site_name[order(div_shinyStan)])))
+
+levels(df_join$site_name_f) # now site names are ordered by number of divergences
 
 (fig0_all <- data_out_params_df %>%
     filter(k > -300000) %>% # removing the outlier from the Reedy Creek site
@@ -189,6 +195,22 @@ data_out_diff_divs <- read_csv("data_working/divergences_09_21_21.csv")
 
 # ggsave(plot = fig0_all,
 #        filename = "figures/teton_34sites/r_k_iterations.png",
+#        width = 30,
+#        height = 30)
+
+(fig0_all2 <- df_join %>%
+    filter(k > -300000) %>% # removing the outlier from the Reedy Creek site
+    ggplot(aes(x = r, y = k)) +
+    geom_point(aes(color = div_shinyStan)) +
+    labs(x = "Maximum Growth Rate (r)",
+         y = "Carrying Capacity (K)",
+         color = "Divergences") +
+    theme_bw() +
+    theme(text = element_text(size=20)) +
+    facet_wrap(.~site_name_f, scales = "free"))
+
+# ggsave(plot = fig0_all2,
+#        filename = "figures/teton_34sites/r_k_iterations_divs.png",
 #        width = 30,
 #        height = 30)
 
