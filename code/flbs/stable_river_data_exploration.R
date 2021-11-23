@@ -8,7 +8,7 @@ library(here)
 library(patchwork)
 
 # Load data.
-dat <- read_csv("data_raw/selected_autotrophic_rivers_daily.csv")
+dat <- read_csv("data_raw/flbs/selected_autotrophic_rivers_daily.csv")
 
 # Plot of all data.
 f1 <- ggplot(dat, aes(x = Date, y = GPP)) +
@@ -36,7 +36,7 @@ f2
 # Canyon Creek specific
 # 20 km upstream of dam
 f3 <- dat_long %>%
-  filter(sitecode == "nwis_10133650") %>%
+  filter(sitecode == "nwis_10133650" & year == 2011) %>%
   ggplot(aes(x = Date, y = value, color = measure)) +
   geom_line() +
   labs(title = "E Canyon Creek") +
