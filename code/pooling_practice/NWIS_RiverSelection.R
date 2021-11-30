@@ -256,6 +256,40 @@ ggplot(TS, aes(date, GPP_temp)) +
        title = "Site-Years for Second Teton Job") +
   facet_wrap(.~long_name, scales = "free")
 
+# plot coefficient of variation (sd/mean) of discharge by site
+(fig_cvQ <- TS %>%
+  group_by(site_name) %>%
+  summarize(cvQ = (sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE))) %>%
+  ungroup() %>%
+  left_join(s, by = "site_name") %>%
+  select(site_name, long_name, cvQ, struct.dam_flag) %>%
+  ggplot(aes(cvQ, struct.dam_flag)) +
+  geom_point() +
+  theme_bw() +
+  labs(x = "Coefficient of Variation of Discharge (Q)",
+       y = "Probable Interference from Dams (95 = least probable)",
+       title = "207 Sites in Second Teton Job"))
+
+(fig_cvQ2 <- TS %>%
+    group_by(site_name) %>%
+    summarize(cvQ = (sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE))) %>%
+    ungroup() %>%
+    left_join(s, by = "site_name") %>%
+    select(site_name, long_name, cvQ, NHD_STREAMORDE, struct.dam_flag) %>%
+    mutate(so = factor(NHD_STREAMORDE)) %>%
+    ggplot(aes(cvQ, so)) +
+    geom_point(aes(color = struct.dam_flag), size = 3) +
+    geom_boxplot(fill = NA) +
+    #scale_y_continuous(breaks = c(0, 2, 4, 6, 8, 10)) +
+    theme_bw() +
+    labs(x = "Coefficient of Variation of Discharge (Q)",
+         y = "Stream Order",
+         color = "Probable Interference from\nDams (95 = least probable)",
+         title = "207 Sites in Second Teton Job"))
+
+# Larger streams (higher order) tend to have greater probability of interference from dams
+# Larger streams also tend to have lower coefficients of variation
+
 # site with multiple time segments
 # plot Allegheny River data
 TS %>%
