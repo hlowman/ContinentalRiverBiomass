@@ -1,0 +1,219 @@
+---
+title: "SAM example on metabolism data"
+author: "Bob Hall,"
+date: "6/17/2021"
+output: html_document
+bibliography: SAMpapers.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rstan)
+```
+
+## Background
+
+Gross primary production (GPP, $P$) and ecosystem respiration (ER, $R$) are core properties of ecosystems.  GPP represents the total of carbon fixed per time and ER is the total mineralization of all organic carbon in an ecoystem.  The leftover is net ecosystem production (NEP,$N$) , calculated as $N = P+R$ ($R$ is consumption of organic carbon, so we consider it as a negative flux.) NEP can be positive or negative.  If positive the ecosystem must store or export carbon; if negative then the `heterotrophic' ecosystem must receive organic  carbon transported from somewhere else.  This idea forms a core tenet of ecosystem ecology [@odum1956primary].
+
+We estimate GPP and ER in streams using open channel methods in that we can use diel variation in dissolved oxygen to estimate  GPP and ER.  Gas exchange with the atmosphere is a big part of this model, we don't know it, but we (think) we can solve for it [@appling2018overcoming].  These methods have occupied my life for the past 10 years, and I won't go into them futher here.
+
+Streams are mostly heterotrophic such that their respiration derives mostly from carbon that flows downhill and into them.  There are however, some streams and rivers that have very high rates of GPP and thus, most of the ER in the ecosystem derives from this GPP.  But two questions exist.  How much of the GPP is respired?  and 2.  When is it respired?  We tried to to address question 1 by examining the slopes (of the 90% quantile) of the relationship between ER and GPP [@hall2013estimating].  We found that on average the slope was 44% meaning that 44% of ER was respired on the day it was fixed.  At least that was what we said, and no one seems to have doubted us.  But this idea does not really say when the respiration occurred because it only compares ER and GPP from the same day (technically the night after the day---we can only measure ER at night).  What if carbon is stored for a day and then respired two days later?  Could that happen?  Could it be longer?  A week?  We do not know. But if true, there would be a pattern of ecological memory, such that past values of GPP imprint onto present ER [@ogle2015quantifying].
+
+Here I  examine the degree to which past values of GPP drive current ER using stochastic antecedent modeling [@ogle2015quantifying]. This paper poses a strong argument and approach for detecting ecological memory, and I  assess how much memory matters for ER.  I expect that much of the variation in ER will come from that day's GPP, but that there will be a memory effect beyond what would be predicted from a random walk model (whose partial autocorrelations = 0 beyond lag 1)
+
+
+## Ecosystem respiration is about 45% GPP on any one day:
+![ ](SAMfigs/ARfig.png)
+
+
+
+-But this model assumes that ER is respired on the same day that the carbon is fixed leadting to the question: When is fixed carbon respired in a river?
+
+
+## Use Stochastic Antecedent modeling
+
+- Consider a process $Y$ whose main cause is $X$ such that $Y$ at some time $t$ is a function of X at any time ($Y_t=f(X_t...X_{t-j})$) where $j$ is some arbitrarily long lag.
+
+-Weight the lags and define $X^{ant}_t$ as a function of these weighted lags
+$$f(X_t...X_{t-n})=X^{ant}_t = \displaystyle\sum_{j=0}^{J} w_j X_{t-j}$$
+
+## Graphical display of SAM 
+![](SAMfigs/Ogle_fig.jpg)
+
+(Ogle and Barber 2015)
+
+## Make a model
+ER is some function of GPP on prior days
+
+$$P^{ant}_t = \displaystyle\sum_{j=0}^{J} w_j P_{t-j} $$
+--this function we assume is a linear model
+$$R_t= b + a P^{ant}_t + \varepsilon_t$$
+
+$$\varepsilon_t \sim N (0, \sigma_{proc})$$
+
+-Priors are minimally informative, but a special prior on $w$, which is a simplex 
+
+$$w \sim dirichlet(1,1,...1)$$
+
+
+## Stan code
+
+```{r,  eval = FALSE, echo=TRUE}
+ 
+sink("SAM.stan")
+
+cat("
+    
+    data {
+    int <lower = 0> N;
+    vector [N] P;
+    vector [N] R;
+    int <lower = 0> nweight;
+     vector [nweight] alpha;
+    
+    }
+    
+    parameters {
+    real <lower =0> a;
+    real b;
+    simplex [nweight] w; 
+ real <lower=0> sigma;
+    }
+    
+    transformed parameters{
+    
+vector  [N] Pant;
+Pant[1:5]= P[1:5];
+
+
+for (i in 6:N){
+  vector  [nweight] Pvec;
+    for(j in 1:nweight){
+    Pvec[j]=w[j]*P[i-(j-1)];
+    }
+    Pant[i]=sum(Pvec);
+    
+    }
+
+    }
+    
+    model {
+    for ( i in 6:N){
+    R[i] ~ normal(b+a*Pant[i], sigma); // likelihood
+    }
+
+
+    b~normal(0,5); //priors
+    a~normal(0,1);
+    w~dirichlet(alpha);
+    }
+    generated quantities{
+    
+    }
+    "
+    ,fill=TRUE)
+sink()
+  
+```
+
+
+
+##Fake Data: Assign weight with 50% each on lags day 1 and 2
+
+
+```{r}
+P<-numeric(100)
+P[1]<-10
+for (i in 2:100)
+  P[i] <- 1+0.9* P[i-1]+rnorm(1,0,0.85)
+
+w<-c(0.5,0.5,0,0,0)
+Pant<-numeric(100)
+Pant[1:5]<-P[1:5]
+
+for (i in 6:100){
+  Pvec<-numeric(5)
+  for(j in 1:5){
+    Pvec[j]<-w[j]*P[i-(j-1)]
+  }
+  Pant[i]<-sum(Pvec)
+  
+}
+
+R<-0.5*P[1]
+for (i in 2:100){
+  
+  R[i]<-0.5*Pant[i]+ rnorm(1,0,0.2)
+}
+
+plot(P,R)
+
+```
+
+
+## How did we do?
+
+```{r, echo=F}
+load("fit_fake.RData")
+print(fit_fake, pars=c("a", "b", "w"))
+
+
+plot(fit_fake, pars = "w")
+
+```
+
+
+##real data:  Klamath River at Seiad
+```{r,r, echo=FALSE}
+klamath<-read.table("/Users/bobhall//Dropbox/Klamath/2007-2014/KlamMetab.txt", header=T, sep="")
+
+klamathsv<-klamath[klamath$site=="SV",]
+klamathwe<-klamath[klamath$site=="WE",]
+
+klamathsv6<-klamathsv[klamathsv$year_numb==6,]
+
+klamathsv6$GPP[111:112]<-c(13.2,13.5)
+klamathsv6$ER[111:112]<-c(-9.5,-9.0)
+klamathsv6<-klamathsv6[-180,]
+
+sam_SV_all_dat<- list(R=-klamathsv6$ER, P=klamathsv6$GPP, N=length(klamathsv6$GPP), nweight=5, alpha=rep(1,5))
+
+plot(klamathsv6$GPP, klamathsv6$ER, ylab=expression(paste("ER", "g O"[2], "m"^{-2}, "d"^{-1})), xlab=expression(paste("GPP", "g O"[2], "m"^{-2}, "d"^{-1})), pch=16, col="blue")
+lines(c(2,12), c(-2,-12))
+```
+
+
+## Klamath parameters
+
+```{r, echo=F}
+load("fit_klam.RData")
+print(fit_klam, pars=c("a", "b", "w"))
+
+```
+
+## Klamath weights
+
+```{r, echo=F}
+
+plot(fit_klam, pars = "w")
+
+```
+
+##How much do we improve the model?
+Not much.
+```{r, echo=F}
+Pant<-summary(fit_klam, pars = c("Pant"), probs = c(0.5))$summary
+
+par(mfcol = c(1,2), mai=c(0.8,0.7,0.1,0.1), mgp=c(2,1,0))
+plot(klamathsv6$GPP, klamathsv6$ER, ylab=expression(paste("ER", "g O"[2], "m"^{-2}, "d"^{-1})), xlab=expression(paste("GPP", " g O"[2], "m"^{-2}, "d"^{-1})), pch=16, col="blue")
+
+plot(Pant[,1], klamathsv6$ER, ylab="", xlab=expression(paste("Pant", " g O"[2], "m"^{-2}, "d"^{-1})), pch=16, col="green")
+
+```
+
+##  Conclusions
+
+ER may not simply be a function of today's productivity, but today and yesterday
+This analysis probably needs to be state space.
+
+## References
