@@ -153,11 +153,14 @@ sim_means <- sim_params_df %>%
 # c             0.2348            0.2446
 
 # Final thoughts - looks good except for the s value...
+# Per discussion with Joanna on 12/2, this is likely due to the x100
+# I have in the code above, but wasn't in the STAN model script.
 
 #### Time Sequence Delineation ####
 
 # Borrowing this code from code/teton_moresites/Data_Availability_figures.R
 # Using sim_dat dataframe created above
+df <- sim_dat
 
 # create placeholder columns for day to day differences and sequences
 df <- df %>%
@@ -188,18 +191,12 @@ seqFUN <- function(d){
     d$new_e[i] = d$seq[i] - d$seq[i-1]
   }
   
-  # split into a list based on events
-  #l <- split(d, as.factor(d$seq))
-  
   return(d)
   
 }
 
 # And now map this to the entire site list.
 events_dat <- seqFUN(df)
-
-# Make the output list back into a dataframe
-#events_dat1 <- rbindlist(events_dat)
 
 #### Fit New Ricker Model to Simulated GPP Data ####
 
@@ -225,7 +222,7 @@ stan_data_compile <- function(x){
 }
 
 # Need to keep this as a list to iterate over each event
-stan_data_df <- stan_data_compile(df)
+stan_data_l <- stan_data_compile(df)
 
 #########################################
 ## Run Stan to get parameter estimates - all sites
@@ -247,7 +244,7 @@ PM_outputlist_Ricker <- stan("code/pooling_practice/Stan_ProductivityModel2_Rick
 
 saveRDS(PM_outputlist_Ricker, "data_working/simulation_1site_output_Ricker_2021_12_02.rds")
 
-#### Re-extraction of model parameters ####
+#### Re-re-extraction of model parameters ####
 
 # Extract the parameters resulting from fitting the simulated data to the model.
 sim_params <- extract(PM_outputlist_Ricker, c("r","lambda","s","c",
@@ -268,12 +265,12 @@ sim_means <- sim_params_df %>%
             sigp_mean = mean(sig_p),
             sigo_mean = mean(sig_o))
 
-# Parameter     Original Value  Simulated Output
-# r             0.1279            0.XXXX
-# lambda        -0.0147          -0.XXXX
-# s             34.2720          XX.XXXX
-# c             0.2348            0.XXXX
+# Parameter     Original Value  Simulated Output  Simulated Output(without reinit)
+# r             0.1279            0.1215            0.1472
+# lambda        -0.0147          -0.0143           -0.0156
+# s             34.2720         197.0388          339.2987
+# c             0.2348            0.2489            0.2446
 
-# Final thoughts - ???
+# Final thoughts - similar results as above!
 
 # End of script.

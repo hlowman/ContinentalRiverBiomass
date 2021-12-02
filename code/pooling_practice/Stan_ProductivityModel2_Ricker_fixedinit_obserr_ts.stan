@@ -30,7 +30,7 @@ transformed parameters {
   real P [Ndays];
   
   for(i in 1:Ndays){
-    P[i]=exp(-exp(s*(tQ[i]-c))); // persistence as a function of discharge
+    P[i]=exp(-exp(s*(tQ[i] - c))); // persistence as a function of discharge
     pred_GPP[i] =light[i]*exp(B[i]); // predicted GPP as a function of light and biomass
   }
   
