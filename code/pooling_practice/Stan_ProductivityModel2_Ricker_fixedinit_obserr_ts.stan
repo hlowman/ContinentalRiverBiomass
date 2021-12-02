@@ -6,7 +6,8 @@ data {
   vector [Ndays] GPP; // mean estimates from posterior probability distributions
   vector [Ndays] GPP_sd; // sd estimates from posterior probability distributions
   vector [Ndays] tQ; // standardized discharge
-  vector [Ndays] new_e; // 0/1s denoting new time sequences
+  int new_e [Ndays]; // 0/1s denoting new time sequences
+  // vector of integers
 }
 
 parameters {
@@ -44,15 +45,18 @@ model {
   // Process Model - reinitialize for every new time sequence
   for (j in 2:(Ndays)){
     
-    if (new_e) { // 1 = TRUE
+    if (new_e[j]==1) { // 1 = TRUE
     
-    B[j] ~ normal(log(GPP[j1]/light[j]), 1)
+    B[j] ~ normal(log(GPP[j]/light[j]),1);
     
-    } else { // 0 = FALSE
+    } 
     
-    B[j] ~ normal((B[(j-1)] + r + lambda*exp(B[(j-1)]))*P[j], sig_p)
+    else { // 0 = FALSE
     
-    };
+    B[j] ~ normal((B[(j-1)] + r + lambda*exp(B[(j-1)]))*P[j], sig_p);
+    
+    }
+    
   }
   
   // Observation model
