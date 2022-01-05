@@ -17,7 +17,7 @@
 # Load packages
 lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
          "tidyverse","data.table","patchwork", "here",
-         "calecopal", "sf", "viridis", "mapproj"), require, character.only=T)
+         "calecopal", "sf", "viridis", "mapproj", "moments"), require, character.only=T)
 
 # Double check working directory
 here()
@@ -35,7 +35,9 @@ site_subset <- readRDS("data_working/NWIS_207sites_subset.rds")
 site_summary <- site_subset %>%
   group_by(site_name) %>% # group by site
   summarize(meanQ = mean(Q, na.rm = TRUE), # (1) mean
-            cvQ = (sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE))) %>% # (2) coefficient of variation
+            cvQ = (sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE)), # (2) coefficient of variation
+            skewQ = skewness(Q, na.rm = TRUE), # (3) skewness - positive = pulled right
+            kurtQ = kurtosis(Q, na.rm = TRUE)) %>% # (4) kurtosis - positive = pointy/leptokurtic
   ungroup() # don't forget it!!
 
 # Plot results.
@@ -55,7 +57,6 @@ hist(new$log_meanQ)
 
 # Coefficient of variation of discharge
 (fig_cvQ <- site_summary %>%
-    #mutate(log_meanQ = log10(meanQ)) %>%
     ggplot(aes(cvQ, site_name)) +
     geom_point() +
     theme_bw() +
@@ -63,5 +64,25 @@ hist(new$log_meanQ)
          y = "Site"))
 
 hist(site_summary$cvQ)
+
+# Skewness of discharge
+(fig_skewQ <- site_summary %>%
+    ggplot(aes(skewQ, site_name)) +
+    geom_point() +
+    theme_bw() +
+    labs(x = "Skewness of Discharge (Q)",
+         y = "Site"))
+
+hist(site_summary$skewQ) # all right-skewed
+
+# Kurtosis of discharge
+(fig_kurtQ <- site_summary %>%
+    ggplot(aes(kurtQ, site_name)) +
+    geom_point() +
+    theme_bw() +
+    labs(x = "Kurtosis of Discharge (Q)",
+         y = "Site"))
+
+hist(site_summary$skewQ) # all leptokurtic
 
 # End of script.
