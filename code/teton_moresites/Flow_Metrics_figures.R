@@ -7,17 +7,25 @@
 # and will not include a persistence (P) term in their applied Ricker model.
 
 # The flow metrics will be calculated according to the manuscript's instructions
-# and they include: (1) mean, (2) coefficient of variation, (3) skewness, (4) kurtosis,
-# (5) autoregressive lag-one correlation coefficient, (6) amplitude, and (7) phase of the
-# seasonal signal.
+# and they include: 
+# (1) mean
+# (2) coefficient of variation
+# (3) skewness
+# (4) kurtosis
+# (5) autoregressive lag-one correlation coefficient
+# (6) amplitude
+# (7) phase of the seasonal signal
 
 # I will be using the dataset containing 207 sites generated in the script 
 # code/teton_moresites/NWIS_RiverSelection.R.
 
+#### Load-in ####
+
 # Load packages
 lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
          "tidyverse","data.table","patchwork", "here",
-         "calecopal", "sf", "viridis", "mapproj", "moments"), require, character.only=T)
+         "calecopal", "sf", "viridis", "mapproj", "moments",
+         "corrplot"), require, character.only=T)
 
 # Double check working directory
 here()
@@ -30,6 +38,8 @@ sitesjoin <- readRDS("data_working/NWIS_207sitesinfo_subset.rds")
 site_subset <- readRDS("data_working/NWIS_207sites_subset.rds")
 
 # Note: Discharge here is in cm/s.
+
+#### Calculate Flow Statistics ####
 
 # Additional calculations required to determine autoregressive lag-one correlation coefficient.
 # Need to first deseasonalize data by subtracting long-term monthly means from all values.
@@ -66,6 +76,8 @@ site_test <- site_scaled %>%
   filter(site_name == "nwis_03081000") %>%
   summarize(ar1Q = acf_print(scaleQ)) # yay :)
 
+# Insert calculations for qzt function here.
+
 # Calculate flow statistics by site.
 site_summary <- site_scaled %>%
   group_by(site_name) %>% # group by site
@@ -74,7 +86,11 @@ site_summary <- site_scaled %>%
             skewQ = skewness(Q, na.rm = TRUE), # (3) skewness - positive = pulled right
             kurtQ = kurtosis(Q, na.rm = TRUE), # (4) kurtosis - positive = pointy/leptokurtic
             ar1Q = acf_print(scaleQ)) %>% # (5) AR(1) correlation coefficient
+          # AQ = sqrt((a^2)+(b^2)) # (6) amplitude of seasonal signal
+          # phiQ = atan(-a/b) # (7) phase shift of seasonal signal
   ungroup() # don't forget it!!
+
+#### Figures ####
 
 # Plot results.
 # Mean discharge
@@ -162,5 +178,18 @@ hist(site_summary$ar1Q) # streamflow relatively persistent from 1 day to the nex
     theme_bw() +
     labs(x = "AR(1) Correlation Coefficient of Discharge (Q)",
          y = "Log of Mean Discharge (Q)")) # as mean Q increases, AR(1) cc increases (more flow = more persistent)
+
+# full correlation figure
+for_corr <- site_summary %>%
+  select(-site_name)
+
+full_corr <- cor(for_corr)
+
+corrplot(full_corr, # uses corrplot package
+         tl.srt = 45, # tilts labels 45 degrees
+         bg = "White", # color scheme/white background 
+         title = "Correlation Plot of Flow Metrics", # adds title
+         addCoef.col = "black", # adds coefficients
+         type = "lower") # only the lower half
 
 # End of script.
