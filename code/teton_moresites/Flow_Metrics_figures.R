@@ -192,4 +192,60 @@ corrplot(full_corr, # uses corrplot package
          addCoef.col = "black", # adds coefficients
          type = "lower") # only the lower half
 
+# Based on persistence curves, choosing 3 sites where P doesn't vary and 3 sites where P responds
+# at varying "steepnesses" to discharge to examine how these sites' flow metrics vary.
+
+# Filter dataset for desired sites.
+sites <- c("nwis_023362095", "nwis_03298250", "nwis_05406457", "nwis_01632900", "nwis_04125460", "nwis_04121944")
+
+rsites <- c("nwis_01632900", "nwis_04125460", "nwis_04121944")
+
+nrsites <- c("nwis_023362095", "nwis_03298250", "nwis_05406457")
+
+site_select <- site_summary %>%
+  filter(site_name %in% sites) %>%
+  pivot_longer(!site_name, names_to = "metric", values_to = "value") %>%
+  mutate(category = case_when(site_name %in% rsites ~ "responsive",
+                              site_name %in% nrsites ~ "non-responsive"))
+
+(fig_paneled <- site_select %>%
+  ggplot(aes(value, site_name, color = category)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = cal_palette("seagrass")) +
+  theme_bw() +
+  facet_wrap(.~metric, scales = "free"))
+
+# Not super informative, so going to examine these values in the context of critical discharge instead.
+
+# Import results from previous 34 site run.
+run1_params <- readRDS("data_working/teton_34rivers_model_parameters_090821.rds")
+
+site_withc <- run1_params %>%
+  select(site_name, c_mean) %>% # chose only columns of interest
+  join(site_summary, by = "site_name") %>% # join with table from above (dropping all but 34 sites)
+  pivot_longer(cols = meanQ:ar1Q, names_to = "metric", values_to = "value")
+
+(fig_paneled2 <- site_withc %>%
+    ggplot(aes(value, site_name, color = c_mean)) +
+    geom_point(size = 3) +
+    scale_color_viridis() +
+    theme_bw() +
+    theme(axis.text.y = element_blank()) +
+    facet_wrap(.~metric, scales = "free"))
+
+# Another exploration based on mean Q.
+
+site_select2 <- site_summary %>%
+  mutate(log_meanQ = log10(meanQ)) %>%
+  select(-meanQ) %>%
+  pivot_longer(cols = cvQ:ar1Q, names_to = "metric", values_to = "value")
+
+(fig_paneled3 <- site_select2 %>%
+    ggplot(aes(value, site_name, color = log_meanQ)) +
+    geom_point(size = 3) +
+    scale_color_viridis() +
+    theme_bw() +
+    theme(axis.text.y = element_blank()) +
+    facet_wrap(.~metric, scales = "free"))
+
 # End of script.
