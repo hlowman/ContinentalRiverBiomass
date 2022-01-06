@@ -177,7 +177,27 @@ hist(site_summary$ar1Q) # streamflow relatively persistent from 1 day to the nex
     geom_point() +
     theme_bw() +
     labs(x = "AR(1) Correlation Coefficient of Discharge (Q)",
-         y = "Log of Mean Discharge (Q)")) # as mean Q increases, AR(1) cc increases (more flow = more persistent)
+         y = "Log of Mean Discharge (Q)")) # as mean Q increases, AR(1) cc increases 
+# (more flow = more persistent)
+
+(fig_cv_ar1Q <- site_summary %>%
+    ggplot(aes(ar1Q, cvQ)) +
+    geom_point() +
+    theme_bw() +
+    labs(x = "AR(1) Correlation Coefficient of Discharge (Q)",
+         y = "Coefficient of Variation of Discharge (Q)")) # as cvQ increases, AR(1) cc decreases 
+# (less flashy flow [i.e., lower cvQ] = more persistent day-to-day discharge)
+
+# join with stream info data to examine if stream order has anything to do with it
+site_summary_info <- join(site_summary, sitesjoin, by = "site_name")
+
+(fig_order_ar1Q <- site_summary_info %>%
+    ggplot(aes(ar1Q, NHD_STREAMORDE)) +
+    geom_point(size = 3) +
+    theme_bw() +
+    scale_y_continuous(breaks = seq(0,10,2)) +
+    labs(x = "AR(1) Correlation Coefficient of Discharge (Q)",
+         y = "Stream Order")) # higher order streams have greater AR(1) a.k.a. more persistent discharge
 
 # full correlation figure
 for_corr <- site_summary %>%
