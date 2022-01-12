@@ -95,7 +95,7 @@ highq_sites <- diagnostics[which(#diagnostics$K600_daily_sigma_Rhat < 1.05 &
 
 # 294 records remaining after diagnostic filtering
 
-highq_site_names <- unique(highq_sites$site) ## 294 sites at the end
+highq_site_names <- unique(highq_sites$site) ## 261 sites at the end
 
 # Subset s based on high sites and site type and flags
 s <- sub[which(sub$site_name %in% highq_site_names),]
@@ -266,7 +266,7 @@ colnames(site_subset_numdays) <- c("site_name","year","max_gap","Ndays","site_ye
 ## Check other covariate data quality
 ###################################################
 
-# skipped making these figures on 10/28/21
+# made these figures on 1/12/22
 
 site_sub_list <- split(site_subset, site_subset$site_name)
 
@@ -319,8 +319,13 @@ plotting_covar <- function(x) {
 # only plotting one as a test here, but this will be handy once results come back
 plotting_covar(site_sub_list$nwis_14206950)
 
-# lapply(site_sub_list, function(x) ggsave(plot = plotting_covar(x),filename = paste("figures/site_covariate_plots/",x$site_name[1],"covar.jpg",sep = ""), width = 8, height = 6))
+lapply(site_sub_list, function(x) ggsave(plot = plotting_covar(x),filename = paste("figures/teton_moresites/site_covariate_plots/",x$site_name[1],"covar.jpg",sep = ""), width = 10, height = 8))
 
+# a few more discharge explorations
+site_maxq <- site_subset %>%
+  group_by(site_name) %>%
+  summarize(max_Q = max(Q, na.rm = TRUE)) %>%
+  ungroup()
 
 ###########################
 ## Export
