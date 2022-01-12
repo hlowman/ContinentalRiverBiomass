@@ -13,8 +13,8 @@
 # (3) skewness
 # (4) kurtosis
 # (5) autoregressive lag-one correlation coefficient
-# (6) amplitude
-# (7) phase of the seasonal signal
+# (6) amplitude - not included in this code
+# (7) phase of the seasonal signal - not included in this code
 
 # I will be using the dataset containing 207 sites generated in the script 
 # code/teton_moresites/NWIS_RiverSelection.R.
@@ -25,7 +25,7 @@
 lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
          "tidyverse","data.table","patchwork", "here",
          "calecopal", "sf", "viridis", "mapproj", "moments",
-         "corrplot"), require, character.only=T)
+         "corrplot", "gt"), require, character.only=T)
 
 # Double check working directory
 here()
@@ -76,18 +76,17 @@ site_test <- site_scaled %>%
   filter(site_name == "nwis_03081000") %>%
   summarize(ar1Q = acf_print(scaleQ)) # yay :)
 
-# Insert calculations for qzt function here.
-
 # Calculate flow statistics by site.
 site_summary <- site_scaled %>%
   group_by(site_name) %>% # group by site
-  summarize(meanQ = mean(Q, na.rm = TRUE), # (1) mean
+  summarize(maxQ = max(Q, na.rm = TRUE), # adding maximum Q for table in figure below
+            meanQ = mean(Q, na.rm = TRUE), # (1) mean
             cvQ = (sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE)), # (2) coefficient of variation
             skewQ = skewness(Q, na.rm = TRUE), # (3) skewness - positive = pulled right
             kurtQ = kurtosis(Q, na.rm = TRUE), # (4) kurtosis - positive = pointy/leptokurtic
             ar1Q = acf_print(scaleQ)) %>% # (5) AR(1) correlation coefficient
-          # AQ = sqrt((a^2)+(b^2)) # (6) amplitude of seasonal signal
-          # phiQ = atan(-a/b) # (7) phase shift of seasonal signal
+          # AQ = sqrt((a^2)+(b^2)) # (6) amplitude of seasonal signal - not included in this code
+          # phiQ = atan(-a/b) # (7) phase shift of seasonal signal - not included in this code
   ungroup() # don't forget it!!
 
 #### Figures ####
@@ -170,6 +169,12 @@ hist(site_summary$skewQ) # all leptokurtic
          y = "Site"))
 
 hist(site_summary$ar1Q) # streamflow relatively persistent from 1 day to the next
+# In plain English,
+# when AR(1) = 1, flow is more persistent from one day to the next at a given site
+# when AR(1) < 0.5, flow is variable from one day to the next at a given site
+# Following a discussion with Joanna on 1/11/22, 0.8 appears to be a good cutoff
+# at which to delineate sites that don't encounter changes in flow and might be 
+# good sites at which to remove the P (persistence) term.
 
 (fig_mean_ar1Q <- site_summary %>%
     mutate(log_meanQ = log10(meanQ)) %>%
@@ -177,7 +182,8 @@ hist(site_summary$ar1Q) # streamflow relatively persistent from 1 day to the nex
     geom_point() +
     theme_bw() +
     labs(x = "AR(1) Correlation Coefficient of Discharge (Q)",
-         y = "Log of Mean Discharge (Q)")) # as mean Q increases, AR(1) cc increases 
+         y = "Log of Mean Discharge (Q)")) 
+# as mean Q increases, AR(1) cc increases 
 # (more flow = more persistent)
 
 (fig_cv_ar1Q <- site_summary %>%
@@ -185,7 +191,8 @@ hist(site_summary$ar1Q) # streamflow relatively persistent from 1 day to the nex
     geom_point() +
     theme_bw() +
     labs(x = "AR(1) Correlation Coefficient of Discharge (Q)",
-         y = "Coefficient of Variation of Discharge (Q)")) # as cvQ increases, AR(1) cc decreases 
+         y = "Coefficient of Variation of Discharge (Q)")) 
+# as cvQ increases, AR(1) cc decreases 
 # (less flashy flow [i.e., lower cvQ] = more persistent day-to-day discharge)
 
 # join with stream info data to examine if stream order has anything to do with it
@@ -197,7 +204,12 @@ site_summary_info <- join(site_summary, sitesjoin, by = "site_name")
     theme_bw() +
     scale_y_continuous(breaks = seq(0,10,2)) +
     labs(x = "AR(1) Correlation Coefficient of Discharge (Q)",
-         y = "Stream Order")) # higher order streams have greater AR(1) a.k.a. more persistent discharge
+         y = "Stream Order")) 
+# higher order streams have greater AR(1) a.k.a. more persistent discharge
+# (more flow = more persistent)
+# but it seems there are a few lower order streams that have high persistence
+# suggesting all the more that AR(1) might be a good measure of flow, regardless
+# stream size
 
 # full correlation figure
 for_corr <- site_summary %>%
@@ -267,5 +279,57 @@ site_select2 <- site_summary %>%
     theme_bw() +
     theme(axis.text.y = element_blank()) +
     facet_wrap(.~metric, scales = "free"))
+
+# Following meeting with Joanna on 1/11/2022, creating another figure
+# hopefully to be included as a supplementary figure in the manuscript
+# to justify AR(1)-based decision-making. I'll be highlighting three
+# sites in particular and providing their metrics in a table below.
+
+site_summary_log <- site_summary %>%
+  mutate(log_meanQ = log10(meanQ))
+
+site_name3 <- c("nwis_05579630", "nwis_04199500", "nwis_01673000") # sites of interest in table
+
+(fig_supp1A_AR1 <- site_summary_log %>%
+    ggplot(aes(x = ar1Q, y = cvQ, color = log_meanQ)) +
+    geom_point(size = 3) +
+    geom_text(data = site_summary_log %>% filter(site_name %in% site_name3), # label only 3 sites
+                    aes(label = site_name), color = "black") +
+    # add black circles around selected sites
+    scale_color_viridis() +
+    theme_bw() +
+    labs(x = "AR(1) Correlation Coefficient of Discharge (Q)",
+         y = "Coefficient of Variation of Discharge (Q)",
+         color = "Log of Mean Discharge (Q)"))
+
+(fig_supp1B_AR1 <- site_summary_log %>%
+  ggplot(aes(x = ar1Q)) +
+  geom_bar(color = "black", fill = "gray50") +
+  scale_x_binned() +
+  #geom_density(alpha = 0.2, fill = "gray48") +
+  theme_bw() +
+  labs(x = "AR(1) Correlation Coefficient of Discharge (Q)",
+       y = "Site Count"))
+
+# create data table to use in gt() below
+site_summary_3 <- site_summary_log %>%
+  filter(site_name %in% site_name3) %>%
+  mutate(long_name = c("Kickapoo Creek, IL", "Vermilion River, OH", "Pamunkey River, VA")) %>%
+  select(site_name, long_name, maxQ, meanQ, log_meanQ, cvQ, ar1Q)
+
+(fig_supp1C_AR1 <- site_summary_3 %>%
+    gt() %>% # create gt table of dataset above
+    cols_label(
+      site_name = "Site ID",
+      long_name = "Site Name",
+      maxQ = "Maximum",
+      meanQ = "Mean",
+      log_meanQ = "Log Mean",
+      cvQ = "CV",
+      ar1Q = "AR(1)") %>% # rename columns
+    fmt_number(
+      columns = 3:7,
+      decimals = 2)) # rounds everything to 2 decimal places
+
 
 # End of script.
