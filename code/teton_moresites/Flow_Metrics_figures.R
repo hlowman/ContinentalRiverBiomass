@@ -290,17 +290,31 @@ site_summary_log <- site_summary %>%
 
 site_name3 <- c("nwis_05579630", "nwis_04199500", "nwis_01673000") # sites of interest in table
 
-(fig_supp1A_AR1 <- site_summary_log %>%
-    ggplot(aes(x = ar1Q, y = cvQ, color = log_meanQ)) +
-    geom_point(size = 3) +
-    geom_text(data = site_summary_log %>% filter(site_name %in% site_name3), # label only 3 sites
-                    aes(label = site_name), color = "black") +
-    # add black circles around selected sites
+site_summary_log_label <- site_summary_log %>%
+  mutate(site_labels = case_when(site_name %in% site_name3 ~ site_name,
+                                 TRUE ~ ""))
+
+(fig_supp1A_AR1 <- site_summary_log_label %>%
+    ggplot(aes(x = ar1Q, y = cvQ)) +
+    # highlight certain data points
+    annotate(geom = "point", x = 0.8220972, y = 1.317274, color = "orange", size = 5) + # kickapoo
+    annotate(geom = "point", x = 0.5112334, y = 2.269440, color = "orange", size = 5) + # vermilion
+    annotate(geom = "point", x = 0.2438063, y = 5.120188, color = "orange", size = 5) + # pamunkey
+    geom_point(aes(color = log_meanQ), size = 3) +
     scale_color_viridis() +
+    # label certain data points
+    geom_label(data = site_summary_log_label %>% filter(site_name %in% site_name3),
+               aes(ar1Q, cvQ, label = site_name), size = 4,
+                    hjust = 0.5, vjust = -0.5, fill = NA) +
+    # note, geom_text_repel here does NOT play nice, particularly with the legends
     theme_bw() +
     labs(x = "AR(1) Correlation Coefficient of Discharge (Q)",
          y = "Coefficient of Variation of Discharge (Q)",
-         color = "Log of Mean Discharge (Q)"))
+         color = "Log of Mean\nDischarge (Q)") +
+    theme(legend.position = c(0.8, 0.75),  # move legend inside plot
+          legend.background = element_rect(fill = NA,
+                                           size = 0.5, linetype = "solid",
+                                           color = "black"))) # edit legend aesthetics
 
 (fig_supp1B_AR1 <- site_summary_log %>%
   ggplot(aes(x = ar1Q)) +
@@ -331,5 +345,18 @@ site_summary_3 <- site_summary_log %>%
       columns = 3:7,
       decimals = 2)) # rounds everything to 2 decimal places
 
+# convert gt object into ggplot object using as_ggplot() function in bstfun package
+fig_supp1C_AR1 <- as_ggplot(fig_supp1C_AR1)
+
+# combine into a single plot
+fig_supp1 <- fig_supp1A_AR1 + fig_supp1B_AR1 + fig_supp1C_AR1 + plot_layout(ncol = 2)
+
+fig_supp1 + plot_annotation(tag_levels = "A")
+
+# ggsave(("figures/teton_moresites/supp_fig_AR1.png"),
+#        width = 24,
+#        height = 16,
+#        units = "cm"
+# )
 
 # End of script.
