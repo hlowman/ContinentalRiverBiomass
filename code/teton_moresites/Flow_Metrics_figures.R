@@ -359,4 +359,102 @@ fig_supp1 + plot_annotation(tag_levels = "A")
 #        units = "cm"
 # )
 
+# Three storm comparison - trying to develop a conceptual figure to explain AR(1)
+# reasoning with more direct relation to flow/discharge.
+
+# Using the same three sites highlighted above (since the trends work so nicely)
+
+# No storms - low AR(1): Kickapoo Creek, nwis_05579630
+# Small storms - medium AR(1): Vermilion River, nwis_04199500
+# Large storms - high AR(1): Pamunkey River, nwis_01673000
+
+lowAR_site_dat <- site_subset %>%
+  filter(site_name == "nwis_05579630") %>%
+  mutate(month = month(date)) %>%
+  filter(year == 2012 & month == 5)
+
+# calculate AR(1) for this subset
+# Using site_deseason and acf_print function created in the section above
+lowAR_site <- site_scaled %>%
+  filter(site_name == "nwis_05579630") %>%
+  filter(year == 2012 & month == 5) %>%
+  summarize(ar1Q = acf_print(scaleQ)) # 0.63
+
+medAR_site_dat <- site_subset %>%
+  filter(site_name == "nwis_04199500") %>%
+  mutate(month = month(date)) %>%
+  filter(year == 2014 & month == 5)
+
+# calculate AR(1) for this subset
+# Using site_deseason and acf_print function created in the section above
+medAR_site <- site_scaled %>%
+  filter(site_name == "nwis_04199500") %>%
+  filter(year == 2014 & month == 5) %>%
+  summarize(ar1Q = acf_print(scaleQ)) # 0.19
+
+highAR_site_dat <- site_subset %>%
+  filter(site_name == "nwis_01673000") %>%
+  mutate(month = month(date)) %>%
+  filter(year == 2014 & month == 5)
+
+# calculate AR(1) for this subset
+# Using site_deseason and acf_print function created in the section above
+highAR_site <- site_scaled %>%
+  filter(site_name == "nwis_01673000") %>%
+  filter(year == 2014 & month == 5) %>%
+  summarize(ar1Q = acf_print(scaleQ)) # 0.66
+
+# Ok, so I think this may not be the best comparison (i.e., apples to apples)
+# since this is across sites with varying monthly mean flow, so I'm going
+# to zero in on the Pamunkey site and pick out no, low, and high storm events.
+
+# rough plot to see which months to parse out
+(pamunkey_2014 <- site_scaled %>%
+  filter(site_name == "nwis_01673000") %>%
+  filter(year == 2014) %>%
+  ggplot() +
+  geom_line(aes(x = date, y = Q)))
+
+# again, using "site_scaled" dataset from above in which data has already been
+# detrended against long-term monthly means and z-scored prior to applying the
+# acf_print function
+
+# february - small storms
+pamunkey_feb_14_ar1 <- site_scaled %>%
+  filter(site_name == "nwis_01673000") %>%
+  filter(year == 2014 & month == 2) %>%
+  summarize(ar1Q = acf_print(scaleQ)) # 0.67
+
+# may - HUGE storms
+pamunkey_may_14_ar1 <- site_scaled %>%
+  filter(site_name == "nwis_01673000") %>%
+  filter(year == 2014 & month == 5) %>%
+  summarize(ar1Q = acf_print(scaleQ)) # 0.66
+
+# august - no storms
+pamunkey_aug_14_ar1 <- site_scaled %>%
+  filter(site_name == "nwis_01673000") %>%
+  filter(year == 2014 & month == 8) %>%
+  summarize(ar1Q = acf_print(scaleQ)) # 0.50
+
+# Hmmm, maybe the AR(1) isn't the best linked with particular storms
+(pamunkey_2014_ar1 <- site_scaled %>%
+    filter(site_name == "nwis_01673000") %>%
+    filter(year == 2014) %>%
+    #mutate(Date = ymd(date)) %>%
+    ggplot() +
+    geom_line(aes(x = date, y = Q)) +
+    annotate(xmin = ymd('2014-02-01'), xmax = ymd('2014-02-28'), ymin = -5, ymax = 500, 
+             geom = "rect", fill = NA, color = "#69B9FA", size = 2) +
+    annotate(xmin = ymd('2014-05-01'), xmax = ymd('2014-05-31'), ymin = -5, ymax = 500, 
+             geom = "rect", fill = NA, color = "#4B8FF7", size = 2) +
+    annotate(xmin = ymd('2014-08-01'), xmax = ymd('2014-08-31'), ymin = -5, ymax = 500, 
+             geom = "rect", fill = NA, color = "#6B6D9F", size = 2) +
+    annotate("text", x = ymd('2014-02-15'), y = 515, label = "AR(1) = 0.67") +
+    annotate("text", x = ymd('2014-05-15'), y = 515, label = "AR(1) = 0.66") +
+    annotate("text", x = ymd('2014-08-15'), y = 515, label = "AR(1) = 0.50") +
+    theme_bw() +
+    labs(x = "Date",
+         y = "Discharge (cm/s)"))
+
 # End of script.
