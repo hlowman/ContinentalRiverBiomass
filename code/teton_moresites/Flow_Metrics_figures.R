@@ -437,6 +437,12 @@ pamunkey_aug_14_ar1 <- site_scaled %>%
   filter(year == 2014 & month == 8) %>%
   summarize(ar1Q = acf_print(scaleQ)) # 0.50
 
+# overall
+pamunkey_14_ar1 <- site_scaled %>%
+  filter(site_name == "nwis_01673000") %>%
+  filter(year == 2014) %>%
+  summarize(ar1Q = acf_print(scaleQ)) # 0.76
+
 # Hmmm, maybe the AR(1) isn't the best linked with particular storms
 (pamunkey_2014_ar1 <- site_scaled %>%
     filter(site_name == "nwis_01673000") %>%
@@ -453,8 +459,78 @@ pamunkey_aug_14_ar1 <- site_scaled %>%
     annotate("text", x = ymd('2014-02-15'), y = 515, label = "AR(1) = 0.67") +
     annotate("text", x = ymd('2014-05-15'), y = 515, label = "AR(1) = 0.66") +
     annotate("text", x = ymd('2014-08-15'), y = 515, label = "AR(1) = 0.50") +
+    annotate("text", x = ymd('2014-11-15'), y = 475, label = "2014\nAR(1) = 0.76") +
+    annotate("text", x = ymd('2014-11-15'), y = 375, label = "Overall\nAR(1) = 0.82") +
     theme_bw() +
     labs(x = "Date",
          y = "Discharge (cm/s)"))
+
+# This too isn't a great example. So switching back to trying to find three site-years
+# with distinct storm regimes.
+
+# calculate AR1 at site with few standout storms
+lowcvsite_ar1 <- site_scaled %>%
+  filter(site_name == "nwis_04137005") %>%
+  filter(year == 2010) %>%
+  summarize(ar1Q = acf_print(scaleQ)) # 0.92
+
+# separate out data at site with few standout storms
+lowcvsite_dat <- site_scaled %>%
+  filter(site_name == "nwis_04137005") %>%
+  filter(year == 2010) %>%
+  mutate(ar1 = 0.92)
+
+# calculate AR1 at site with a couple of storms
+medcvsite_ar1 <- site_scaled %>%
+  filter(site_name == "nwis_03067510") %>%
+  filter(year == 2012) %>%
+  summarize(ar1Q = acf_print(scaleQ)) # 0.52
+
+# separate out data at site with a couple of storms
+medcvsite_dat <- site_scaled %>%
+  filter(site_name == "nwis_03067510") %>%
+  filter(year == 2012) %>%
+  mutate(ar1 = 0.52)
+
+# calculate AR1 at site with one large storm
+highcvsite_ar1 <- site_scaled %>%
+  filter(site_name == "nwis_02336728") %>%
+  filter(year == 2016) %>%
+  summarize(ar1Q = acf_print(scaleQ)) # 0.04
+
+# separate out data at site with one large storm
+highcvsite_dat <- site_scaled %>%
+  filter(site_name == "nwis_02336728") %>%
+  filter(year == 2016) %>%
+  mutate(ar1 = 0.04)
+
+# join 3 sites of data together
+ar1_3sites_bound <- bind_rows(lowcvsite_dat, medcvsite_dat, highcvsite_dat)
+
+# create figure of data above
+
+# create list for facet labels
+f_labels <- c("0.04" = "Utoy Creek, GA - 2016\nAR(1) = 0.04",
+  "0.52" = "Shavers Fork, WV - 2012\nAR(1) = 0.52",
+  "0.92" = "Au Sable River,MI - 2010\nAR(1) = 0.92")
+
+(fig_supp1_2 <- ar1_3sites_bound %>%
+    mutate(ar1_f = factor(ar1)) %>%
+    ggplot() +
+    geom_line(aes(x = date, y = Q, color = ar1_f), size = 1.5) +
+    scale_color_manual(values = c("#69B9FA", "#4B8FF7", "#6B6D9F")) +
+    scale_x_date(date_labels = "%b") +
+    theme_bw() +
+    theme(legend.position = "none",
+          strip.background = element_rect(fill = NA)) +
+    labs(x = "Date",
+         y = "Discharge (cm/s)") +
+    facet_wrap(.~ as.character(ar1_f), scales = "free", labeller = as_labeller(f_labels)))
+
+# ggsave(("figures/teton_moresites/supp_fig_AR1_v2.png"),
+#        width = 20,
+#        height = 8,
+#        units = "cm"
+# )
 
 # End of script.
