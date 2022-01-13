@@ -25,7 +25,7 @@
 lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
          "tidyverse","data.table","patchwork", "here",
          "calecopal", "sf", "viridis", "mapproj", "moments",
-         "corrplot", "gt"), require, character.only=T)
+         "corrplot", "gt", "webshot", "bstfun"), require, character.only=T)
 
 # Double check working directory
 here()
