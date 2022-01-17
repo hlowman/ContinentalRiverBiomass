@@ -19,6 +19,10 @@
 # I will be using the dataset containing 207 sites generated in the script 
 # code/teton_moresites/NWIS_RiverSelection.R.
 
+## ADDENDUM: Following investigating the above metrics, I will also be examining
+# other metrics to better delineate storm events, per a discussion with Joanna in
+# Jan 2022. These investigations will be in the section titled "Additional Metrics".
+
 #### Load-in ####
 
 # Load packages
@@ -526,6 +530,122 @@ f_labels <- c("0.04" = "Utoy Creek, GA - 2016\nAR(1) = 0.04",
     labs(x = "Date",
          y = "Discharge (cm/s)") +
     facet_wrap(.~ as.character(ar1_f), scales = "free", labeller = as_labeller(f_labels)))
+
+# ggsave(("figures/teton_moresites/supp_fig_AR1_v2.png"),
+#        width = 20,
+#        height = 8,
+#        units = "cm"
+# )
+
+#### Additional Metrics ####
+
+# Just to make life a bit easier at the start, I'm going to start with just a few sites, some
+# of which will match the 3 sites I've examined above.
+
+# [nwis_02336728] Utoy Creek (GA) 2016 - one larger storm
+# [nwis_03067510] Shavers Fork (WV) 2012 - a few storms
+# [nwis_04137005] Au Sable River (MI) 2010 - multiple smaller storms
+# [nwis_05579630] Kickapoo Creek (IL) 2012 - no storms
+
+# also:
+# [nwis_04085108] East River (WI) 2016 - no storms (summer only)
+
+list_of_4 <- c("nwis_02336728", "nwis_03067510", "nwis_04137005", "nwis_05579630")
+
+site_subset_4 <- site_subset %>%
+  filter(site_name %in% list_of_4)
+
+# First, I'll examine if the range > mean. If false, we would drop the P term
+utoy_creek_m1 <- site_subset_4 %>%
+  filter(site_name == "nwis_02336728" & year == 2016) %>%
+  summarize(rangeQ = max(range(Q, na.rm = TRUE)) - min(range(Q, na.rm = TRUE)),
+            meanQ = mean(Q, na.rm = TRUE)) # Range > Mean == TRUE
+
+shavers_fork_m1 <- site_subset_4 %>%
+  filter(site_name == "nwis_03067510" & year == 2012) %>%
+  summarize(rangeQ = max(range(Q, na.rm = TRUE)) - min(range(Q, na.rm = TRUE)),
+            meanQ = mean(Q, na.rm = TRUE)) # Range > Mean == TRUE
+
+au_sable_m1 <- site_subset_4 %>%
+  filter(site_name == "nwis_04137005" & year == 2010) %>%
+  summarize(rangeQ = max(range(Q, na.rm = TRUE)) - min(range(Q, na.rm = TRUE)),
+            meanQ = mean(Q, na.rm = TRUE)) # Range > Mean == TRUE (but it's close)
+
+kickapoo_creek_m1 <- site_subset_4 %>%
+  filter(site_name == "nwis_05579630" & year == 2012) %>%
+  summarize(rangeQ = max(range(Q, na.rm = TRUE)) - min(range(Q, na.rm = TRUE)),
+            meanQ = mean(Q, na.rm = TRUE)) # Range > Mean == TRUE (but it's VERY CLOSE)
+
+east_river_m1 <- site_subset %>%
+  filter(site_name == "nwis_04085108" & year == 2016 & doy >=153 & doy <= 244) %>%
+  summarize(rangeQ = max(range(Q, na.rm = TRUE)) - min(range(Q, na.rm = TRUE)),
+            meanQ = mean(Q, na.rm = TRUE)) # Range > Mean == TRUE (but it's SUPER DUPER close)
+
+# datasets for easier use
+
+utoy_dat <- site_subset_4 %>%
+  filter(site_name == "nwis_02336728" & year == 2016)
+
+shavers_dat <- site_subset_4 %>%
+  filter(site_name == "nwis_03067510" & year == 2012)
+
+au_sable_dat <- site_subset_4 %>%
+  filter(site_name == "nwis_04137005" & year == 2010)
+
+kickapoo_dat <- site_subset_4 %>%
+  filter(site_name == "nwis_05579630" & year == 2012)
+
+# east_dat <- site_subset_4 %>%
+#   filter(site_name == "nwis_04085108" & year == 2016 & doy >=153 & doy <= 244)
+
+# Next, I'm going to see if flow exceeds 150% of mean flow at any point
+utoy_mean <- 0.81
+utoy_creek_m2 <- utoy_dat %>%
+  mutate(exceedance = case_when(Q > (1.5*utoy_mean) ~ 1,
+                                Q <= (1.5*utoy_mean) ~ 0))
+sum(utoy_creek_m2$exceedance) # 43 days
+
+shavers_mean <- 3.41
+shavers_m2 <- shavers_dat %>%
+  mutate(exceedance = case_when(Q > (1.5*shavers_mean) ~ 1,
+                                Q <= (1.5*shavers_mean) ~ 0))
+sum(shavers_m2$exceedance) # 57 days
+
+au_sable_mean <- 31.01
+au_sable_m2 <- au_sable_dat %>%
+  mutate(exceedance = case_when(Q > (1.5*au_sable_mean) ~ 1,
+                                Q <= (1.5*au_sable_mean) ~ 0))
+sum(au_sable_m2$exceedance) # 7 days
+
+kickapoo_mean <- 0.08
+kickapoo_m2 <- kickapoo_dat %>%
+  mutate(exceedance = case_when(Q > (1.5*kickapoo_mean) ~ 1,
+                                Q <= (1.5*kickapoo_mean) ~ 0))
+sum(kickapoo_m2$exceedance) # 45 days
+
+# dataset for plotting
+
+fm_4sites_bound <- bind_rows(utoy_dat, shavers_dat, au_sable_dat, kickapoo_dat)
+
+# create figure of data above
+
+# create list for facet labels
+f_labels2 <- c("nwis_02336728" = "Utoy Creek, GA - 2016\nRange > Mean TRUE",
+              "nwis_03067510" = "Shavers Fork, WV - 2012\nRange > Mean TRUE",
+              "nwis_04137005" = "Au Sable River, MI - 2010\nRange > Mean TRUE",
+              "nwis_05579630" = "Kickapoo Creek, IL - 2012\nRange > Mean TRUE")
+
+(fig_supp1_3 <- fm_4sites_bound %>%
+    ggplot() +
+    geom_line(aes(x = date, y = Q, color = site_name), size = 1.5) +
+    scale_color_manual(values = c("#69B9FA", "#4B8FF7", "#6B6D9F", "#D46F10")) +
+    scale_x_date(date_labels = "%b") +
+    theme_bw() +
+    theme(legend.position = "none",
+          strip.background = element_rect(fill = NA)) +
+    labs(x = "Date",
+         y = "Discharge (cm/s)") +
+    facet_wrap(.~ as.character(site_name), scales = "free", labeller = as_labeller(f_labels2)))
 
 # ggsave(("figures/teton_moresites/supp_fig_AR1_v2.png"),
 #        width = 20,
