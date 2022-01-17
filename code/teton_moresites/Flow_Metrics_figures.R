@@ -26,10 +26,11 @@
 #### Load-in ####
 
 # Load packages
-lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
-         "tidyverse","data.table","patchwork", "here",
+lapply(c("ggplot2","cowplot","lubridate",
+         "data.table","patchwork", "here",
          "calecopal", "sf", "viridis", "mapproj", "moments",
-         "corrplot", "gt", "webshot", "bstfun"), require, character.only=T)
+         "corrplot", "gt", "webshot", "bstfun", #"EcoHydRology",
+         "tidyverse"), require, character.only=T)
 
 # Double check working directory
 here()
@@ -556,7 +557,7 @@ site_subset_4 <- site_subset %>%
   filter(site_name %in% list_of_4)
 
 # First, I'll examine if the range > mean. If false, we would drop the P term
-utoy_creek_m1 <- site_subset_4 %>%
+utoy_creek_m1 <- site_subset %>%
   filter(site_name == "nwis_02336728" & year == 2016) %>%
   summarize(rangeQ = max(range(Q, na.rm = TRUE)) - min(range(Q, na.rm = TRUE)),
             meanQ = mean(Q, na.rm = TRUE)) # Range > Mean == TRUE
@@ -623,6 +624,29 @@ kickapoo_m2 <- kickapoo_dat %>%
                                 Q <= (1.5*kickapoo_mean) ~ 0))
 sum(kickapoo_m2$exceedance) # 45 days
 
+# Now, I'm going to investigate the baseflow function in the EcoHydRology package.
+
+# get an approximation for baseflow using a 3 pass filter and a value of 0.925
+# rturns a 2 column data frame with first column - baseflow and second column -
+# quickflow, in same units as input
+utoy_bfs <- BaseflowSeparation(utoy_dat$Q, passes = 3)
+
+utoy_together <- cbind(utoy_dat, utoy_bfs)
+
+ggplot(utoy_together) +
+  geom_line(aes(x = date, y = Q), color = "blue") +
+  geom_line(aes(x = date, y = bt), colo = "black") +
+  labs(x = "Date", y = "Discharge (cm/s)")
+
+shavers_bfs <- BaseflowSeparation(shavers_dat$Q, passes = 3)
+shavers_together <- cbind(shavers_dat, shavers_bfs)
+
+au_sable_bfs <- BaseflowSeparation(au_sable_dat$Q, passes = 3)
+au_sable_together <- cbind(au_sable_dat, au_sable_bfs)
+
+kickapoo_bfs <- BaseflowSeparation(kickapoo_dat$Q, passes = 3)
+kickapoo_together <- cbind(kickapoo_dat, kickapoo_bfs)
+
 # dataset for plotting
 
 fm_4sites_bound <- bind_rows(utoy_dat, shavers_dat, au_sable_dat, kickapoo_dat)
@@ -630,14 +654,15 @@ fm_4sites_bound <- bind_rows(utoy_dat, shavers_dat, au_sable_dat, kickapoo_dat)
 # create figure of data above
 
 # create list for facet labels
-f_labels2 <- c("nwis_02336728" = "Utoy Creek, GA - 2016\nRange > Mean TRUE",
-              "nwis_03067510" = "Shavers Fork, WV - 2012\nRange > Mean TRUE",
-              "nwis_04137005" = "Au Sable River, MI - 2010\nRange > Mean TRUE",
-              "nwis_05579630" = "Kickapoo Creek, IL - 2012\nRange > Mean TRUE")
+f_labels2 <- c("nwis_02336728" = "Utoy Creek, GA - 2016\nRange > Mean TRUE\nExceedance of 150% Mean 43 days",
+              "nwis_03067510" = "Shavers Fork, WV - 2012\nRange > Mean TRUE\nExceedance of 150% Mean 57 days",
+              "nwis_04137005" = "Au Sable River, MI - 2010\nRange > Mean TRUE\nExceedance of 150% Mean 7 days",
+              "nwis_05579630" = "Kickapoo Creek, IL - 2012\nRange > Mean TRUE\nExceedance of 150% Mean 45 days")
 
 (fig_supp1_3 <- fm_4sites_bound %>%
     ggplot() +
     geom_line(aes(x = date, y = Q, color = site_name), size = 1.5) +
+    #geom_line(aes(x = date, y = bt), color = "black", size = 1.5) +
     scale_color_manual(values = c("#69B9FA", "#4B8FF7", "#6B6D9F", "#D46F10")) +
     scale_x_date(date_labels = "%b") +
     theme_bw() +
