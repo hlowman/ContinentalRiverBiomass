@@ -29,7 +29,8 @@
 lapply(c("ggplot2","cowplot","lubridate",
          "data.table","patchwork", "here",
          "calecopal", "sf", "viridis", "mapproj", "moments",
-         "corrplot", "gt", "webshot", "bstfun", #"EcoHydRology",
+         "corrplot", "gt", "webshot", "bstfun", 
+         #  "EcoHydRology", - removed bc it causes problems with the tidyverse/ggplot
          "tidyverse"), require, character.only=T)
 
 # Double check working directory
@@ -629,27 +630,37 @@ sum(kickapoo_m2$exceedance) # 45 days
 # get an approximation for baseflow using a 3 pass filter and a value of 0.925
 # rturns a 2 column data frame with first column - baseflow and second column -
 # quickflow, in same units as input
-utoy_bfs <- BaseflowSeparation(utoy_dat$Q, passes = 3)
 
-utoy_together <- cbind(utoy_dat, utoy_bfs)
-
-ggplot(utoy_together) +
-  geom_line(aes(x = date, y = Q), color = "blue") +
-  geom_line(aes(x = date, y = bt), colo = "black") +
-  labs(x = "Date", y = "Discharge (cm/s)")
-
-shavers_bfs <- BaseflowSeparation(shavers_dat$Q, passes = 3)
-shavers_together <- cbind(shavers_dat, shavers_bfs)
-
-au_sable_bfs <- BaseflowSeparation(au_sable_dat$Q, passes = 3)
-au_sable_together <- cbind(au_sable_dat, au_sable_bfs)
-
-kickapoo_bfs <- BaseflowSeparation(kickapoo_dat$Q, passes = 3)
-kickapoo_together <- cbind(kickapoo_dat, kickapoo_bfs)
+# library(EcoHydRology)
+#
+# utoy_bfs <- BaseflowSeparation(utoy_dat$Q, passes = 3)
+# 
+# utoy_together <- cbind(utoy_dat, utoy_bfs)
+# 
+# ggplot(utoy_together) +
+#   geom_line(aes(x = date, y = Q), color = "blue") +
+#   geom_line(aes(x = date, y = bt), colo = "black") +
+#   labs(x = "Date", y = "Discharge (cm/s)")
+# 
+# shavers_bfs <- BaseflowSeparation(shavers_dat$Q, passes = 3)
+# shavers_together <- cbind(shavers_dat, shavers_bfs)
+# 
+# au_sable_bfs <- BaseflowSeparation(au_sable_dat$Q, passes = 3)
+# au_sable_together <- cbind(au_sable_dat, au_sable_bfs)
+# 
+# kickapoo_bfs <- BaseflowSeparation(kickapoo_dat$Q, passes = 3)
+# kickapoo_together <- cbind(kickapoo_dat, kickapoo_bfs)
 
 # dataset for plotting
 
-fm_4sites_bound <- bind_rows(utoy_dat, shavers_dat, au_sable_dat, kickapoo_dat)
+# fm_4sites_bound <- bind_rows(utoy_together, 
+                             # shavers_together, 
+                             # au_sable_together, 
+                             # kickapoo_together)
+
+# write_rds(fm_4sites_bound, "data_working/flowmetrics_baseflow_4sites_01172022.rds")
+
+fm_4sites_bound <- readRDS("data_working/flowmetrics_baseflow_4sites_01172022.rds")
 
 # create figure of data above
 
@@ -662,7 +673,7 @@ f_labels2 <- c("nwis_02336728" = "Utoy Creek, GA - 2016\nRange > Mean TRUE\nExce
 (fig_supp1_3 <- fm_4sites_bound %>%
     ggplot() +
     geom_line(aes(x = date, y = Q, color = site_name), size = 1.5) +
-    #geom_line(aes(x = date, y = bt), color = "black", size = 1.5) +
+    geom_line(aes(x = date, y = bt), color = "black", size = 1) + # baseflow in black
     scale_color_manual(values = c("#69B9FA", "#4B8FF7", "#6B6D9F", "#D46F10")) +
     scale_x_date(date_labels = "%b") +
     theme_bw() +
@@ -672,9 +683,9 @@ f_labels2 <- c("nwis_02336728" = "Utoy Creek, GA - 2016\nRange > Mean TRUE\nExce
          y = "Discharge (cm/s)") +
     facet_wrap(.~ as.character(site_name), scales = "free", labeller = as_labeller(f_labels2)))
 
-# ggsave(("figures/teton_moresites/supp_fig_AR1_v2.png"),
+# ggsave(("figures/teton_moresites/supp_fig_AR1_v3.png"),
 #        width = 20,
-#        height = 8,
+#        height = 20,
 #        units = "cm"
 # )
 
