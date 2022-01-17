@@ -62,7 +62,7 @@ site_month <- site_subset %>%
   mutate(month = month(date))
 
 site_deseason <- site_month %>%
-  join(monthly_means, by = c("site_name", "month")) %>%
+  plyr::join(monthly_means, by = c("site_name", "month")) %>%
   mutate(deseasonQ = Q - lt_meanQ)
 
 # Then, standardize all values to have a zero mean and unit variance.
@@ -686,6 +686,87 @@ f_labels2 <- c("nwis_02336728" = "Utoy Creek, GA - 2016\nRange > Mean TRUE\nExce
 # ggsave(("figures/teton_moresites/supp_fig_AR1_v3.png"),
 #        width = 20,
 #        height = 20,
+#        units = "cm"
+# )
+
+# Not sure how much the above informs decision-making, so the last thing I'll do is plot
+# some of these metrics versus the number of divergences we got from the first run.
+
+data_out_diff_divs <- read_csv("data_working/divergences_09_21_21.csv")
+
+# join with "site_summary" dataset created above
+sites34_flow_divs <- left_join(data_out_diff_divs, site_summary, by = "site_name")
+
+# add the two stats worked on today - range & 150% of mean exceedance
+exceed150 <- function(input) {
+  # calculate the mean
+  a <- mean(input, na.rm = TRUE)
+  # create a column of 150% mean exceedances
+  b <- case_when(input > (1.5*a) ~ 1,
+                 input <= (1.5*a) ~ 0)
+  # sum the number of occurrences (a.k.a. days) when this happens
+  sum(b)
+}
+
+# test to be sure this function works
+testing <- site_subset %>%
+  filter(site_name == "nwis_02336728" & year == 2016) %>%
+  summarize(exceed = exceed150(Q)) # 43 - it works :)
+
+site_metrics <- site_subset %>%
+  group_by(site_name) %>%
+  summarize(range = (max(range(Q, na.rm = TRUE))) - min(range(Q, na.rm = TRUE)),
+            days_1.5mean_exceeded = exceed150(Q)) %>%
+  ungroup()
+
+# join with "sites34_flow_divs" dataset created above
+sites34_metrics <- left_join(sites34_flow_divs, site_metrics, by = "site_name") %>%
+  mutate(range_mean = range - meanQ)
+
+# Now, to make some figures comparing metrics with model divergences
+(fig_md_1 <- ggplot(sites34_metrics, aes(x = meanQ, y = div_shinyStan)) +
+  geom_point() +
+  theme_bw() +
+  labs(x = "Mean Discharge (cm/s)",
+       y = "Number of Divergences"))
+
+(fig_md_1.2 <- ggplot(sites34_metrics, aes(x = log10(meanQ), y = div_shinyStan)) +
+    geom_point() +
+    theme_bw() +
+    labs(x = "Log of Mean Discharge (cm/s)",
+         y = "Number of Divergences"))
+
+(fig_md_2 <- ggplot(sites34_metrics, aes(x = cvQ, y = div_shinyStan)) +
+    geom_point() +
+    #geom_smooth(method = "lm") +
+    theme_bw() +
+    labs(x = "Coefficient of Variation\nof Discharge",
+         y = "Number of Divergences"))
+
+(fig_md_3 <- ggplot(sites34_metrics, aes(x = ar1Q, y = div_shinyStan)) +
+    geom_point() +
+    theme_bw() +
+    labs(x = "AR(1) Correlation Coefficient\nof Discharge",
+         y = "Number of Divergences"))
+
+(fig_md_4 <- ggplot(sites34_metrics, aes(x = range_mean, y = div_shinyStan)) +
+    geom_point() +
+    theme_bw() +
+    labs(x = "Range in Discharge - Mean Discharge",
+         y = "Number of Divergences"))
+
+(fig_md_5 <- ggplot(sites34_metrics, aes(x = days_1.5mean_exceeded, y = div_shinyStan)) +
+    geom_point() +
+    theme_bw() +
+    labs(x = "Days Discharge Exceeds\n150% of Mean Discharge",
+         y = "Number of Divergences"))
+
+(full_fig_md <- (fig_md_1 + fig_md_1.2 + fig_md_2) /
+                (fig_md_3 + fig_md_4 + fig_md_5) )
+
+# ggsave(("figures/teton_moresites/flow_metrics_34sites.png"),
+#        width = 20,
+#        height = 15,
 #        units = "cm"
 # )
 
