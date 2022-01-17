@@ -761,8 +761,20 @@ sites34_metrics <- left_join(sites34_flow_divs, site_metrics, by = "site_name") 
     labs(x = "Days Discharge Exceeds\n150% of Mean Discharge",
          y = "Number of Divergences"))
 
-(full_fig_md <- (fig_md_1 + fig_md_1.2 + fig_md_2) /
-                (fig_md_3 + fig_md_4 + fig_md_5) )
+(fig_md_6 <- ggplot(sites34_metrics, aes(x = skewQ, y = div_shinyStan)) +
+    geom_point() +
+    theme_bw() +
+    labs(x = "Skewness of Discharge",
+         y = "Number of Divergences"))
+
+(fig_md_7 <- ggplot(sites34_metrics, aes(x = kurtQ, y = div_shinyStan)) +
+    geom_point() +
+    theme_bw() +
+    labs(x = "Kurtosis of Discharge",
+         y = "Number of Divergences"))
+
+(full_fig_md <- (fig_md_1 + fig_md_2 + fig_md_3) /
+                (fig_md_4 + fig_md_5 + fig_md_6) )
 
 # ggsave(("figures/teton_moresites/flow_metrics_34sites.png"),
 #        width = 20,
