@@ -273,4 +273,87 @@ sim_means <- sim_params_df %>%
 
 # Final thoughts - similar results as above!
 
+#### Option to Remove the P term ####
+
+# I've edited code from the following site to allow for the model to chose whether
+# or not to use the P term: https://dev.to/martinmodrak/optional-parametersdata-in-stan-4o33
+
+#### Fit New Ricker Model to Simulated GPP Data ####
+
+## Source data (from above)
+df <- events_dat
+
+####################
+## Stan data prep ##
+####################
+rstan_options(auto_write=TRUE)
+## specify number of cores
+options(mc.cores=6)
+
+## compile data - number of days of data, light, gpp, discharge
+stan_data_compile <- function(x){
+  data <- list(Ndays=length(x$GPP), 
+               light = x$light_rel, 
+               GPP = x$GPP,
+               GPP_sd = x$GPP_sd, 
+               tQ = x$tQ,
+               new_e = x$new_e,
+               p_remove = 0) # eventually this will be due to a data filter, 
+  # but I'm going to feed it in for now
+  return(data)
+}
+
+# Need to keep this as a list to iterate over each event
+stan_data_l <- stan_data_compile(df)
+
+#########################################
+## Run Stan to get parameter estimates - all sites
+#########################################
+
+## PM 2 - Latent Biomass (Ricker)
+# With Persistence Term (P)
+
+# sets initial values of c and s to help chain converge
+init_Ricker <- function(...) {
+  list(c = 0.5, s = 100)
+}
+
+## export results
+PM_outputlist_Ricker <- stan("code/pooling_practice/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_noP.stan",
+                             data = stan_data_l,chains = 3,iter = 5000,
+                             init = init_Ricker,
+                             control = list(max_treedepth = 12))
+
+saveRDS(PM_outputlist_Ricker, "data_working/simulation_1site_output_Ricker_2022_01_19.rds")
+
+#### Re-re-extraction of model parameters ####
+
+# Extract the parameters resulting from fitting the simulated data to the model.
+sim_params <- extract(PM_outputlist_Ricker, c("r","lambda","s","c",
+                                              "B","P","pred_GPP","sig_p","sig_o"))
+
+# And create a dataframe
+sim_params_df <- as.data.frame(sim_params) %>%
+  # and add "K" to it, calculating for each individual iteration
+  mutate(k = (-1*r)/lambda)
+
+# And now to calculate means by site.
+sim_means <- sim_params_df %>%
+  summarize(r_mean = mean(r),
+            k_mean = mean(k),
+            lambda_mean = mean(lambda),
+            s_mean = mean(s),
+            c_mean = mean(c),
+            sigp_mean = mean(sig_p),
+            sigo_mean = mean(sig_o))
+
+# Parameter     Original Value  Simulated Output  Simulated Output(without reinit)
+# r             0.1279            0.1215            0.1472
+# lambda        -0.0147          -0.0143           -0.0156
+# s             34.2720         197.0388          339.2987
+# c             0.2348            0.2489            0.2446
+
+# Final thoughts - similar results as above!
+
+
 # End of script.

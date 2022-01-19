@@ -46,7 +46,7 @@ transformed parameters {
   
   real pred_GPP [Ndays];
   // P is size 0 if p_remove is TRUE
-  real P [p_remove ? 0 : Ndays]; // persistence term for use in process model below
+  real P [Ndays]; // persistence term for use in process model below
   
   if(p_remove == 0){
     
