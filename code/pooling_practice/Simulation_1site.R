@@ -360,4 +360,88 @@ sim_means <- sim_params_df %>%
 # So, the s value went really crazy, but that was to be expected considering
 # we didn't initialize with c and s values.
 
+# Next, excluding P term (p_remove = 1), just to make sure the code runs.
+
+## Source data (from above)
+df2 <- events_dat %>%
+  mutate(p_remove = 1) # adding dummy column of P term removal value
+
+####################
+## Stan data prep ##
+####################
+rstan_options(auto_write=TRUE)
+## specify number of cores
+options(mc.cores=6)
+
+## compile data - number of days of data, light, gpp, discharge
+stan_data_compile <- function(x){
+  data <- list(Ndays=length(x$GPP), 
+               light = x$light_rel, 
+               GPP = x$GPP,
+               GPP_sd = x$GPP_sd, 
+               tQ = x$tQ,
+               new_e = x$new_e,
+               p_remove = x$p_remove[1]) # eventually this will result from a data filter
+  return(data)
+}
+
+# Need to keep this as a list to iterate over each event
+stan_data_l2 <- stan_data_compile(df2)
+
+#########################################
+## Run Stan to get parameter estimates - all sites
+#########################################
+
+## PM 2 - Latent Biomass (Ricker)
+# With Persistence Term (P)
+
+# sets initial values of c and s to help chain converge
+# something about this throws an error message that the samples are empty
+# so I've commented out the init line in the stan() function below
+init_Ricker <- function(...) {
+  list(c = 0.5, s = 100)
+}
+
+## export results
+PM_outputlist_Ricker2 <- stan("code/pooling_practice/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_noP.stan",
+                             data = stan_data_l2,chains = 3,iter = 5000,
+                             #init = init_Ricker,
+                             control = list(max_treedepth = 12))
+
+# Sooooo, this took like 2 minutes, as opposed to the above, which took like 2 hours...
+
+saveRDS(PM_outputlist_Ricker2, "data_working/simulation_1sitewoP_output_Ricker_2022_01_19.rds")
+
+#### Re-re-re-extraction of model parameters ####
+
+# Extract the parameters resulting from fitting the simulated data to the model.
+# P, s, and c should not exist in this iteration.
+sim_params2 <- extract(PM_outputlist_Ricker2, c("r","lambda","s","c",
+                                              "B","P","pred_GPP","sig_p","sig_o"))
+# Yay! They don't exist!!
+
+# And create a dataframe
+sim_params_df2 <- as.data.frame(sim_params2) %>%
+  # and add "K" to it, calculating for each individual iteration
+  mutate(k = (-1*r)/lambda)
+
+# And now to calculate means by site.
+sim_means2 <- sim_params_df2 %>%
+  summarize(r_mean = mean(r),
+            k_mean = mean(k),
+            lambda_mean = mean(lambda),
+            #s_mean = mean(s),
+            #c_mean = mean(c),
+            sigp_mean = mean(sig_p),
+            sigo_mean = mean(sig_o))
+
+# Parameter     Original Value  Sim. Out. (w/ reinit)   Sim. Out (w/ P)     Sim. Out (w/o P)
+# r             0.1279          0.1215                  0.1267              0.0953
+# lambda        -0.0147         -0.0143                 -0.0141             -0.0125
+# s             34.2720         197.0388                283.8156            NA (WOOT)
+# c             0.2348          0.2489                  0.2442              NA (WOOT)
+
+# So, it seems the r and lambda values did suffer some without the P term, but the
+# computational time decreased DRASTICALLY.
+
 # End of script.
