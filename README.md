@@ -1,7 +1,7 @@
 # ContinentalRiverBiomass
 River Productivity Modeling at the Continental Scale using Data from [Appling et al. 2018](https://www.sciencebase.gov/catalog/item/59bff507e4b091459a5e0982)
 
-Please note, due to file size, the "/data_raw" folder will not track or load datasets to GitHub.
+Please note, due to file size, the "/data_raw" and "/data_working" folders will not track or load datasets to GitHub.
 
 To download the site_data.tsv file used, please visit [this link](https://www.sciencebase.gov/catalog/item/59bff64be4b091459a5e098b).
 
