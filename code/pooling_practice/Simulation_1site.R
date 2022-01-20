@@ -329,6 +329,7 @@ PM_outputlist_Ricker <- stan("code/pooling_practice/Stan_ProductivityModel2_Rick
                              control = list(max_treedepth = 12))
 
 saveRDS(PM_outputlist_Ricker, "data_working/simulation_1site_output_Ricker_2022_01_19.rds")
+# 3 divergent transitions.
 
 #### Re-re-re-extraction of model parameters ####
 
@@ -409,6 +410,7 @@ PM_outputlist_Ricker2 <- stan("code/pooling_practice/Stan_ProductivityModel2_Ric
                              control = list(max_treedepth = 12))
 
 # Sooooo, this took like 2 minutes, as opposed to the above, which took like 2 hours...
+# Also, no divergent transitions.
 
 saveRDS(PM_outputlist_Ricker2, "data_working/simulation_1sitewoP_output_Ricker_2022_01_19.rds")
 
