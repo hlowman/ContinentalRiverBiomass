@@ -265,7 +265,7 @@ sim_means <- sim_params_df %>%
             sigp_mean = mean(sig_p),
             sigo_mean = mean(sig_o))
 
-# Parameter     Original Value  Simulated Output  Simulated Output(without reinit)
+# Parameter     Original Value  Simulated Output  Simulated Output(w/o reinit)
 # r             0.1279            0.1215            0.1472
 # lambda        -0.0147          -0.0143           -0.0156
 # s             34.2720         197.0388          339.2987
@@ -280,8 +280,11 @@ sim_means <- sim_params_df %>%
 
 #### Fit New Ricker Model to Simulated GPP Data ####
 
+# First, including P term (p_remove = 0), just to make sure the code runs.
+
 ## Source data (from above)
-df <- events_dat
+df <- events_dat %>%
+  mutate(p_remove = 0) # adding dummy column of P term removal value
 
 ####################
 ## Stan data prep ##
@@ -298,8 +301,7 @@ stan_data_compile <- function(x){
                GPP_sd = x$GPP_sd, 
                tQ = x$tQ,
                new_e = x$new_e,
-               p_remove = 0) # eventually this will be due to a data filter, 
-  # but I'm going to feed it in for now
+               p_remove = x$p_remove[1]) # eventually this will result from a data filter
   return(data)
 }
 
@@ -314,6 +316,8 @@ stan_data_l <- stan_data_compile(df)
 # With Persistence Term (P)
 
 # sets initial values of c and s to help chain converge
+# something about this throws an error message that the samples are empty
+# so I've commented out the init line in the stan() function below
 init_Ricker <- function(...) {
   list(c = 0.5, s = 100)
 }
@@ -321,12 +325,12 @@ init_Ricker <- function(...) {
 ## export results
 PM_outputlist_Ricker <- stan("code/pooling_practice/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_noP.stan",
                              data = stan_data_l,chains = 3,iter = 5000,
-                             init = init_Ricker,
+                             #init = init_Ricker,
                              control = list(max_treedepth = 12))
 
 saveRDS(PM_outputlist_Ricker, "data_working/simulation_1site_output_Ricker_2022_01_19.rds")
 
-#### Re-re-extraction of model parameters ####
+#### Re-re-re-extraction of model parameters ####
 
 # Extract the parameters resulting from fitting the simulated data to the model.
 sim_params <- extract(PM_outputlist_Ricker, c("r","lambda","s","c",
@@ -347,13 +351,13 @@ sim_means <- sim_params_df %>%
             sigp_mean = mean(sig_p),
             sigo_mean = mean(sig_o))
 
-# Parameter     Original Value  Simulated Output  Simulated Output(without reinit)
-# r             0.1279            0.1215            0.1472
-# lambda        -0.0147          -0.0143           -0.0156
-# s             34.2720         197.0388          339.2987
-# c             0.2348            0.2489            0.2446
+# Parameter     Original Value  Sim. Out. (w/ reinit)   Sim. Out (w/ P)
+# r             0.1279          0.1215                  0.1267
+# lambda        -0.0147         -0.0143                 -0.0141
+# s             34.2720         197.0388                283.8156
+# c             0.2348          0.2489                  0.2442
 
-# Final thoughts - similar results as above!
-
+# So, the s value went really crazy, but that was to be expected considering
+# we didn't initialize with c and s values.
 
 # End of script.

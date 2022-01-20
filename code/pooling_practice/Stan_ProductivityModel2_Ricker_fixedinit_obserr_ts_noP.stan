@@ -10,7 +10,7 @@ data {
   int new_e [Ndays]; // 0/1s denoting new time sequences
   int<lower = 0, upper = 1> p_remove; // boolean (0/1) variable for P term filter
   // and finally, create an empty P dataset to feed the model if p_remove is TRUE
-  real<lower=0> p_data[p_remove ? 0 : 1]; // p_data is size 0 if p_remove is TRUE
+  // real<lower=0> p_data[p_remove ? 0 : 1]; // p_data is size 0 if p_remove is TRUE
 
 }
 
@@ -46,12 +46,12 @@ transformed parameters {
   
   real pred_GPP [Ndays];
   // P is size 0 if p_remove is TRUE
-  real P [Ndays]; // persistence term for use in process model below
+  real P [p_remove ? 0 : Ndays]; // persistence term for use in process model below
   
   if(p_remove == 0){
     
     for(i in 1:Ndays) {
-    P[i]=exp(-exp(s*(tQ[i]-c))); // persistence as a function of discharge
+    P[i]=exp(-exp(s[1]*(tQ[i]-c[1]))); // persistence as a function of discharge
     }
     
   }
@@ -125,8 +125,8 @@ model {
   
   // Param priors
   if (p_remove == 0) {
-    c ~ normal(0,1)T[0,];
-    s ~ normal(0,200)T[0,];
+    c[1] ~ normal(0,1)T[0,];
+    s[1] ~ normal(0,200)T[0,];
   } // c and s conditional on P term being included
   r ~ normal(0,1);
   lambda ~ normal(0,1)T[,0];
