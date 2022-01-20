@@ -797,4 +797,57 @@ site_scaled_skew <- site_scaled %>%
 #        units = "cm"
 # )
 
+# Additional figures to explore the relationships between GPP and Q, since that's
+# the response that the P term relies upon.
+
+# create list for facet labels
+f_labels3 <- c("nwis_02336728" = "Utoy Creek, GA",
+               "nwis_03067510" = "Shavers Fork, WV\ndivergences = 1,438",
+               "nwis_04137005" = "Au Sable River, MI\ndivergences = 0",
+               "nwis_05579630" = "Kickapoo Creek, IL")
+
+# Using site_subset_4 dataset from above - so not zeroing in on a particular year
+
+(fig_supp1_4 <- site_subset_4 %>%
+    ggplot() +
+    geom_point(aes(x = Q, y = GPP, color = site_name)) +
+    scale_color_manual(values = c("#69B9FA", "#4B8FF7", "#6B6D9F", "#D46F10")) +
+    theme_bw() +
+    theme(legend.position = "none",
+          strip.background = element_rect(fill = NA)) +
+    labs(x = "Discharge (cm/s)",
+         y = "Gross Primary Production (g O2/m2*d)") +
+    facet_wrap(.~ as.character(site_name), scales = "free", labeller = as_labeller(f_labels3)))
+
+# Do a bit more exploring of the GPP vs. Q relationship in relation to divergences
+
+sites34 <- data_out_diff_divs %>%
+  select(site_name)
+
+slope <- function(x, y){
+  model1 <- lm(y ~ x) # create linear model
+  model1$coefficient[2] # extract slope
+}
+
+# test it out at a single site
+utoy_slope <- utoy_dat %>%
+  summarize(gpp_vs_q = slope(Q, GPP)) #yep!
+
+site_subset_34 <- site_subset %>%
+  filter(site_name %in% sites34$site_name) %>%
+  group_by(site_name) %>%
+  summarize(gpp_vs_q = slope(Q, GPP)) %>%
+  ungroup()
+
+site_lms_divs <- left_join(data_out_diff_divs, site_subset_34)
+
+(fig_supp1_5 <- site_lms_divs %>%
+    ggplot() +
+    geom_point(aes(x = gpp_vs_q, y = div_shinyStan)) +
+    theme_bw() +
+    labs(x = "Slope of GPP vs. Discharge",
+         y = "Model Divergences"))
+
+# No clear trend.
+
 # End of script.
