@@ -767,6 +767,21 @@ sites34_metrics <- left_join(sites34_flow_divs, site_metrics, by = "site_name") 
     labs(x = "Skewness of Discharge",
          y = "Number of Divergences"))
 
+# quick additional plot to see how skewness changes with standardized Q
+# since standardized Q is what's fed into the model structure
+site_scaled_skew <- site_scaled %>%
+  group_by(site_name) %>%
+  mutate(tQ = Q/max(Q)) %>%
+  summarize(meantQ = mean(tQ),
+            skewtQ = skewness(tQ))
+
+(fig_md6.2 <- left_join(sites34_metrics, site_scaled_skew, by = "site_name") %>%
+    ggplot(aes(x = skewtQ, y = div_shinyStan)) +
+    geom_point() +
+    theme_bw() +
+    labs(x = "Skewness of Standardized Discharge",
+         y = "Number of Divergences")) # it's the same
+
 (fig_md_7 <- ggplot(sites34_metrics, aes(x = kurtQ, y = div_shinyStan)) +
     geom_point() +
     theme_bw() +
