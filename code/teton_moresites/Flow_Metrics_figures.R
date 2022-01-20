@@ -850,4 +850,21 @@ site_lms_divs <- left_join(data_out_diff_divs, site_subset_34)
 
 # No clear trend.
 
+# Investigate cv of flow vs. dam presence.
+
+(fig_dams1 <- left_join(site_summary, sitesjoin) %>%
+  ggplot() +
+  geom_point(aes(x = struct.dam_flag, y = cvQ)) +
+  theme_bw() +
+  labs(x = "Likelihood of being affected\nby a dam (0 = 100% likelihood)",
+       y = "Coefficient of Variation of Discharge"))
+
+(fig_dams2 <- left_join(site_summary, sitesjoin) %>%
+    ggplot() +
+    geom_point(aes(x = struct.dam_flag, y = ar1Q)) +
+    theme_bw() +
+    labs(x = "Likelihood of being affected\nby a dam (0 = 100% likelihood)",
+         y = "AR(1) Coefficient\n(1 = stable day-to-day flow)"))
+
+
 # End of script.

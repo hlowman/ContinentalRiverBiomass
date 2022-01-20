@@ -9,15 +9,11 @@ data {
   vector [Ndays] tQ; // standardized discharge
   int new_e [Ndays]; // 0/1s denoting new time sequences
   int<lower = 0, upper = 1> p_remove; // boolean (0/1) variable for P term filter
-  // and finally, create an empty P dataset to feed the model if p_remove is TRUE
-  // real<lower=0> p_data[p_remove ? 0 : 1]; // p_data is size 0 if p_remove is TRUE
-
+  
 }
 
 parameters {
   // parameters will change based on persistence (P) term filter
-  // dummy filter currently based on mean discharge - EDIT THIS!!!
-  // if mean(tQ) >= 0.02 a.k.a. p_remove = 0 KEEP P term
   
   // using ternary operator, which reads [(condition) ? (true value) : (false value)]
   
@@ -41,8 +37,6 @@ parameters {
 
 transformed parameters {
   // transformed parameters will change based on persistence (P) term filter
-  // dummy filter currently based on mean discharge - EDIT THIS!!!
-  // if mean(tQ) >= 0.02 a.k.a. p_remove = 0 KEEP P term
   
   real pred_GPP [Ndays];
   // P is size 0 if p_remove is TRUE
