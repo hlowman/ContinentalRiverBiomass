@@ -16,10 +16,6 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
 
 ## Source data
 df <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_4sites/df_4sites.rds")
-df <- readRDS("data_working/df_4sites.rds")
-
-# for test, pull out only sites not requiring P
-test <- df[c(1,2)]
 
 ####################
 ## Stan data prep ##
@@ -41,7 +37,6 @@ stan_data_compile <- function(x){
 }
 
 stan_data_l <- lapply(df, function(x) stan_data_compile(x))
-stan_data_test <- lapply(test, function(x) stan_data_compile(x))
 
 #########################################
 ## Run Stan to get parameter estimates - all sites
@@ -57,35 +52,18 @@ init_Ricker <- function(...) {
 # create stan function that delineates between two scripts to use
 p_choose <- function(dat){
   if(dat$p_remove == 1){
-    return("code/teton_4sites/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_noP.stan")
+    return("/project/modelscape/users/hlowman/jobscripts/teton_4sites/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_noP.stan")
   } else {
-    return("code/teton_4sites/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP.stan")
+    return("/project/modelscape/users/hlowman/jobscripts/teton_4sites/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP.stan")
   }
 }
 
-p_choose(stan_data_test$nwis_02266300)
-
 ## export results
-PM_outputlist_Ricker <- lapply(stan_data_test,
-                               
-                               # p = 1, so remove P
-                               
-                                 # function(x) stan("/project/modelscape/users/hlowman/jobscripts/teton_4sites/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_noP.stan",
-                                 function(x) stan(p_choose(x),
+PM_outputlist_Ricker <- lapply(stan_data_l,
+                               function(x) stan(p_choose(x),
                                    data = x,chains = 3,iter = 5000,
                                    init = init_Ricker,
-                                   control = list(max_treedepth = 12)) )
-                               } 
-                               
-                               # p = 0, so keep P
-                               else {
-                                 # function(x) stan("/project/modelscape/users/hlowman/jobscripts/teton_4sites/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP.stan",
-                                 function(x) stan("code/teton_4sites/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP.stan",
-                                   data = x,chains = 3,iter = 5000,
-                                   init = init_Ricker,
-                                   control = list(max_treedepth = 12))
-                               }
-                               )
+                                   control = list(max_treedepth = 12)))
 
 saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_4sites/teton_4rivers_output_Ricker_2022_01_22.rds")
 
