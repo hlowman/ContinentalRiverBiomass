@@ -261,4 +261,56 @@ events_summary2 <- events_summary %>%
 #        units = "cm"
 # )
 
+# Creating an additional figure for use in my presentation to Modelscape.
+# Import time series of streamMetabolizer-generated predictions
+NWIS <- read.table("data_raw/daily_predictions.tsv", sep='\t', header = TRUE)
+
+wv <- NWIS %>%
+  filter(site_name == "nwis_01608500") %>% # filter only for stream in WV
+
+wv$date <- ymd(wv$date) # and structure dates properly
+
+wv2012 <- wv %>%
+  mutate(year = year(date)) %>%
+  filter(year ==2012)
+
+wv12_do <- ggplot(wv2012, aes(date, DO.obs))+
+  geom_point(color="gray60", size=2)+
+  labs(y=expression('DO (mg '*~O[2]~ L^-1*')'), x = "Date")+
+  theme(legend.position = "none",
+        panel.background = element_rect(color = "black", fill=NA, size=1),
+        axis.title.x = element_text(size=12), 
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.title.y = element_text(size=12))
+  
+wv12_gpp <- ggplot(wv2012, aes(date, GPP))+
+  geom_point(color="chartreuse4", size=2)+
+  geom_errorbar(aes(ymin = GPP.lower, ymax = GPP.upper), width=0.2,color="darkolivegreen4")+
+  labs(y=expression('GPP (g '*~O[2]~ m^-2~d^-1*')'), x = "Date")+
+  theme(legend.position = "none",
+        panel.background = element_rect(color = "black", fill=NA, size=1),
+        axis.title.x = element_text(size=12), 
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.title.y = element_text(size=12))
+
+wv12_q <- ggplot(wv2012, aes(date, discharge))+
+  geom_line(size=1.5, color="deepskyblue4")+
+  labs(y=expression('Q (cm '*s^-1*')'), x = "Date")+
+  theme(legend.position = "none",
+        panel.background = element_rect(color = "black", fill=NA, size=1),
+        axis.title.x = element_text(size=12), 
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.title.y = element_text(size=12))
+
+wv12fig <- wv12_do / wv12_gpp / wv12_q
+
+# ggsave(("figures/presentations/nwis_01608500_2012_do_gpp_q.png"),
+#        width = 20,
+#        height = 20,
+#        units = "cm"
+# )
+
 # End of script.
