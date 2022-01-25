@@ -243,6 +243,21 @@ fig1 <- data_together %>%
 
 fig1
 
+fig1v2 <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  mutate(so = factor(NHD_STREAMORDE)) %>%
+  ggplot(aes(x = so, y = r_mean, fill = so)) +
+  scale_fill_manual(values = cal_palette("sbchannel", n = 7, type = "continuous")) + # custom colors
+  geom_boxplot(alpha = 0.8) +
+  geom_jitter(color = "black", alpha = 0.5, width = 0.1) +
+  labs(x = "Stream Order",
+       y = "Maximum Growth Rate (r)") +
+  theme_bw() +
+  theme(text = element_text(size=12), legend.position = "none")
+
+fig1v2
+
 # ggsave(plot = fig1,
 #        filename = "figures/teton_34sites/r_strord.jpg",
 #        width = 8,
@@ -305,6 +320,32 @@ fig3b <- data_together %>%
   theme(text = element_text(size=20), legend.position = "none")
 
 fig3b
+
+# Create another version of this figure for the Modelscape
+# presentation Jan 2022
+fig3bv2 <- data_together %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  mutate(logK = log10(k_mean)) %>%
+  mutate(so = factor(NHD_STREAMORDE)) %>%
+  ggplot(aes(x = r_mean, y = logK, 
+             fill = so)) +
+  geom_point(shape = 21, size = 4, alpha = 0.9) +
+  scale_fill_manual(values = cal_palette("sbchannel", n = 7, type = "continuous")) + # custom colors
+  labs(x = "Maximum Growth Rate (r)",
+       y = "Log of Carrying Capacity (K)") +
+  #geom_text_repel(data = subset(data_together, r_mean > 0.4), size = 4) +
+  theme_bw() +
+  theme(text = element_text(size=12), legend.position = "none")
+
+fig3bv2
+
+fig_modelscape <- fig3bv2 + fig1v2
+
+# ggsave(plot = fig_modelscape,
+#        filename = "figures/presentations/r_k_order.jpg",
+#        width = 10,
+#        height = 5)
 
 # Create single figure of r, k, and stream order figures:
 fig1_full <- fig1 + fig2 + fig3b +
