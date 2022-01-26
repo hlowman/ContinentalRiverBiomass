@@ -14,7 +14,7 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
 
 ## Source data
 df <- readRDS("data_working/df_207sites.rds")
-test <- df[c(3,4)]
+test2 <- df[c(33,43)]
 #df <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_4sites/df_4sites.rds")
 
 ####################
@@ -36,7 +36,7 @@ stan_data_compile <- function(x){
   return(data)
 }
 
-test_data <- lapply(test, function(x) stan_data_compile(x))
+test_data2 <- lapply(test2, function(x) stan_data_compile(x))
 #stan_data_l <- lapply(df, function(x) stan_data_compile(x))
 
 #########################################
@@ -47,14 +47,14 @@ test_data <- lapply(test, function(x) stan_data_compile(x))
 
 # sets initial values of c and s to help chains converge
 init_Ricker <- function(...) {
-  list(c = 0.5, s = 100)
+  list(c = 0.5, s = 0.5)
 }
 
 ## export results
 
-PM_outputlist_test <- lapply(test_data,
+PM_outputlist_test2 <- lapply(test_data2,
                                function(x) stan("code/teton_moresites/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP.stan",
-                                                data = x, chains = 3,iter = 5000,
+                                                data = x, chains = 1,iter = 5000,
                                                 init = init_Ricker,
                                                 control = list(max_treedepth = 12)))
 
