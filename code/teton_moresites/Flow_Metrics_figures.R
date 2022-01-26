@@ -767,6 +767,29 @@ sites34_metrics <- left_join(sites34_flow_divs, site_metrics, by = "site_name") 
     labs(x = "Skewness of Discharge",
          y = "Number of Divergences"))
 
+# Creating some additional plots examining GPP vs. divergences
+site_gpp_summary <- site_subset %>%
+  group_by(site_name) %>%
+  summarize(mean_GPP = mean(GPP),
+            max_GPP = max(GPP)) %>%
+  ungroup()
+
+# join with divergences dataset
+gpp_divs <- left_join(data_out_diff_divs, site_gpp_summary)
+
+# AND PLOT
+gpp1 <- ggplot(gpp_divs, aes(x = mean_GPP, y = div_shinyStan)) +
+  geom_point() +
+  theme_bw() +
+  labs(x = "Mean GPP",
+       y = "Number of Divergences")
+
+gpp2 <- ggplot(gpp_divs, aes(x = max_GPP, y = div_shinyStan)) +
+  geom_point() +
+  theme_bw() +
+  labs(x = "Maximum GPP",
+       y = "Number of Divergences")
+
 # quick additional plot to see how skewness changes with standardized Q
 # since standardized Q is what's fed into the model structure
 site_scaled_skew <- site_scaled %>%
