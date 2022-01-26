@@ -7,7 +7,6 @@ data {
   vector [Ndays] GPP_sd; // sd estimates from posterior probability distributions
   vector [Ndays] tQ; // standardized discharge
   int new_e [Ndays]; // 0/1s denoting new time sequences
-  // vector of integers
 }
 
 parameters {
