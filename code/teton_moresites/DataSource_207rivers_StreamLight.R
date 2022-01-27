@@ -11,8 +11,8 @@
 # repository structure.
 
 ## Load packages
-lapply(c("plyr","dplyr","ggplot2","cowplot",
-         "lubridate","tidyverse", "reshape2",
+lapply(c("tidyverse", "cowplot",
+         "lubridate", "reshape2",
          "PerformanceAnalytics","jpeg","grid",
          "rstan","bayesplot","shinystan", "here"), require, character.only=T)
 
@@ -33,18 +33,15 @@ colnames(SL)[colnames(SL) == "Date"] <- "date"
 ## Join data and StreamLight
 data <- left_join(data, SL, by=c("site_name", "date"))
 
-## Removed code changing names to short names - see previous versions if 
-## needed to add back in.
-
 ## How many days of data per site per year
 data$year <- year(data$date)
 
 data_siteyears <- data %>%
-  group_by(site_name, year) %>%
-  tally()
+  count(site_name, year)
 
-## Using all data so removed code selecting only 2 years of data
+sum(data_siteyears$n) # 219,871 days = 602.39 years
 
+## DONT FORGET THIS:
 ## Set any GPP < 0 to a small value between 0.05 to 0.13 g O2 m-2 d-1
 data[which(data$GPP < 0),]$GPP <- sample(exp(-3):exp(-2), 1)
 
@@ -117,8 +114,6 @@ dat <- lapply(l, function(x) rel_LQT(x))
 
 # rename dataset
 df <- dat
-
-#rm(data, l, SL, data_siteyears, dat)
 
 # Exporting dataset
 saveRDS(df, "data_working/df_207sites.rds") # data for full run
