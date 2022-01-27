@@ -10,15 +10,15 @@
 # need to perform, and I've changed the appropriate filepaths to match my
 # repository structure.
 
-lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
-         "tidyverse","data.table","patchwork", "here"), require, character.only=T)
+lapply(c("tidyverse", "plyr", "cowplot","lubridate",
+         "data.table","patchwork", "here"), require, character.only=T)
 
 # Load in datasets created in NWIS_RiverSelection script.
 NWIS_207sites_subset <- readRDS("data_working/NWIS_207sites_subset.rds")
 NWIS_207sitesinfo_subset <- readRDS("data_working/NWIS_207sitesinfo_subset.rds")
 NWIS_207sites_Ndays <- readRDS("data_working/NWIS_207sites_Ndays.rds")
 
-## Site of interest that has StreamLight data
+## Sites of interest that have StreamLight data
 sites <- NWIS_207sitesinfo_subset$site_name
 sites_files <- rep(NA, length(sites))
 for(i in 1:length(sites)){
@@ -26,7 +26,7 @@ for(i in 1:length(sites)){
 }
 
 # need to identify the intersection of files with available light data
-filenames <- intersect(sites_files, list.files(here("data_raw", "individual_files")))
+filenames <- intersect(sites_files, list.files(here("data_raw/individual_files")))
 
 ## Import StreamLight
 SL <- ldply(filenames, function(filename) {
@@ -63,7 +63,7 @@ site_subset <- SF_df
 
 site_subset_split <- split(site_subset, site_subset$.id)
 
-# what are these doing??
+# Check for NA values.
 lapply(site_subset_split, function(x) sum(is.na(x$PAR_surface)))
 lapply(site_subset_split, function(x) sum(is.na(x$PAR_turb)))
 
