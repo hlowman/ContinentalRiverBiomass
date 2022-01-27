@@ -313,4 +313,32 @@ wv12fig <- wv12_do / wv12_gpp / wv12_q
 #        units = "cm"
 # )
 
+# Also, creating a figure showing time gaps to visualize reinitialization.
+
+pa <- NWIS %>%
+  filter(site_name == "nwis_03007800")# filter only for stream in PA
+
+pa$date <- ymd(pa$date) # and structure dates properly
+
+pa <- pa %>%
+  mutate(year = year(date)) %>%
+  filter(year < 2015)
+
+pa_gpp <- ggplot(pa, aes(date, GPP))+
+  geom_point(color="chartreuse4", size=2)+
+  geom_errorbar(aes(ymin = GPP.lower, ymax = GPP.upper), width=0.2,color="darkolivegreen4")+
+  labs(y=expression('GPP (g '*~O[2]~ m^-2~d^-1*')'), x = "Date")+
+  theme(legend.position = "none",
+        panel.background = element_rect(color = "black", fill=NA, size=1),
+        axis.title.x = element_text(size=12), 
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.title.y = element_text(size=12))
+
+# ggsave(("figures/presentations/nwis_03007800_2011_2014_gpp.png"),
+#        width = 25,
+#        height = 8,
+#        units = "cm"
+# )
+
 # End of script.
