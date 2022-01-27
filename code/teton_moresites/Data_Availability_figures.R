@@ -266,7 +266,7 @@ events_summary2 <- events_summary %>%
 NWIS <- read.table("data_raw/daily_predictions.tsv", sep='\t', header = TRUE)
 
 wv <- NWIS %>%
-  filter(site_name == "nwis_01608500") %>% # filter only for stream in WV
+  filter(site_name == "nwis_01608500")# filter only for stream in WV
 
 wv$date <- ymd(wv$date) # and structure dates properly
 
@@ -275,7 +275,7 @@ wv2012 <- wv %>%
   filter(year ==2012)
 
 wv12_do <- ggplot(wv2012, aes(date, DO.obs))+
-  geom_point(color="gray60", size=2)+
+  geom_line(color="gray60", size=1)+
   labs(y=expression('DO (mg '*~O[2]~ L^-1*')'), x = "Date")+
   theme(legend.position = "none",
         panel.background = element_rect(color = "black", fill=NA, size=1),
