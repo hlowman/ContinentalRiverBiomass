@@ -1,10 +1,12 @@
 ## Fitting models to data
-## Step THREE in Metabolism Modeling Workflow
-## January 26, 2022
+## Step FOUR in Metabolism Modeling Workflow
+## January 27, 2022
 ## Heili Lowman
 
 # I'll be modifying Joanna's code from the RiverBiomass repository
-# to fit the Ricker model to 4 sites of data.
+# to fit the Ricker model to 207 sites of data.
+
+# I double-checked all the code steps prior to this one on 01/27/22.
 
 # load packages
 lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
@@ -44,7 +46,7 @@ stan_data_l <- lapply(df, function(x) stan_data_compile(x))
 
 # sets initial values of c and s to help chains converge
 init_Ricker <- function(...) {
-  list(c = 0.5, s = 0.5)
+  list(c = 0.5, s = 0.5) # new values as of jan 2022
 }
 
 ## export results
