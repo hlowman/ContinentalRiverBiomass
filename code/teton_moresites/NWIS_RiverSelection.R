@@ -1,6 +1,8 @@
 ## Step ONE in Metabolism Modeling Workflow
-## October 28, 2021
+## January 27, 2022
 ## Heili Lowman
+
+# This version of the workflow will be to send a 207 site dataset to Teton.
 
 # I'll be modifying Joanna's code from the RiverBiomass repository
 # to fit the Ricker model to a larger dataset than the previous run (34 sites).
@@ -19,8 +21,8 @@
 ## JRB
 
 ## Load packages
-lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
-         "tidyverse","data.table","patchwork", "here"), require, character.only=T)
+lapply(c("tidyverse", "cowplot","lubridate",
+         "data.table","patchwork", "here"), require, character.only=T)
 
 ############################
 ## To create linked file
@@ -97,7 +99,7 @@ highq_sites <- diagnostics[which(#diagnostics$K600_daily_sigma_Rhat < 1.05 &
 
 highq_site_names <- unique(highq_sites$site) ## 261 sites at the end
 
-# Subset s based on high sites and site type and flags
+# Subset s based on high quality sites and site type and flags
 s <- sub[which(sub$site_name %in% highq_site_names),]
 
 # Removing all except stream sites. Possible categories include:
@@ -125,6 +127,7 @@ s <- s[which(s$site_type == "ST"),] ## 8 sites drop off
 # Import time series of streamMetabolizer-generated predictions
 NWIS <- read.table("data_raw/daily_predictions.tsv", sep='\t', header = TRUE)
 NWIS$date <- ymd(NWIS$date)
+
 # Due to date issues below, forcing the dataframe to present dates in ascending order
 NWIS <- NWIS %>%
   group_by(site_name) %>%
@@ -164,21 +167,23 @@ NWIS_sub$year <- year(NWIS_sub$date)
 
 ## count days per year
 dat_per_year <- NWIS_sub %>%
-  group_by(site_name, year) %>%
-  count()
+  count(site_name, year)
 
-# and visualize distribution of days per year across all site-years
 hist(dat_per_year$n)
 
 ## identify the max day gap per year
 gap_per_year <- NWIS_sub %>%
   group_by(site_name, year) %>%
-  mutate(gap = doy - lag(doy, default=doy[1], order_by = doy))
+  mutate(gap = doy - lag(doy, default=doy[1], order_by = doy)) %>%
+  ungroup()
 # now, no more negative values in the gap column - woohoo!
+# The code above really struggles between the dplyr/plyr packages it seems.
+# So, ALWAYS double check the output above to be sure there aren't any gaps
+# that are negative, as that indicates the data isn't being grouped properly.
 
 # So, the following code shows that the dates are now arranged in ascending order
 # When earlier this was not the case using the same code
-test <- gap_per_year %>% filter(site_name == "nwis_040871488" & year == 2011) # YAY! It's working.
+# test <- gap_per_year %>% filter(site_name == "nwis_040871488" & year == 2011) # YAY! It's working.
 # Switching the above code to lubridate's ymd() function alone didn't seem to help
 # so I'm going to force it to be in ascending order above using arrange().
 
@@ -205,16 +210,17 @@ length(levels(as.factor(sub_by_gap2$site_name))) # 207 unique sites
 # for our purposes
 # high_q <- sub_by_gap_sum[which(sub_by_gap_sum$n >= 2),]
 
+# Renaming dataset
 high_q <- sub_by_gap2
 
-## Subset NWIS_sub
+## Subset NWIS_sub sites
 TS <- NWIS_sub[which(NWIS_sub$site_name %in% high_q$site_name),]
 
-## Subset to years that meet criteria
+## Subset to YEARS that meet criteria
 sub_by_gap2$site_year <- paste(sub_by_gap2$site_name,sub_by_gap2$year,sep = "_")
 TS$site_year <- paste(TS$site_name, TS$year,sep = "_")
-TS <- TS[which(TS$site_year %in% sub_by_gap2$site_year),]
-TS_site <- s[which(s$site_name %in% high_q$site_name),]
+TS <- TS[which(TS$site_year %in% sub_by_gap2$site_year),] # Site data
+TS_site <- s[which(s$site_name %in% high_q$site_name),] # Site info
 
 ## Attach the median GPP
 TS$GPP_temp <- TS$GPP
