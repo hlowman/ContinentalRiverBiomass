@@ -475,6 +475,48 @@ fig2_full
 #        width = 15,
 #        height = 5)
 
+# Adding figures for Modelscape demonstration
+
+# Site that performed poorly - Reedy Creek, FL nwis_02266300
+# Site that performed well - South Branch Potomac, WV nwis_01608500
+(figc1 <- data_out_params_df %>%
+  filter(site_name == "nwis_02266300" | site_name == "nwis_01608500") %>%
+  mutate(site = factor(site_name, levels = c("nwis_02266300", "nwis_01608500"))) %>%
+  ggplot(aes(x = c, color = site, fill = site)) +
+  geom_histogram(alpha = 0.75) +
+  scale_color_manual(values = cal_palette("sierra2")) + # custom colors
+  scale_fill_manual(values = cal_palette("sierra2")) + # custom colors
+  geom_density(alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Density") +
+  facet_wrap(.~site_name, scales = "free") +
+  theme_bw() +
+  theme(text = element_text(size=12), legend.position = "none"))
+
+(figs1 <- data_out_params_df %>%
+    filter(site_name == "nwis_02266300" | site_name == "nwis_01608500") %>%
+    mutate(site = factor(site_name, levels = c("nwis_02266300", "nwis_01608500"))) %>%
+    ggplot(aes(x = s, color = site, fill = site)) +
+    geom_histogram(alpha = 0.75) +
+    scale_color_manual(values = cal_palette("sierra2")) + # custom colors
+    scale_fill_manual(values = cal_palette("sierra2")) + # custom colors
+    geom_density(alpha = 0.75) +
+    labs(x = "Sensitivity of Persistence (s)",
+         y = "Density") +
+    facet_wrap(.~site_name, scales = "free") +
+    theme_bw() +
+    theme(text = element_text(size=12), legend.position = "none"))
+
+# creating composite figure for export
+figcs_full <- figc1 / figs1
+
+figcs_full
+
+# ggsave(figcs_full,
+#        filename = "figures/presentations/s_c_histograms.jpg",
+#        width = 20,
+#        height = 20)
+
 #### Persistence Curves ####
 
 # Adapted from Joanna's code in: 
