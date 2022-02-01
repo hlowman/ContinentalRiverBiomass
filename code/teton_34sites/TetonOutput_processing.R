@@ -514,8 +514,8 @@ figcs_full
 
 # ggsave(figcs_full,
 #        filename = "figures/presentations/s_c_histograms.jpg",
-#        width = 20,
-#        height = 20)
+#        width = 10,
+#        height = 10)
 
 #### Persistence Curves ####
 
