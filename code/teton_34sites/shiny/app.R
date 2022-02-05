@@ -1,6 +1,7 @@
-# Shiny application for 34 site Teton run
+# Shiny application for 207 site Teton run
 # Heili Lowman
-# September 9, 2021
+# Created: September 9, 2021
+# Revised for the second Teton run: February 5, 2022
 
 #### Setup ####
 
@@ -13,11 +14,14 @@ library(here)
 # All data will be pulled from this project.
 
 # Dataset of available sites/years.
-dat <- readRDS("teton_34rivers_sitesyrsgpp.rds") %>%
+dat <- readRDS("teton_207rivers_sitesyrsgpp.rds") %>%
   select(site_name, yearf)
 
+# Dataset of site names.
+names_dat <- readRDS("teton_207rivers_sitenames.rds")
+
 # Model diagnostics dataset
-model_dat <- readRDS("teton_34rivers_model_diagnostics_090821.rds")
+# model_dat <- readRDS("teton_34rivers_model_diagnostics_090821.rds")
 
 #### UI ####
 
@@ -34,33 +38,42 @@ ui <- fluidPage(
                        br(),
                        p("This part of the application allows you to sort through the available stream sites and display the original covariate data used to fit the Ricker model."),
                        br(),
-                       p("You may use the drop down menu to select your site of interest, and the corresponding covariate figures should populate below, with one figure per year of data available."),
+                       p("You may use the drop down menu to select your site of interest, and the corresponding covariate figures should populate below."),
                        br(),
                        column(width = 12,
                               
                               column(width = 3,
                                      selectInput("select_site", label = h3("Select stream site:"), # site dropdown
-                                     choices = unique(dat$site_name))),
+                                     choices = unique(dat$site_name)))),
                               
-                              column(width = 3,
-                                     htmlOutput("secondSelection"))), # year dropdown
+                              # column(width = 3,
+                              #        htmlOutput("secondSelection"))), # year dropdown
                        hr(),
                        column(width = 12,
                        imageOutput("covplot"))),
               
-              # Tab 2: Table Display of Model Output
-              tabPanel(h4("Summarized Model Results & Diagnostics"),
+              # Tab 2: Site Listing
+              tabPanel(h4("Site Names"),
                        br(),
-                       p("This part of the application allows you to view the model results of fitting the Ricker model to the dataset."),
-                       br(),
-                       p("You may toggle through the column headers to sort in an ascending/descending manner, or you may used the 'Search' bar to search for a particular site."),
-                       br(),
+                       p("This part of the application provides a table to convert between NWIS identification numbers and names of stream sites."),
                        fluidRow(
-                         column(width = 12,
-                                dataTableOutput('table')
-                         )
-                       )
-                       )
+                         column(width=12,
+                                dataTableOutput('names'))
+                       ))
+              
+              # Tab 2: Table Display of Model Output
+              # tabPanel(h4("Summarized Model Results & Diagnostics"),
+              #          br(),
+              #          p("This part of the application allows you to view the model results of fitting the Ricker model to the dataset."),
+              #          br(),
+              #          p("You may toggle through the column headers to sort in an ascending/descending manner, or you may used the 'Search' bar to search for a particular site."),
+              #          br(),
+              #          fluidRow(
+              #            column(width = 12,
+              #                   dataTableOutput('table')
+              #            )
+              #          )
+              #          )
               )
 )
 
@@ -71,17 +84,17 @@ server <- function(input, output){
   
   # Create dependent dropdown menu:
   
-  output$secondSelection <- renderUI({
-    
-    selected_site <- input$select_site # assign chosen site to "selected_site"
-    
-    dat_new <- dat %>% # take original dataset
-      filter(site_name %in% selected_site) %>% # filter by chosen site
-      mutate(yearf_new = yearf) # new subset of years
-    
-    selectInput(inputId ="select_year", 
-                label = h3("Select year:"), # site dropdown
-                choices = unique(dat_new$yearf_new))})
+  # output$secondSelection <- renderUI({
+  #   
+  #   selected_site <- input$select_site # assign chosen site to "selected_site"
+  #   
+  #   dat_new <- dat %>% # take original dataset
+  #     filter(site_name %in% selected_site) %>% # filter by chosen site
+  #     mutate(yearf_new = yearf) # new subset of years
+  #   
+  #   selectInput(inputId ="select_year", 
+  #               label = h3("Select year:"), # site dropdown
+  #               choices = unique(dat_new$yearf_new))})
   
   # Spit out the appropriate figure
   
@@ -89,8 +102,8 @@ server <- function(input, output){
     
     filename <- normalizePath(file.path("site_covariate_plots",
                                         paste(input$select_site, 
-                                              input$select_year, 
-                                              'covar.jpg', sep='_')))
+                                              'covar.jpg',
+                                              sep = "")))
     
     # Return a list containing the filename and alt text
     list(src = filename,
@@ -99,9 +112,13 @@ server <- function(input, output){
     
   }, deleteFile = FALSE)
   
+  # Display site names
+  
+  output$names <- renderDataTable(names_dat)
+  
   # Display model diagnostics
   
-  output$table <- renderDataTable(model_dat)
+  #output$table <- renderDataTable(model_dat)
   
 }
 
