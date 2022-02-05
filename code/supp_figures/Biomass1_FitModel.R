@@ -122,17 +122,24 @@ params_gpp <- params_all %>%
 params_gpp <- params_gpp %>%
   mutate(date = rep(rivers_dates, 2))  # add dates back in
 
+# new facet labels for sites
+site.labs <- c("South Branch Potomac River (WV)", "Reedy Creek (FL)")
+names(site.labs) <- c("nwis_01608500", "nwis_02266300")
+
 supp_fig <- ggplot()+
-  geom_line(data = params_gpp, aes(x = date, y = pred_GPP, color = model), size=1)+
-  scale_color_manual(values = c("#4CA49E", "#6B6D9F"))+
-  geom_point(data = rivers_gpp, aes(x = date, y = GPP), color="black", size=2)+
+  geom_point(data = rivers_gpp, aes(x = date, y = GPP), color="gray60", size=2)+
+  geom_line(data = params_gpp , aes(x = date, y = pred_GPP, color = model), size=1)+
+  scale_color_manual(values = c("#3793EC", "#6CA184"))+
   #geom_errorbar(aes(ymin = GPP.lower, ymax = GPP.upper), width=0.2,color="darkolivegreen4")+
   labs(y=expression('GPP (g '*~O[2]~ m^-2~d^-1*')'), x = "Date")+
-  facet_wrap(.~site_name, nrow = 2, scales = "free") +
-  theme(panel.background = element_rect(color = "black", fill=NA, size=1),
+  facet_grid(model~site_name, scales = "free",
+             labeller = labeller(site_name = site.labs)) +
+  theme(strip.background = element_rect(fill = NA),
+        panel.background = element_rect(color = "black", fill=NA, size=1),
+        legend.position = "none",
         axis.title.x = element_text(size=12), 
-        axis.text.x = element_text(size=12),
-        axis.text.y = element_text(size=12),
+        axis.text.x = element_text(size=10),
+        axis.text.y = element_text(size=10),
         axis.title.y = element_text(size=12))
 
 supp_fig
