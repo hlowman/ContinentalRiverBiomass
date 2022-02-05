@@ -45,6 +45,12 @@ knitr::include_graphics(here::here("figures", "presentations", "reinitialization
 
 ```
 
+```{r P removal, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Figure 3. For sites that perform poorly with the model structure presented in Figure 1, we have begun removing the persistence (P) term, as well as associated parameters (s and c) from the model. The figure above demonstrates the effect that P term removal has on gross primary production (GPP) predictions at a site that performs well with the original model (South Branch Potomac River) and at a site that performs poorly (Reedy Creek). Note, GPP minima are better predicted at the South Branch Potomac River site when P is included. However, inclusion of the P term does not appear to affect GPP predictions for the Reedy Creek site."}
+
+knitr::include_graphics(here::here("figures", "supp_figures", "nwis_01608500_02266300_with_without_P.png"))
+
+```
+
 ***
 
 ##### Data Acquisition
