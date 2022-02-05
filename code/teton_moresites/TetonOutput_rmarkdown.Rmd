@@ -1,0 +1,143 @@
+---
+title: "Productivity Modeling - Intermediate Results"
+author: "Heili Lowman, Joanna Blaszczak"
+date: "2/7/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Continental Stream Productivity Modeling
+
+The following document walks through the next iteration of the results of applying the logistic growth primary productivity model initially developed by Blaszczak et al. (*in prep*) to stream sites across the continental United States.
+
+*Note: If you would like to be added to the GitHub repository that currently houses the below code, please contact Heili at hlowman at unr.edu. Everyone is welcome to join the repo as a collaborator!*
+
+***
+
+##### Revised Hypotheses
+
+**How does the maximum growth rate (r) and carrying capacity (K) vary in streams and rivers across the country as a function of stream order, disturbance, and light availability?**
+
+*H~1~*: As **stream order** increases, the maximum growth rate will decrease (due to size, water depth, light attenuation and sediment load in water) and the carrying capacity will increase (due to size and space availability).
+
+*H~2~*: The maximum growth rate will be greatest in streams with regular **disturbance** events that scour existing biomass. Carrying capacity will be altered if the regular **disturbances** are of large enough scale to alter the physical structure of the stream (e.g., could decrease due to infill with sediment or increase due to increase in surface area).
+
+*H~3~*: As **light availability** increases, the maximum growth rate will increase (photoinhibition will likely not be a concern except in intermittent/ephemeral and low order streams) and the carrying capacity will also increase (up until a certain point, where the demand for light is fulfilled and no space remains).
+
+***
+
+##### Model Structure
+
+A conceptual diagram of the model structure used may be found in *Figure 1*, and changes made to the model since our last meeting are described in *Figure 2* and *Figure 3*.
+
+```{r model structure, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Figure 1. The state-space population model being used to estimate parameters of maximum growth rate (r) and carrying capacity (K) across individual stream sites. The observation model uses daily estimates of gross primary production (g) and daily light (L) to estimate daily biomass (B). The daily persistence term (P) is a function of daily discharge (Q) which is used to estimate the sensitivity of the persistence transition from presence to removal of biomass (s) and the critical discharge threshold at which benthic biomass is removed (c). Both the observation and persistence models then inform the process model, which is a density-dependent growth function for daily biomass (B) in a given stream. The estimated terms of P and B are fit to this model to extract values for the maximum growth rate (r) and lambda, which is equal to the maximum growth rate divided by the carrying capacity (K)."}
+
+knitr::include_graphics(here::here("figures", "presentations", "model_screenshot.png"))
+
+```
+
+```{r reinitialization, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Figure 2. For every gap in a time series greater than 14 days, we have instituted a re-initialization rule. Rather than having the daily biomass (B) be a function of the biomass the day before, we re-initialize the model and set the biomass on that day to be function of the gross primary production estimate and the light data for that same day. Then, the model is allowed to proceed using the process model structure shown in Figure 1."}
+
+knitr::include_graphics(here::here("figures", "presentations", "reinitialization_screenshot.png"))
+
+```
+
+***
+
+##### Data Acquisition
+
+Data was combined from the following sources:
+
+- Site information, model diagnostics, and time series data were from [Appling et al., 2018](https://www.sciencebase.gov/catalog/item/59bff507e4b091459a5e0982).
+- Additional information regarding stream order was from [Blaszczak et al., 2021](https://www.sciencebase.gov/catalog/item/606f60afd34ef99870188ee5).
+- Stream light data were from [Savoy and Harvey, 2021](https://www.sciencebase.gov/catalog/item/5f974adfd34e198cb77db168).
+
+We then applied the following rules to filter the available data:
+
+- Filtered for high-quality sites based on model diagnostics (e.g., K600 sigma Rhat < 1.05).
+- Removed sites with certain flags (e.g., structural dam flag = 95).
+- Filtered for sites that have a maximum time gap of 14 days and a minimum of 275 days per year of GPP data.
+- For any GPP values below zero, they were assigned a value between 0.05 and 0.13.
+- For sites that did not have stream light data available from Savoy and Harvey, 2021, light values were set to surface PAR.
+
+From the initial 356 river sites in the Appling dataset, our filtered dataset consists of **34 sites** and **135 site-years** of data (Figure 1). We plan to use the StreamLight model ([Savoy and Harvey, 2021](https://www.sciencebase.gov/catalog/item/5f974adfd34e198cb77db168)) to model additional sites where light data is not currently available.
+
+```{r fig1, fig.align = "center", fig.cap = "Fig. 1. Summary statistics of (A) stream order and (B) years of data above (C) a map of the United States with locations of all stream sites included in the dataset.", out.width = "50%", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_34sites", "map_fig_34sites.png"))
+
+```
+
+***
+
+##### Initial Results
+
+Figures of all available covariates (by site-year) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order.
+
+Outliers in the following figures may include:
+
+- Pecos River (Pandale, TX), nwis 08447300
+     - Few high discharge events per year.
+     - Data available only in 2012 and 2013.
+     
+- Little Muskegon River (Oak Grove, MI), nwis 04121944
+     - GPP does not always appear to respond to high discharge events.
+     - Data skips from 2011 to 2015, and timing of dataset does not always correspond with Jan through Dec.
+     
+- Santa Margarita River (Temecula, CA), nwis 11044000
+     - Discharge is at or near zero nearly the entire year for all 5 years of data available (intermittent/ephemeral?).
+
+```{r fig2, fig.align = "center", fig.cap = "Fig. 2. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order as well as (C) mean maximum growth rates plotted against mean carrying capacities.", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_34sites", "r_k_paneled.jpg"))
+
+```
+
+Both carrying capacity (K) and maximum growth rate (r) appear to increase with increasing stream order (Figure 2A & B). Furthermore, Blaszczak et al. found greater variation in K than in r, which appears to be true for this larger dataset as well (Figure 2C).  
+
+```{r fig3, fig.align = "center", fig.cap = "Fig. 3. Boxplots of (A) mean sensitivity of persistence curves (s) and (B) mean critical discharge (c) for individual sites grouped by stream order as well as (C) mean sensitivity of persistence curves plotted against mean critical discharges.", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_34sites", "s_c_paneled.jpg"))
+
+```
+
+As critical discharge (c) increases, the sensitivity of the persistence curve (s) also appears to increase (Figure 3C).
+
+```{r fig4, fig.align = "center", fig.cap = "Fig. 4. Productivity-related parameters (r, K) plotted against disturbance-related parameters (c, s).", out.width = "75%", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_34sites", "rk_vs_cs.jpg"))
+
+```
+
+Maximum growth rate (r) decreases with increasing critical discharge (c, Figure 4A) as well as with increasing sensitivity of the persistence curve (s, Figure 4B). There was less of a clear trend between carrying capacity (K) and disturbance-related parameters (Figure 4C & D).
+
+```{r fig5, fig.align = "center", fig.cap = "Fig. 5. Divergent transitions for each site plotted against (A) the number of years of available data and (B) the coefficient of variation of discharge at that site.", out.width = "80%", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_34sites", "divergences_paneled.jpg"))
+
+```
+
+Divergent transitions generally decreased with more years of data as well as increased coefficients of variation (suggesting more storm events).
+
+*Next Steps:* Following this meeting, we intend to re-fit the model parsing out each site year, so that we may also investigate temporal trends.
+
+***
+
+##### Questions for You:
+
+(1) What should the longest permissible gap in data be? It is currently set to 14 days.
+
+(a) Should we also set a rule regarding year-long gaps? Currently, we have datasets that skip entire years.
+
+(2) Should we explore the feasibility of estimating missing data? Or do you imagine reviewers might respond poorly to estimated values used to fit the model (a sort-of dual-layered estimation), even if model fit is improved by the estimation of missing data?
+
+(3) What is the value of fitting the model to full time-series (e.g., if there are 7 years of data available at a given site) compared to fitting the model to singular site years (e.g., performing the temporal comparisons mentioned in the next steps)?
+
+(4) Is there anything else you feel I should consider examining moving forward?
+
+###### End of RMarkdown document.
+
+***
