@@ -18,7 +18,9 @@ dat <- readRDS("teton_207rivers_sitesyrsgpp.rds") %>%
   select(site_name, yearf)
 
 # Dataset of site names.
-names_dat <- readRDS("teton_207rivers_sitenames.rds")
+names_dat <- readRDS("teton_207rivers_sitenames.rds") %>%
+  rename("NWIS ID" = "site_name",
+         "Long Site Name" = "long_name")
 
 # Model diagnostics dataset
 # model_dat <- readRDS("teton_34rivers_model_diagnostics_090821.rds")
