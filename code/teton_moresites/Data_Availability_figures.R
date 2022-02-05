@@ -27,6 +27,13 @@ here()
 # Main dataset containing site information from Appling + Koenig
 sitesjoin <- readRDS("data_working/NWIS_207sitesinfo_subset.rds")
 
+# Make a quick dataset for use in the shiny app
+sitenames <- sitesjoin %>%
+  select(site_name, long_name)
+
+# Export for rmarkdown use:
+saveRDS(sitenames, "data_working/teton_207rivers_sitenames.rds")
+
 # Dataset with data itself
 site_subset <- readRDS("data_working/NWIS_207sites_subset.rds")
 
