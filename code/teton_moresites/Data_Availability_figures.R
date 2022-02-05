@@ -117,15 +117,24 @@ saveRDS(main4, "data_working/teton_207rivers_sitesyears.rds")
 
 # Combine all figures into one
 
-full_fig <- (storder | styears) /
-  sitemap  +
+full_fig1 <- (storder | styears)  +
   plot_annotation(tag_levels = 'A')
 
-full_fig
+full_fig1
 
-# ggsave(("figures/teton_moresites/map_fig_207sites.png"),
-#        width = 16,
-#        height = 20,
+# ggsave("figures/teton_moresites/order_years_207sites.png",
+#        width = 20,
+#        height = 10,
+#        units = "cm"
+# )
+
+full_fig2 <- sitemap
+
+full_fig2
+
+# ggsave("figures/teton_moresites/map_207sites.png",
+#        width = 20,
+#        height = 10,
 #        units = "cm"
 # )
 
