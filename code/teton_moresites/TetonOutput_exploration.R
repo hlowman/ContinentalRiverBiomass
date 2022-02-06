@@ -61,18 +61,52 @@ data_together <- left_join(data_params_means, data_info, by = "site_name")
 # Exporting a plot of r vs. k for all iterations for all sites to
 # include in the shiny app (similar to the covariate plots).
 
-(fig0 <- df_join %>%
-    ggplot(aes(x = r, y = k)) +
-    geom_point() +
-    labs(x = "Maximum Growth Rate (r)",
-         y = "Carrying Capacity (K)") +
-    theme_bw() +
-    theme(text = element_text(size=20)))
+plotting_rk <- function(x) {
+  
+  names <- unique(x$site_name)
+  
+  for (i in names){
+  
+  # create a dataframe at each site
+  df <- x %>%
+    filter(site_name == i)
+  
+  # join with site information
+  #df <- left_join(df.1, data_info, by = "site_name")
+  
+  # create a plot with r and k for all iterations
+  p <- ggplot(df, aes(x = r, y = logK)) +
+       geom_point() +
+       labs(x = "Maximum Growth Rate (r)",
+              y = "Log of Carrying Capacity (K)") +
+       theme_bw() +
+       theme(text = element_text(size=20))
+    
+    # display plots
+    print(p) 
+    
+    # save and export plots
+    file.name <- paste0("figures/teton_moresites/site_rk_plots/",
+                        df$site_name[1],"rk.jpg",sep = "") # create file name
+    
+    # set specifications for size and resolution of your figure
+    ggsave(p,
+           filename = file.name,
+           width = 8,
+           height = 8)
+    
+  } # close out for loop
+  
+} # close out function
 
-# ggsave(plot = fig0,
-#        filename = "figures/teton_moresites/r_k_iterations_divs.png",
-#        width = 30,
-#        height = 30)
+data_params <- data_params %>%
+  mutate(logK = log10(k))# add log(k) column
+
+# test to be sure the function works at a single site
+plotting_rk(data_params %>% filter(site_name == "nwis_01124000"))
+
+# And now apply this to the entire dataset.
+# plotting_rk(data_params)
 
 #### Max Growth Rate / Carrying Capacity ####
 
@@ -171,6 +205,8 @@ fig3b <- data_together %>%
   theme(text = element_text(size=12))
 
 fig3b
+
+#### STOPPED HERE ON FEBRUARY 6 ####
 
 #### Critical Discharge / Sensitivity of Persistence Curve ####
 
@@ -575,90 +611,6 @@ full_fig5
 #        width = 11,
 #        height = 11)
 
-#### Covariate data quality ####
-
-plotting_covar <- function(x) {
-  
-  # create a dataframe at each site
-  df.1 <- x
-  
-  # join with site information
-  df <- left_join(df.1, data_info, by = "site_name")
-  
-  # create a vector of the available years of data
-  years <- unique(df$year)
-  
-  # loop over each year of data
-  for(z in years){
-    
-    # subset the data by year
-    subset <- subset(df, year == z) # subset the larger dataset by each year
-    
-    # create a 4-paneled plot with gross primary production, discharge, temperature, and light
-    # a.k.a. data inputs (prior to fitting the model)
-    p <- plot_grid(
-    
-    ggplot(subset, aes(date, GPP))+
-      geom_point(color="chartreuse4", size=2)+
-      geom_errorbar(aes(ymin = GPP.lower, ymax = GPP.upper), width=0.2,color="darkolivegreen4")+
-      labs(y=expression('GPP (g '*~O[2]~ m^-2~d^-1*')'), 
-           title = df$long_name.y[1],
-           subtitle = df$site_name[1])+
-      theme(legend.position = "none",
-            panel.background = element_rect(color = "black", fill=NA, size=1),
-            axis.title.x = element_blank(), axis.text.x = element_blank(),
-            axis.text.y = element_text(size=12),
-            axis.title.y = element_text(size=12)),
-    
-    ggplot(subset, aes(date, Q))+
-      geom_line(size=1.5, color="deepskyblue4")+
-      labs(y="Q (cms)")+
-      theme(legend.position = "none",
-            panel.background = element_rect(color = "black", fill=NA, size=1),
-            axis.title.x = element_blank(), axis.text.x = element_blank(),
-            axis.text.y = element_text(size=12),
-            axis.title.y = element_text(size=12)),
-    
-    ggplot(subset, aes(date, temp))+
-      geom_line(size=1.5, color="#A11F22")+
-      labs(y="Water Temp (C)")+
-      theme(legend.position = "none",
-            panel.background = element_rect(color = "black", fill=NA, size=1),
-            axis.title.x = element_blank(), axis.text.x = element_blank(),
-            axis.text.y = element_text(size=12),
-            axis.title.y = element_text(size=12)),
-    
-    ggplot(subset, aes(date, light))+
-      geom_point(size=2, color="darkgoldenrod3")+
-      labs(y="Incoming Light", x="Date")+
-      theme(legend.position = "none",
-            panel.background = element_rect(color = "black", fill=NA, size=1),
-            axis.text = element_text(size=12),
-            axis.title = element_text(size=12)),
-    ncol=1, align="hv")
-  
-  # display plots
-  print(p) 
-  
-  # save and export plots
-  file.name <- paste0("figures/teton_34sites/site_covariate_plots/",df$site_name[1],"_",z,"_covar.jpg",sep = "") # create file name
-  
-  # set specifications for size and resolution of your figure
-  ggsave(p,
-         filename = file.name,
-         width = 8,
-         height = 8)
-  
-  } # close out for-loop
-  
-} # close out function
-
-# test to be sure the function works at a single site
-plotting_covar(data_in$nwis_02266200)
-
-# And now map this to the entire data_in list.
-map(data_in, plotting_covar)
-
 #### Light vs. Growth Parameters ####
 
 # Create a function to calculate mean light availability
@@ -810,54 +762,6 @@ fig_div_full
 #        height = 5)
 
 #### Check model diagnostics ####
-
-# Using rstan documentation found at:
-# https://mc-stan.org/rstan/articles/stanfit_objects.html
-
-# Obtain summary statistics for a single site
-test_summary <- summary(data_out$nwis_01608500)
-
-# In $summary, results for all chains are merged
-print(test_summary$summary)
-# se_mean = Monte Carlo standard error
-# n_eff = effective sample size
-# Rhat = R-hat statistic
-
-# Obtain summary statistics for a single site for particular parameters
-# Essentially combining top two steps into a single one
-test_summary2 <- summary(data_out$nwis_01608500, 
-                         pars = c("r","lambda","s","c"))$summary
-
-# Need to move rownames to their own column
-test_summary3 <- as.data.frame(test_summary2) %>%
-  rownames_to_column("parameter")
-
-# Ok, so this is working, now I need to iterate over all sites
-# and combine model diagnostics for r, lambda, s, and c
-
-# Using a similar workflow as above:
-# Going to create a function of the above to pull out summaries from all sites
-extract_summary <- function(x){
-  df <- x
-  df1 <- summary(df,
-          pars = c("r", "lambda", "s", "c"))$summary
-  as.data.frame(df1) %>% rownames_to_column("parameter")
-}
-
-# And now map this to the entire output list. (Be patient - this step takes a while.)
-data_out_summary <- map(data_out, extract_summary)
-
-# And create a dataframe
-data_out_summary_df <- map_df(data_out_summary, ~as.data.frame(.x), .id="site_name")
-
-# And now to bind the values with site attributes.
-# data_summary_siteinfo <- left_join(data_out_summary_df, data_info, by = "site_name")
-
-# Export dataset
-saveRDS(data_out_summary_df, file = "data_working/teton_207rivers_model_diagnostics_020622.rds")
-
-# Load in this dataset
-data_summary_siteinfo <- readRDS("data_working/teton_34rivers_model_diagnostics_090821.rds")
 
 # Mimic the s vs. c plot created above, but this time with confidence intervals added.
 # Careful, I am not filtering out negative r and k values here for now (just for a rough
