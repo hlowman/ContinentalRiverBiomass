@@ -82,11 +82,17 @@ knitr::include_graphics(here::here("figures", "teton_moresites", "map_207sites.p
 
 ##### Revised Results
 
-Figures of all available covariates (discharge, temperature, light) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order.
+Figures of all available covariates (discharge, temperature, light) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order (*H~1~*).
 
-```{r results1, fig.align = "center", fig.cap = "Figure 6. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order as well as (C) mean maximum growth rates plotted against mean carrying capacities.", echo = FALSE}
+```{r results1, fig.align = "center", fig.cap = "Figure 6. Plot of mean maximum growth rates (r) and the log of mean carrying capacities (K) for individual sites. Note 14 sites with negative mean r and K values have been removed.", out.width = "50%", echo = FALSE}
 
-#knitr::include_graphics(here::here("figures", "teton_34sites", "r_k_paneled.jpg"))
+knitr::include_graphics(here::here("figures", "teton_moresites", "r_K_allsites.jpg"))
+
+```
+
+```{r results2, fig.align = "center", fig.cap = "Figure 7. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order. Note, the same 14 sites that were removed from Figure 6 have been removed from these panels.", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_moresites", "r_k_strord.jpg"))
 
 ```
 
