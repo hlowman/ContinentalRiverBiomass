@@ -23,7 +23,7 @@ names_dat <- readRDS("teton_207rivers_sitenames.rds") %>%
          "Long Site Name" = "long_name")
 
 # Model diagnostics dataset
-# model_dat <- readRDS("teton_34rivers_model_diagnostics_090821.rds")
+model_dat <- readRDS("teton_207rivers_model_diagnostics_020622.rds")
 
 #### UI ####
 
@@ -31,12 +31,12 @@ names_dat <- readRDS("teton_207rivers_sitenames.rds") %>%
 ui <- fluidPage(
   titlePanel("Continental Metabolism Modeling"), # title
   
-  # Set of 2 tabs
+  # Set of 3 tabs
   tabsetPanel(type = "tabs",
               position = c("fixed=top"),
               
               # Tab 1: Covariate Figures
-              tabPanel(h4("Sampling Site Covariate Figures"),
+              tabPanel(h4("Covariate Figures"),
                        br(),
                        p("This part of the application allows you to sort through the available stream sites and display the original covariate data used to fit the Ricker model."),
                        br(),
@@ -55,27 +55,44 @@ ui <- fluidPage(
                        imageOutput("covplot"))),
               
               # Tab 2: Site Listing
-              tabPanel(h4("Site Names"),
+              tabPanel(h4("Site Names and NWIS IDs"),
                        br(),
                        p("This part of the application provides a table to convert between NWIS identification numbers and names of stream sites."),
                        fluidRow(
                          column(width=12,
                                 dataTableOutput('names'))
-                       ))
+                       )),
               
-              # Tab 2: Table Display of Model Output
-              # tabPanel(h4("Summarized Model Results & Diagnostics"),
-              #          br(),
-              #          p("This part of the application allows you to view the model results of fitting the Ricker model to the dataset."),
-              #          br(),
-              #          p("You may toggle through the column headers to sort in an ascending/descending manner, or you may used the 'Search' bar to search for a particular site."),
-              #          br(),
-              #          fluidRow(
-              #            column(width = 12,
-              #                   dataTableOutput('table')
-              #            )
-              #          )
-              #          )
+              # Tab 3: Table Display of Model Output
+              tabPanel(h4("Summarized Model Results & Diagnostics"),
+                       br(),
+                       p("This part of the application allows you to view the model results of fitting the Ricker model to the dataset."),
+                       br(),
+                       p("You may toggle through the column headers to sort in an ascending/descending manner, or you may used the 'Search' bar to search for a particular site."),
+                       br(),
+                       fluidRow(
+                         column(width = 12,
+                                dataTableOutput('table')
+                         )
+                       )
+                       ),
+              
+              # Tab 4: Covariate Figures
+              tabPanel(h4("Parameter Figures for All Iterations"),
+                       br(),
+                       p("This part of the application allows you to sort through the available stream sites and display the r and k values for every iteration of the model run."),
+                       br(),
+                       p("You may use the drop down menu to select your site of interest, and the corresponding figures should populate below."),
+                       br(),
+                       column(width = 12,
+                              
+                              column(width = 3,
+                                     selectInput("select_site2", label = h3("Select stream site:"), # site dropdown
+                                                 choices = unique(dat$site_name)))),
+                       hr(),
+                       column(width = 12,
+                              imageOutput("rkplot")))
+              
               )
 )
 
@@ -120,7 +137,23 @@ server <- function(input, output){
   
   # Display model diagnostics
   
-  #output$table <- renderDataTable(model_dat)
+  output$table <- renderDataTable(model_dat)
+  
+  # Spit out the appropriate figure
+  
+  output$rkplot <- renderImage({
+    
+    filename <- normalizePath(file.path("site_rk_plots",
+                                        paste(input$select_site2, 
+                                              'rk.jpg',
+                                              sep = "")))
+    
+    # Return a list containing the filename and alt text
+    list(src = filename,
+         width = "600",
+         height = "600")
+    
+  }, deleteFile = FALSE)
   
 }
 
