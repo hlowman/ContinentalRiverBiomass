@@ -15,7 +15,7 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
        require, character.only=T)
 
 ## Source data
-df <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_moresites/df_207sites_rerun132.rds")
+df <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_moresites/df_207sites_rerun131.rds")
 
 ####################
 ## Stan data prep ##
@@ -57,6 +57,6 @@ PM_outputlist_Ricker <- lapply(stan_data_l,
                                                 #init = init_Ricker,
                                                 control = list(max_treedepth = 12)))
 
-saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_moresites/teton_132rivers_output_Ricker_2022_02_07.rds")
+saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_moresites/teton_131rivers_output_Ricker_2022_02_07.rds")
 
 # End of script.
