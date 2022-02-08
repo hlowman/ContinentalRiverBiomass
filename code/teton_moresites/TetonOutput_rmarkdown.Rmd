@@ -11,9 +11,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Continental Stream Productivity Modeling
 
-The following document walks through the next iteration of the results of applying the logistic growth primary productivity model initially developed by Blaszczak et al. (*in prep*) to stream sites across the continental United States.
+#### Purpose Statement
 
-*Note: If you would like to be added to the GitHub repository that currently houses the below code, please contact Heili at hlowman at unr.edu. Everyone is welcome to join the repo as a collaborator!*
+**We are interested in learning about streams' responses to disturbance (i.e., storm events). Specifically, by fitting a logistic population growth model to gross primary production estimates, we can gain information about growth parameters (e.g., maximum growth rate). We then aim to compare these population parameters describing algal biomass in streams across different sites and conditions to learn about these streams' resilience in the face of disturbance.**
 
 ***
 
@@ -45,7 +45,13 @@ knitr::include_graphics(here::here("figures", "presentations", "reinitialization
 
 ```
 
-```{r P removal, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Figure 3. For sites that perform poorly with the model structure presented in Figure 1, we have begun removing the persistence (P) term, as well as associated parameters (s and c) from the model. The figure above demonstrates the effect that P term removal has on gross primary production (GPP) predictions at a site that performs well with the original model (South Branch Potomac River) and at a site that performs poorly (Reedy Creek). Note, GPP minima are better predicted at the South Branch Potomac River site when P is included. However, inclusion of the P term does not appear to affect GPP predictions for the Reedy Creek site."}
+```{r P curves, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Figure 3. Persistence curves for a site that performs well with the model structure described above (South Branch Potomac River) and a site that performs poorly (Reedy Creek). The critical discharge at which biomass is disturbed (c) is denoted by the dotted vertical line. Note, the steepness of the persistence curve (s) is much greater for the South Branch Potomac River site than the Reedy Creek site."}
+
+knitr::include_graphics(here::here("figures", "presentations", "p_curves.png"))
+
+```
+
+```{r P removal, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Figure 4. For sites that perform poorly with the model structure presented in Figure 1, we have begun removing the persistence (P) term, as well as associated parameters (s and c) from the model. The figure above demonstrates the effect that P term removal has on gross primary production (GPP) predictions at a site that performs well with the original model (South Branch Potomac River) and at a site that performs poorly (Reedy Creek). Note, GPP minima are better predicted at the South Branch Potomac River site when P is included. However, inclusion of the P term does not appear to affect GPP predictions for the Reedy Creek site."}
 
 knitr::include_graphics(here::here("figures", "supp_figures", "nwis_01608500_02266300_with_without_P.png"))
 
@@ -66,13 +72,13 @@ We have revised the following rules to filter the available data:
 
 From the initial 356 river sites in the Appling dataset, our filtered dataset consists of **207 sites** and **784 site-years** of data (Figures 4 and 5).
 
-```{r summary stream stats, fig.align = "center", fig.cap = "Figure 4. Summary statistics of (A) stream order and (B) years of data all 207 stream sites included in the dataset. Note - years refers to calendar years represented in the dataset, with a minimum of 90 days of data required within a given year.", out.width = "75%", echo = FALSE}
+```{r summary stream stats, fig.align = "center", fig.cap = "Figure 5. Summary statistics of (A) stream order and (B) years of data all 207 stream sites included in the dataset. Note - years refers to calendar years represented in the dataset, with a minimum of 90 days of data required within a given year.", out.width = "75%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_moresites", "order_years_207sites.png"))
 
 ```
 
-```{r geography, fig.align = "center", fig.cap = "Figure 5. Map of all 207 stream sites included in the dataset, colored by stream order. Note - one site in Alaska is not pictured. ", out.width = "100%", echo = FALSE}
+```{r geography, fig.align = "center", fig.cap = "Figure 6. Map of all 207 stream sites included in the dataset, colored by stream order. Note - one site in Alaska is not pictured. ", out.width = "100%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_moresites", "map_207sites.png"))
 
@@ -84,19 +90,19 @@ knitr::include_graphics(here::here("figures", "teton_moresites", "map_207sites.p
 
 Figures of all available covariates (discharge, temperature, light) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order (*H~1~*).
 
-```{r results1, fig.align = "center", fig.cap = "Figure 6. Plot of mean maximum growth rates (r) and the log of mean carrying capacities (K) for individual sites. Note 14 sites with negative mean r and K values have been removed.", out.width = "50%", echo = FALSE}
+```{r results1, fig.align = "center", fig.cap = "Figure 7. Plot of mean maximum growth rates (r) and the log of mean carrying capacities (K) for individual sites. Note 14 sites with negative mean r and K values have been removed.", out.width = "50%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_moresites", "r_K_allsites.jpg"))
 
 ```
 
-```{r results2, fig.align = "center", fig.cap = "Figure 7. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order. Note, the same 14 sites that were removed from Figure 6 have been removed from these panels.", echo = FALSE}
+```{r results2, fig.align = "center", fig.cap = "Figure 8. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order. Note, the same 14 sites that were removed from Figure 6 have been removed from these panels.", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_moresites", "r_k_strord.jpg"))
 
 ```
 
-*Next Steps:* Following this meeting, we intend to re-fit the model with a random effect for year in order to pool information across sites.
+*Next Steps:* Following this meeting, we intend to re-fit the model with a random effect for site in order to pool information across sites.
 
 ***
 
