@@ -30,14 +30,60 @@ data_info <- readRDS("data_working/NWIS_207sitesinfo_subset.rds")
 
 # Load dataset with parameters' data (all iterations).
 data_params <- readRDS("data_working/teton_207rivers_model_parameters_all_iterations_020622.rds")
+data_params2 <- readRDS("data_working/teton_131rivers_model_parameters_all_iterations_021322.rds")
 
 # Load dataset with model divergences for each site.
 data_divs <- readRDS("data_working/teton_207rivers_model_divergences_020622.rds")
+data_divs2 <- readRDS("data_working/teton_131rivers_model_divergences_021322.rds")
 
 # Load dataset with model diagnostics for each site.
 data_diags <- readRDS("data_working/teton_207rivers_model_diagnostics_020622.rds")
+data_diags2 <- readRDS("data_working/teton_131rivers_model_diagnostics_021322.rds")
 
 #### Data Tidying ####
+
+# First, need to join all of the datasets above.
+
+# all iterations of the parameters
+data_params <- data_params %>%
+  mutate(model = "with P") # add model designation
+
+data_params2 <- data_params2 %>%
+  mutate(model = "without P",
+         s = NA,
+         c = NA) %>% # add model designation and missing columns
+  select(site_name, r, lambda, s, c, k, model) # and reorder
+
+data_params_all <- rbind(data_params, data_params2) # and join together
+
+# Export dataset
+# saveRDS(data_params_all, file = "data_working/teton_207rivers_model_parameters_all_iterations_bothmodels_021322.rds")
+
+# all divergences
+data_divs <- data_divs %>%
+  mutate(model = "with P") # add model designation
+
+data_divs2 <- data_divs2 %>%
+  mutate(model = "without P") # add model designation
+
+data_divs_all <- rbind(data_divs, data_divs2) # and join together
+
+# Export dataset
+# saveRDS(data_divs_all, file = "data_working/teton_207rivers_model_divergences_bothmodels_021322.rds")
+
+# all diagnostics
+data_diags <- data_diags %>%
+  mutate(model = "with P") # add model designation
+
+data_diags2 <- data_diags2 %>%
+  mutate(model = "without P") # add model designation
+
+data_diags_all <- rbind(data_diags, data_diags2) # and join together
+
+# Export dataset
+# saveRDS(data_diags_all, file = "data_working/teton_207rivers_model_diagnostics_bothmodels_021322.rds")
+
+
 
 # And now to calculate means by site.
 data_params_means <- data_params %>%
