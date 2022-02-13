@@ -23,7 +23,7 @@ names_dat <- readRDS("teton_207rivers_sitenames.rds") %>%
          "Long Site Name" = "long_name")
 
 # Model diagnostics dataset
-model_dat <- readRDS("teton_207rivers_model_diagnostics_020622.rds")
+model_dat <- readRDS("teton_207rivers_model_diagnostics_bothmodels_021322.rds")
 
 #### UI ####
 
@@ -66,7 +66,7 @@ ui <- fluidPage(
               # Tab 3: Table Display of Model Output
               tabPanel(h4("Summarized Model Results & Diagnostics"),
                        br(),
-                       p("This part of the application allows you to view the model results of fitting the Ricker model to the dataset."),
+                       p("This part of the application allows you to view the model results of fitting the Ricker model to the dataset. Note, both the models including and excluding the persistence term (P) are displayed below."),
                        br(),
                        p("You may toggle through the column headers to sort in an ascending/descending manner, or you may used the 'Search' bar to search for a particular site."),
                        br(),
@@ -80,7 +80,7 @@ ui <- fluidPage(
               # Tab 4: Covariate Figures
               tabPanel(h4("Parameter Figures for All Iterations"),
                        br(),
-                       p("This part of the application allows you to sort through the available stream sites and display the r and k values for every iteration of the model run."),
+                       p("This part of the application allows you to sort through the available stream sites and display the r and k values for every iteration of the model run. Figures have been colored according to the model structure presented."),
                        br(),
                        p("You may use the drop down menu to select your site of interest, and the corresponding figures should populate below."),
                        br(),
