@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Purpose Statement
 
-**We are interested in learning about streams' responses to disturbance (i.e., storm events). Specifically, by fitting a logistic population growth model to gross primary production estimates, we can gain information about growth parameters (e.g., maximum growth rate). We then aim to compare these population parameters describing algal biomass in streams across different sites and conditions to learn about these streams' resilience in the face of disturbance.**
+**We are interested in learning about streams' responses to disturbance (i.e., storm events). Specifically, by fitting a logistic population growth model to gross primary production estimates, we can gain information about growth parameters (e.g., maximum growth rate). We then aim to compare these population parameters describing algal biomass in streams across different sites and conditions to learn about these streams' resilience following disturbance.**
 
 ***
 
@@ -31,7 +31,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ##### Model Structure
 
-A conceptual diagram of the model structure used may be found in Figure 1, and changes made to the model since our last meeting are described in Figure 2 and Figure 3.
+A conceptual diagram of the model structure used may be found in Figure 1, and changes made to the model since our last meeting are described in Figure 2 and Figure 4.
 
 ```{r model structure, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Figure 1. The state-space population model being used to estimate parameters of maximum growth rate (r) and carrying capacity (K) across individual stream sites. The observation model uses daily estimates of gross primary production (g) and daily light (L) to estimate daily biomass (B). The daily persistence term (P) is a function of daily discharge (Q) which is used to estimate the sensitivity of the persistence transition from presence to removal of biomass (s) and the critical discharge threshold at which benthic biomass is removed (c). Both the observation and persistence models then inform the process model, which is a density-dependent growth function for daily biomass (B) in a given stream. The estimated terms of P and B are fit to this model to extract values for the maximum growth rate (r) and lambda, which is equal to the maximum growth rate divided by the carrying capacity (K)."}
 
@@ -70,7 +70,7 @@ We have revised the following rules to filter the available data:
 - Any GPP estimates below zero were assigned a value between 0.05 and 0.13.
 - For sites that did not have stream light data available from Savoy and Harvey, 2021, light values were set to **surface PAR**.
 
-From the initial 356 river sites in the Appling dataset, our filtered dataset consists of **207 sites** and **784 site-years** of data (Figures 4 and 5).
+From the initial 356 river sites in the Appling dataset, our filtered dataset consists of **207 sites** and **784 site-years** of data (Figures 5 and 6).
 
 ```{r summary stream stats, fig.align = "center", fig.cap = "Figure 5. Summary statistics of (A) stream order and (B) years of data all 207 stream sites included in the dataset. Note - years refers to calendar years represented in the dataset, with a minimum of 90 days of data required within a given year.", out.width = "75%", echo = FALSE}
 
@@ -90,15 +90,15 @@ knitr::include_graphics(here::here("figures", "teton_moresites", "map_207sites.p
 
 Figures of all available covariates (discharge, temperature, light) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order (*H~1~*).
 
-```{r results1, fig.align = "center", fig.cap = "Figure 7. Plot of mean maximum growth rates (r) and the log of mean carrying capacities (K) for individual sites. Note 14 sites with negative mean r and K values have been removed.", out.width = "50%", echo = FALSE}
+```{r results1, fig.align = "center", fig.cap = "Figure 7. Plots of mean maximum growth rates (r) and the log of mean carrying capacities (K) for individual sites colored by (A) the model structure used and (B) Pearson's correlation coefficient values. Note 9 sites with negative mean r and K values have been removed.", out.width = "100%", echo = FALSE}
 
-knitr::include_graphics(here::here("figures", "teton_moresites", "r_K_allsites.jpg"))
+knitr::include_graphics(here::here("figures", "teton_moresites", "r_k_allsites_bothmodels_cc.jpg"))
 
 ```
 
-```{r results2, fig.align = "center", fig.cap = "Figure 8. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order. Note, the same 14 sites that were removed from Figure 6 have been removed from these panels.", echo = FALSE}
+```{r results2, fig.align = "center", fig.cap = "Figure 8. Boxplots of (A) mean maximum growth rates (r) and (B) mean carrying capacities (K) for individual sites grouped by stream order. Note, the same 9 sites that were removed from Figure 6 have been removed from these panels.", out.width = "80%", echo = FALSE}
 
-knitr::include_graphics(here::here("figures", "teton_moresites", "r_k_strord.jpg"))
+knitr::include_graphics(here::here("figures", "teton_moresites", "r_k_strord2.jpg"))
 
 ```
 

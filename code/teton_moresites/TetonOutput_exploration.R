@@ -14,7 +14,7 @@
 # been removed will be added later.
 
 # Load packages
-lapply(c("calecopal", "cowplot",
+lapply(c("calecopal", "cowplot", "viridis",
          "lubridate","tidyverse", "reshape2",
          "PerformanceAnalytics","jpeg","grid",
          "rstan","bayesplot","shinystan", "here",
@@ -83,21 +83,19 @@ data_diags_all <- rbind(data_diags, data_diags2) # and join together
 # Export dataset
 # saveRDS(data_diags_all, file = "data_working/teton_207rivers_model_diagnostics_bothmodels_021322.rds")
 
-
+# Next, going to calculate additional summaries for plotting purposes below.
 
 # And now to calculate means by site.
-data_params_means <- data_params %>%
-  group_by(site_name) %>%
+data_params_means <- data_params_all %>%
+  group_by(model,site_name) %>%
   summarize(r_mean = mean(r),
             k_mean = mean(k),
             s_mean = mean(s),
-            c_mean = mean(c))
-
-# And now to bind the values with site attributes.
-data_together <- left_join(data_params_means, data_info, by = "site_name")
+            c_mean = mean(c)) %>%
+  ungroup()
 
 # Export dataset
-# saveRDS(data_together, file = "data_working/teton_207rivers_model_parameters_means_020622.rds")
+#saveRDS(data_params_means, file = "data_working/teton_bothmodels_parameters_means_021322.rds")
 
 ####      Figures         ####
 
@@ -122,9 +120,11 @@ plotting_rk <- function(x) {
   
   # create a plot with r and k for all iterations
   p <- ggplot(df, aes(x = r, y = logK)) +
-       geom_point() +
+       geom_point(shape = 21, alpha = 0.75, aes(fill = model)) +
+       scale_fill_manual(values = c("black", "white")) +
        labs(x = "Maximum Growth Rate (r)",
-              y = "Log of Carrying Capacity (K)") +
+            y = "Log of Carrying Capacity (K)",
+            color = "Model Structure") +
        theme_bw() +
        theme(text = element_text(size=20))
     
@@ -145,19 +145,40 @@ plotting_rk <- function(x) {
   
 } # close out function
 
-data_params <- data_params %>%
+data_params_all <- data_params_all %>%
   mutate(logK = log10(k))# add log(k) column
 
 # test to be sure the function works at a single site
-plotting_rk(data_params %>% filter(site_name == "nwis_01124000"))
+plotting_rk(data_params_all %>% filter(site_name == "nwis_02266300"))
 
 # And now apply this to the entire dataset.
-# plotting_rk(data_params)
+plotting_rk(data_params_all)
 
 #### Max Growth Rate / Carrying Capacity ####
 
+# Need to create a new dataset with only one value per site.
+# Separate out the two runs.
+data_params_means1 <- data_params_means %>%
+  filter(model == "with P")
+
+data_params_means2 <- data_params_means %>%
+  filter(model == "without P")
+
+# Make a columns of names to remove from the initial run,
+toremove <- data_params_means2$site_name
+
+# and remove the re-run sites from the initial run.
+data_params_means1 <- data_params_means1 %>%
+  filter(!(site_name %in% toremove))
+
+# And finally re-combine the datasets.
+data_params_mean <- rbind(data_params_means1, data_params_means2)
+
+# Export dataset
+#saveRDS(data_params_mean, file = "data_working/teton_bothmodels_parameters_mean_021322.rds")
+
 # Basic plot of r values vs. stream order.
-fig1 <- data_together %>%
+fig1 <- full_join(data_params_mean, data_info) %>%
   filter(r_mean > 0) %>%
   #filter(k_mean > 0) %>%
   mutate(so = factor(NHD_STREAMORDE)) %>%
@@ -173,11 +194,11 @@ fig1 <- data_together %>%
 fig1
 
 # ggsave(plot = fig1,
-#        filename = "figures/teton_moresites/r_strord.jpg",
+#        filename = "figures/teton_moresites/r_strord2.jpg",
 #        width = 6,
 #        height = 4)
 
-fig2 <- data_together %>%
+fig2 <- full_join(data_params_mean, data_info) %>%
   #filter(r_mean > 0) %>%
   filter(k_mean > 0) %>%
   mutate(so = factor(NHD_STREAMORDE)) %>%
@@ -186,7 +207,7 @@ fig2 <- data_together %>%
   scale_fill_manual(values = cal_palette("sbchannel", n = 9, type = "continuous")) +
   geom_boxplot(alpha = 0.9) +
   geom_jitter(color = "black", alpha = 0.5, width = 0.1) +
-  labs(x = "NHD Stream Order",
+  labs(x = "Stream Order",
        y = "Log of Carrying Capacity (K)") +
   theme_bw() +
   theme(text = element_text(size=12), legend.position = "none")
@@ -194,7 +215,7 @@ fig2 <- data_together %>%
 fig2
 
 # ggsave(plot = fig2,
-#        filename = "figures/teton_moresites/k_strord.jpg",
+#        filename = "figures/teton_moresites/k_strord2.jpg",
 #        width = 6,
 #        height = 4)
 
@@ -205,54 +226,93 @@ fig1.2 <- (fig1 | fig2) +
 fig1.2
 
 # ggsave(plot = fig1.2,
-#        filename = "figures/teton_moresites/r_k_strord.jpg",
+#        filename = "figures/teton_moresites/r_k_strord2.jpg",
 #        width = 10,
-#        height = 6)
+#        height = 5)
 
 # A quick pairs plot.
-fig_pairs <- data_together %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  select(r_mean, k_mean, s_mean, c_mean, NHD_STREAMORDE) %>%
-  pairs()
+# fig_pairs <- data_together %>%
+#   filter(r_mean > 0) %>%
+#   filter(k_mean > 0) %>%
+#   select(r_mean, k_mean, s_mean, c_mean, NHD_STREAMORDE) %>%
+#   pairs()
 
-# Plotting overall r and k means for all sites.
-fig3a <- data_together %>%
-  filter(r_mean > 0) %>% # removes 10 sites
-  filter(k_mean > 0) %>% # removes another 4 sites
+# Plotting overall r and k means for all sites (but using only one value).
+fig3a <- data_params_mean %>%
+  filter(r_mean > 0) %>% # removes 4 sites
+  filter(k_mean > 0) %>% # removes another 5 sites
   mutate(logK = log10(k_mean)) %>%
   ggplot(aes(x = r_mean, y = logK)) +
-  geom_point(shape = 21, size = 4, alpha = 0.75) +
+  geom_point(shape = 21, size = 4, alpha = 0.75, aes(fill = model)) +
+  scale_fill_manual(values = c("black", "white")) +
   labs(x = "Maximum Growth Rate (r)",
-       y = "Log of Carrying Capacity (K)") +
+       y = "Log of Carrying Capacity (K)",
+       fill = "Model Structure") +
   theme_bw() +
   theme(text = element_text(size=12))
 
 fig3a
 
 # ggsave(plot = fig3a,
-#        filename = "figures/teton_moresites/r_K_allsites.jpg",
+#        filename = "figures/teton_moresites/r_K_allsites2.jpg",
 #        width = 6,
 #        height = 6)
 
-# Create another version of this figure colored by stream order
-fig3b <- data_together %>%
+# Create another version of this figure colored by r/k correlation coefficient
+
+# Calculate Pearson's correlation coefficient for all sites on both runs.
+data_params_cc <- data_params_all %>%
+  group_by(model, site_name) %>%
+  summarize(cc = cor(r, k))
+
+# Separate out the two runs.
+data_params_cc1 <- data_params_cc %>%
+  filter(model == "with P")
+
+data_params_cc2 <- data_params_cc %>%
+  filter(model == "without P")
+
+# Use the to remove column from above,
+# and remove the re-run sites from the initial run.
+data_params_cc1 <- data_params_cc1 %>%
+  filter(!(site_name %in% toremove))
+
+# And finally re-combine the datasets.
+data_params_cc_single <- rbind(data_params_cc1, data_params_cc2)
+
+fig3b <- full_join(data_params_mean, data_params_cc_single) %>%
   filter(r_mean > 0) %>%
   filter(k_mean > 0) %>%
   mutate(logK = log10(k_mean)) %>%
-  mutate(so = factor(NHD_STREAMORDE)) %>%
   ggplot(aes(x = r_mean, y = logK, 
-             fill = so)) +
-  geom_point(shape = 21, size = 4, alpha = 0.9) +
-  scale_fill_manual(values = cal_palette("sbchannel", n = 9, type = "continuous")) + # custom colors
+             fill = cc)) +
+  geom_point(shape = 21, size = 4, alpha = 0.9, aes(fill = cc)) +
+  scale_fill_viridis() + # custom colors
   labs(x = "Maximum Growth Rate (r)",
-       y = "Log of Carrying Capacity (K)") +
+       y = "Log of Carrying Capacity (K)",
+       fill = "Correlation Coefficient") +
   theme_bw() +
   theme(text = element_text(size=12))
 
 fig3b
 
-#### STOPPED HERE ON FEBRUARY 6 ####
+# ggsave(plot = fig3b,
+#        filename = "figures/teton_moresites/r_K_allsites2_cc.jpg",
+#        width = 6,
+#        height = 6)
+
+# Combine the above boxplots into a single figure.
+fig3.2 <- (fig3a | fig3b) +
+  plot_annotation(tag_levels = "A")
+
+fig3.2
+
+# ggsave(plot = fig3.2,
+#        filename = "figures/teton_moresites/r_k_allsites_bothmodels_cc.jpg",
+#        width = 13,
+#        height = 5)
+
+#### STOPPED HERE ON FEBRUARY 13 ####
 
 #### Critical Discharge / Sensitivity of Persistence Curve ####
 
