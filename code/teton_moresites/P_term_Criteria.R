@@ -110,4 +110,10 @@ data_in_rerun <- list.remove(data_in, c("nwis_01124000", "nwis_01400500",
 # Export for run on Teton.
 saveRDS(data_in_rerun, file = "data_working/df_207sites_rerun132.rds")
 
+# Remove third element that's causing problems on Teton.
+data_in_rerun2 <- list.remove(data_in_rerun, c("nwis_01201487"))
+
+# Export for run on Teton.
+saveRDS(data_in_rerun2, file = "data_working/df_207sites_rerun131.rds")
+
 # End of script.
