@@ -18,7 +18,8 @@ lapply(c("calecopal", "cowplot", "viridis",
          "lubridate","tidyverse", "reshape2",
          "PerformanceAnalytics","jpeg","grid",
          "rstan","bayesplot","shinystan", "here",
-         "ggrepel", "patchwork", "grid","gridExtra"), require, character.only=T)
+         "ggrepel", "patchwork", "grid","gridExtra",
+         "sf", "viridis", "maps", "mapproj"), require, character.only=T)
 
 #### Data Import ####
 
@@ -312,7 +313,194 @@ fig3.2
 #        width = 13,
 #        height = 5)
 
-#### STOPPED HERE ON FEBRUARY 13 ####
+#### Light vs. Growth Parameters ####
+
+# Create a function to calculate mean light availability
+calc_mean_light <- function(df){
+  mean(df$PAR_new) # this column either pulls light from Appling or PAR_surface from Savoy
+}
+
+# And now map this to the entire output list.
+data_light <- map(data_in, calc_mean_light)
+
+# And create a dataframe
+data_light_params <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
+  rename(light_mean = `.x`) %>%
+  left_join(data_params_mean, by = "site_name")
+
+# Light vs.maximum growth rate
+# light vs. r
+(fig_light1 <- data_light_params %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = light_mean, y = r_mean, fill = model)) +
+  geom_point(shape = 21, size = 3, alpha = 0.75) +
+  scale_fill_manual(values = c("black", "white")) +
+  labs(x = "Light Availability (ppfd?)",
+       y = "Maximum Growth Rate (r)") +
+  theme_bw() +
+  theme(text = element_text(size=20)))
+# Roughly, r appears to decrease with increasing light availability
+
+#### Discharge vs. Growth Parameters ####
+
+# Create a function to calculate mean discharge
+calc_mean_q <- function(df){
+  mean(df$Q)
+}
+
+# And now map this to the entire output list.
+data_q <- map(data_in, calc_mean_q)
+
+# And create a dataframe
+data_q_params <- map_df(data_q, ~as.data.frame(.x), .id="site_name") %>%
+  rename(q_mean = `.x`) %>%
+  left_join(data_params_mean, by = "site_name")
+
+# Discharge vs.maximum growth rate
+# Q vs. r
+(fig_q1 <- data_q_params %>%
+    filter(r_mean > 0) %>%
+    filter(k_mean > 0) %>%
+    mutate(logmQ = log10(q_mean)) %>%
+    ggplot(aes(x = logmQ, y = r_mean, fill = model)) +
+    geom_point(shape = 21, size = 3, alpha = 0.75) +
+    scale_fill_manual(values = c("black", "white")) +
+    labs(x = "Log of Mean Site Discharge (cm/s)",
+         y = "Maximum Growth Rate (r)") +
+    theme_bw() +
+    theme(text = element_text(size=20)))
+# Doesn't immediately appear to be a trend in growth rates based on mean q
+
+# Create a function to calculate coefficient of variation of discharge
+calc_cv_q <- function(df){
+  (sd(df$Q, na.rm = TRUE)/mean(df$Q, na.rm = TRUE))
+}
+
+# And now map this to the entire output list.
+data_cvq <- map(data_in, calc_cv_q)
+
+# And create a dataframe
+data_cvq_params <- map_df(data_cvq, ~as.data.frame(.x), .id="site_name") %>%
+  rename(q_cv = `.x`) %>%
+  left_join(data_params_mean, by = "site_name")
+
+# C.V. Q vs. r
+(fig_q2 <- data_cvq_params %>%
+    filter(r_mean > 0) %>%
+    filter(k_mean > 0) %>%
+    #mutate(logmQ = log10(q_mean)) %>%
+    ggplot(aes(x = q_cv, y = r_mean, fill = model)) +
+    geom_point(shape = 21, size = 3, alpha = 0.75) +
+    scale_fill_manual(values = c("black", "white")) +
+    labs(x = "Coefficient of Variation of Discharge (cm/s)",
+         y = "Maximum Growth Rate (r)") +
+    theme_bw() +
+    theme(text = element_text(size=20)))
+# Also appears that with increasing c.v. values, max growth rate decreases
+
+#### GPP vs. Growth Parameters ####
+
+# Create a function to calculate mean gpp
+calc_mean_gpp <- function(df){
+  mean(df$GPP)
+}
+
+# And now map this to the entire output list.
+data_gpp <- map(data_in, calc_mean_gpp)
+
+# And create a dataframe
+data_gpp_params <- map_df(data_gpp, ~as.data.frame(.x), .id="site_name") %>%
+  rename(gpp_mean = `.x`) %>%
+  left_join(data_params_mean, by = "site_name")
+
+# GPP vs. carrying capacity
+(fig_gpp1 <- data_gpp_params %>%
+    filter(r_mean > 0) %>%
+    filter(k_mean > 0) %>%
+    ggplot(aes(x = gpp_mean, y = k_mean, fill = model)) +
+    geom_point(shape = 21, size = 3, alpha = 0.75) +
+    scale_fill_manual(values = c("black", "white")) +
+    labs(x = "Mean Site GPP",
+         y = "Carrying Capacity (K)") +
+    theme_bw() +
+    theme(text = element_text(size=20)))
+# It does appear that GPP directly correlates with carrying capacity
+# (a.k.a. the upper limit of what the system can support)
+
+#### Geography vs. Growth Parameters ####
+
+# make data sf object
+sites_sf <- st_as_sf(full_join(data_info,data_params_mean),
+                     coords = c("lon", "lat"), # always put lon (x) first
+                     remove = F, # leave the lat/lon columns in too
+                     crs = 4269) # projection: NAD83
+
+# make base US map
+states <- map_data("state")
+states_sf <- st_as_sf(states,
+                      coords = c("long", "lat"),
+                      remove = F,
+                      crs = 4269)
+
+# site map colored by model used
+(sitemap <- ggplot(states_sf) + # base plot
+    geom_polygon(aes(x = long, y = lat, group = group), 
+                 fill = "white", color = "black") + # map of states
+    geom_point(data = sites_sf %>% 
+                 filter(r_mean > 0) %>%
+                 filter(k_mean > 0) %>%
+                 filter(site_name != "nwis_15298040"), # removing 1 alaska site for now
+               aes(x = lon, y = lat, fill = model), 
+               shape = 21, size = 4, alpha = 0.75) + # map of sites
+    scale_fill_manual(name = "Model", 
+                       values = c("black", "white")) + # custom colors
+    theme_classic() + # remove grid
+    labs(x = "Longitude",
+         y = "Latitude") +
+    theme(legend.position = "bottom") + # reposition legend
+    coord_map(projection = "albers", lat0 = 39, lat1 = 45))
+# So, unsurprisingly, our model performs less well with P in the western states
+
+# site map colored by r
+(sitemap2 <- ggplot(states_sf) + # base plot
+    geom_polygon(aes(x = long, y = lat, group = group), 
+                 fill = "white", color = "black") + # map of states
+    geom_point(data = sites_sf %>% 
+                 filter(r_mean > 0) %>%
+                 filter(k_mean > 0) %>%
+                 filter(site_name != "nwis_15298040"), # removing 1 alaska site for now
+               aes(x = lon, y = lat, fill = r_mean), 
+               shape = 21, size = 4, alpha = 0.75) + # map of sites
+    scale_fill_viridis() +
+    theme_classic() + # remove grid
+    labs(fill = "Maximum Growth Rate (r)",
+         x = "Longitude",
+         y = "Latitude") +
+    theme(legend.position = "bottom") + # reposition legend
+    coord_map(projection = "albers", lat0 = 39, lat1 = 45))
+# Hard to see a real pattern other than at a few sites
+
+# site map colored by K
+(sitemap3 <- ggplot(states_sf) + # base plot
+    geom_polygon(aes(x = long, y = lat, group = group), 
+                 fill = "white", color = "black") + # map of states
+    geom_point(data = sites_sf %>% 
+                 filter(r_mean > 0) %>%
+                 filter(k_mean > 0) %>%
+                 filter(site_name != "nwis_15298040"), # removing 1 alaska site for now
+               aes(x = lon, y = lat, fill = k_mean), 
+               shape = 21, size = 4, alpha = 0.75) + # map of sites
+    scale_fill_viridis(option = "plasma") +
+    theme_classic() + # remove grid
+    labs(fill = "Carrying Capacity (K)",
+         x = "Longitude",
+         y = "Latitude") +
+    theme(legend.position = "bottom") + # reposition legend
+    coord_map(projection = "albers", lat0 = 39, lat1 = 45))
+# Again, hard to see a pattern other than at a few sites
+
+#### STOPPED HERE ON FEBRUARY 17 ####
 
 #### Critical Discharge / Sensitivity of Persistence Curve ####
 
@@ -716,53 +904,6 @@ full_fig5
 #        filename = "figures/teton_34sites/rk_vs_cs.jpg",
 #        width = 11,
 #        height = 11)
-
-#### Light vs. Growth Parameters ####
-
-# Create a function to calculate mean light availability
-calc_mean_light <- function(df){
-  mean(df$PAR_new) # this column either pulls light from Appling or PAR_surface from Savoy
-}
-
-# And now map this to the entire output list.
-data_light <- map(data_in, calc_mean_light)
-
-# And create a dataframe
-data_light_params <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
-  rename(light_mean = `.x`) %>%
-  left_join(data_together, by = "site_name")
-
-# Light vs.maximum growth rate
-# light vs. r
-fig_light1 <- data_light_params %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  mutate(light_cat = factor(light_mean)) %>% # adding column for coloration purposes
-  ggplot(aes(x = light_mean, y = r_mean, fill = light_cat)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("canary", n = 28, type = "continuous")) + # custom colors
-  labs(x = "Light Availability (ppfd?)",
-       y = "Maximum Growth Rate (r)") +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig_light1
-
-# Light vs.carrying capacity
-# light vs. K
-fig_light2 <- data_light_params %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  mutate(light_cat = factor(light_mean)) %>% # adding column for coloration purposes
-  ggplot(aes(x = light_mean, y = k_mean, fill = light_cat)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("canary", n = 28, type = "continuous")) + # custom colors
-  labs(x = "Light Availability (ppfd?)",
-       y = "Carrying Capacity (K)") +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig_light2
 
 #### Divergences ####
 
