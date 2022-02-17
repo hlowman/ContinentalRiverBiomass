@@ -500,6 +500,71 @@ states_sf <- st_as_sf(states,
     coord_map(projection = "albers", lat0 = 39, lat1 = 45))
 # Again, hard to see a pattern other than at a few sites
 
+#### All Parameter Comparisons ####
+
+# Now, to compare growth and disturbance parameters
+# r vs. c
+fig5a <- data_params_mean %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = c_mean, y = r_mean)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Maximum Growth Rate (r)") +
+  theme_bw() +
+  theme(text = element_text(size=20))
+
+fig5a
+
+# r vs. s
+fig5b <- data_params_mean %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = s_mean, y = r_mean)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  labs(x = "Sensitivity of Persistence Curve (s)",
+       y = "Maximum Growth Rate (r)") +
+  theme_bw() +
+  theme(text = element_text(size=20))
+
+fig5b
+
+# k vs. c
+fig5c <- data_params_mean %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = c_mean, y = k_mean)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  labs(x = "Critical Discharge (c)",
+       y = "Carrying Capacity (K)") +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+
+fig5c
+
+# k vs. s
+fig5d <- data_params_mean %>%
+  filter(r_mean > 0) %>%
+  filter(k_mean > 0) %>%
+  ggplot(aes(x = s_mean, y = k_mean)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75) +
+  labs(x = "Sensitivity of Persistence Curve (s)",
+       y = "Carrying Capacity (K)") +
+  theme_bw() +
+  theme(text = element_text(size=20))
+
+fig5d
+
+full_fig5 <- (fig5a + fig5b) / (fig5c + fig5d) +
+  plot_annotation(tag_levels = 'A')
+
+full_fig5
+
+# ggsave(full_fig5,
+#        filename = "figures/teton_moresites/rk_vs_cs.jpg",
+#        width = 11,
+#        height = 11)
+
 #### STOPPED HERE ON FEBRUARY 17 ####
 
 #### Critical Discharge / Sensitivity of Persistence Curve ####
@@ -827,83 +892,6 @@ Persist_plot2 # WOOT!
 
 
 names(plots) <- site_list
-
-#### All Parameter Comparisons ####
-
-# Now, to compare growth and disturbance parameters
-# r vs. c
-fig5a <- data_together %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  ggplot(aes(x = c_mean, y = r_mean, 
-             fill = site_name, label = site_name)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) + # custom colors
-  labs(x = "Critical Discharge (c)",
-       y = "Maximum Growth Rate (r)") +
-  geom_text_repel(data = subset(data_together, r_mean > 0.3), size = 4) +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig5a
-
-# r vs. s
-fig5b <- data_together %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  ggplot(aes(x = s_mean, y = r_mean, 
-             fill = site_name, label = site_name)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
-  labs(x = "Sensitivity of Persistence Curve (s)",
-       y = "Maximum Growth Rate (r)") +
-  geom_text_repel(data = subset(data_together, r_mean > 0.3 | s_mean > 300), size = 4) +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig5b
-
-# k vs. c
-fig5c <- data_together %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  ggplot(aes(x = c_mean, y = k_mean, 
-             fill = site_name, label = site_name)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
-  labs(x = "Critical Discharge (c)",
-       y = "Carrying Capacity (K)") +
-  geom_text_repel(data = subset(data_together, k_mean > 30), size = 4) +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig5c
-
-# k vs. s
-fig5d <- data_together %>%
-  filter(r_mean > 0) %>%
-  filter(k_mean > 0) %>%
-  ggplot(aes(x = s_mean, y = k_mean, 
-             fill = site_name, label = site_name)) +
-  geom_point(shape = 21, size = 5, alpha = 0.75) +
-  scale_fill_manual(values = cal_palette("creek", n = 28, type = "continuous")) +
-  labs(x = "Sensitivity of Persistence Curve (s)",
-       y = "Carrying Capacity (K)") +
-  geom_text_repel(data = subset(data_together, k_mean > 30 | s_mean > 300), size = 4) +
-  theme_bw() +
-  theme(text = element_text(size=20), legend.position = "none")
-
-fig5d
-
-full_fig5 <- (fig5a + fig5b) / (fig5c + fig5d) +
-  plot_annotation(tag_levels = 'A')
-
-full_fig5
-
-# ggsave(full_fig5,
-#        filename = "figures/teton_34sites/rk_vs_cs.jpg",
-#        width = 11,
-#        height = 11)
 
 #### Divergences ####
 
