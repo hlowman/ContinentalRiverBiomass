@@ -321,7 +321,7 @@ calc_mean_light <- function(df){
 }
 
 # And now map this to the entire output list.
-data_light <- map(data_in, calc_mean_light)
+data_light <- purrr::map(data_in, calc_mean_light)
 
 # And create a dataframe
 data_light_params <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
@@ -336,11 +336,17 @@ data_light_params <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
   ggplot(aes(x = light_mean, y = r_mean, fill = model)) +
   geom_point(shape = 21, size = 3, alpha = 0.75) +
   scale_fill_manual(values = c("black", "white")) +
-  labs(x = "Light Availability (ppfd?)",
-       y = "Maximum Growth Rate (r)") +
+  labs(x = "Mean Light Availability (PAR)",
+       y = "Maximum Growth Rate (r)",
+       fill = "Model Structure") +
   theme_bw() +
   theme(text = element_text(size=20)))
 # Roughly, r appears to decrease with increasing light availability
+
+# ggsave(plot = fig_light1,
+#        filename = "figures/teton_moresites/r_light.jpg",
+#        width = 10,
+#        height = 6)
 
 #### Discharge vs. Growth Parameters ####
 
@@ -350,7 +356,7 @@ calc_mean_q <- function(df){
 }
 
 # And now map this to the entire output list.
-data_q <- map(data_in, calc_mean_q)
+data_q <- purrr::map(data_in, calc_mean_q)
 
 # And create a dataframe
 data_q_params <- map_df(data_q, ~as.data.frame(.x), .id="site_name") %>%
@@ -367,10 +373,16 @@ data_q_params <- map_df(data_q, ~as.data.frame(.x), .id="site_name") %>%
     geom_point(shape = 21, size = 3, alpha = 0.75) +
     scale_fill_manual(values = c("black", "white")) +
     labs(x = "Log of Mean Site Discharge (cm/s)",
-         y = "Maximum Growth Rate (r)") +
+         y = "Maximum Growth Rate (r)",
+         fill = "Model Structure") +
     theme_bw() +
     theme(text = element_text(size=20)))
 # Doesn't immediately appear to be a trend in growth rates based on mean q
+
+# ggsave(plot = fig_q1,
+#        filename = "figures/teton_moresites/r_meanq.jpg",
+#        width = 10,
+#        height = 6)
 
 # Create a function to calculate coefficient of variation of discharge
 calc_cv_q <- function(df){
@@ -378,7 +390,7 @@ calc_cv_q <- function(df){
 }
 
 # And now map this to the entire output list.
-data_cvq <- map(data_in, calc_cv_q)
+data_cvq <- purrr::map(data_in, calc_cv_q)
 
 # And create a dataframe
 data_cvq_params <- map_df(data_cvq, ~as.data.frame(.x), .id="site_name") %>%
@@ -394,10 +406,16 @@ data_cvq_params <- map_df(data_cvq, ~as.data.frame(.x), .id="site_name") %>%
     geom_point(shape = 21, size = 3, alpha = 0.75) +
     scale_fill_manual(values = c("black", "white")) +
     labs(x = "Coefficient of Variation of Discharge (cm/s)",
-         y = "Maximum Growth Rate (r)") +
+         y = "Maximum Growth Rate (r)",
+         fill = "Model Structure") +
     theme_bw() +
     theme(text = element_text(size=20)))
 # Also appears that with increasing c.v. values, max growth rate decreases
+
+# ggsave(plot = fig_q2,
+#        filename = "figures/teton_moresites/r_cvq.jpg",
+#        width = 10,
+#        height = 6)
 
 #### GPP vs. Growth Parameters ####
 
@@ -407,7 +425,7 @@ calc_mean_gpp <- function(df){
 }
 
 # And now map this to the entire output list.
-data_gpp <- map(data_in, calc_mean_gpp)
+data_gpp <- purrr::map(data_in, calc_mean_gpp)
 
 # And create a dataframe
 data_gpp_params <- map_df(data_gpp, ~as.data.frame(.x), .id="site_name") %>%
@@ -422,11 +440,17 @@ data_gpp_params <- map_df(data_gpp, ~as.data.frame(.x), .id="site_name") %>%
     geom_point(shape = 21, size = 3, alpha = 0.75) +
     scale_fill_manual(values = c("black", "white")) +
     labs(x = "Mean Site GPP",
-         y = "Carrying Capacity (K)") +
+         y = "Carrying Capacity (K)",
+         fill = "Model Structure") +
     theme_bw() +
     theme(text = element_text(size=20)))
 # It does appear that GPP directly correlates with carrying capacity
 # (a.k.a. the upper limit of what the system can support)
+
+# ggsave(plot = fig_gpp1,
+#        filename = "figures/teton_moresites/r_gpp.jpg",
+#        width = 10,
+#        height = 6)
 
 #### Geography vs. Growth Parameters ####
 
@@ -462,6 +486,11 @@ states_sf <- st_as_sf(states,
     coord_map(projection = "albers", lat0 = 39, lat1 = 45))
 # So, unsurprisingly, our model performs less well with P in the western states
 
+# ggsave(plot = sitemap,
+#        filename = "figures/teton_moresites/map_models.jpg",
+#        width = 10,
+#        height = 6)
+
 # site map colored by r
 (sitemap2 <- ggplot(states_sf) + # base plot
     geom_polygon(aes(x = long, y = lat, group = group), 
@@ -481,6 +510,11 @@ states_sf <- st_as_sf(states,
     coord_map(projection = "albers", lat0 = 39, lat1 = 45))
 # Hard to see a real pattern other than at a few sites
 
+# ggsave(plot = sitemap2,
+#        filename = "figures/teton_moresites/map_r.jpg",
+#        width = 10,
+#        height = 6)
+
 # site map colored by K
 (sitemap3 <- ggplot(states_sf) + # base plot
     geom_polygon(aes(x = long, y = lat, group = group), 
@@ -499,6 +533,11 @@ states_sf <- st_as_sf(states,
     theme(legend.position = "bottom") + # reposition legend
     coord_map(projection = "albers", lat0 = 39, lat1 = 45))
 # Again, hard to see a pattern other than at a few sites
+
+# ggsave(plot = sitemap3,
+#        filename = "figures/teton_moresites/map_K.jpg",
+#        width = 10,
+#        height = 6)
 
 #### All Parameter Comparisons ####
 
@@ -562,8 +601,8 @@ full_fig5
 
 # ggsave(full_fig5,
 #        filename = "figures/teton_moresites/rk_vs_cs.jpg",
-#        width = 11,
-#        height = 11)
+#        width = 10,
+#        height = 10)
 
 #### STOPPED HERE ON FEBRUARY 17 ####
 
