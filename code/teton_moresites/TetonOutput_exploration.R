@@ -333,9 +333,9 @@ data_light_params <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
 (fig_light1 <- data_light_params %>%
   filter(r_mean > 0) %>%
   filter(k_mean > 0) %>%
-  ggplot(aes(x = light_mean, y = r_mean, fill = model)) +
-  geom_point(shape = 21, size = 3, alpha = 0.75) +
-  scale_fill_manual(values = c("black", "white")) +
+  ggplot(aes(x = light_mean, y = r_mean)) +
+  geom_point(shape = 21, size = 5, alpha = 0.75, fill = "black") +
+  #scale_fill_manual(values = c("black", "white")) +
   labs(x = "Mean Light Availability (PAR)",
        y = "Maximum Growth Rate (r)",
        fill = "Model Structure") +
@@ -344,8 +344,8 @@ data_light_params <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
 # Roughly, r appears to decrease with increasing light availability
 
 # ggsave(plot = fig_light1,
-#        filename = "figures/teton_moresites/r_light.jpg",
-#        width = 10,
+#        filename = "figures/teton_moresites/r_light2.jpg",
+#        width = 8,
 #        height = 6)
 
 #### Discharge vs. Growth Parameters ####
@@ -402,9 +402,9 @@ data_cvq_params <- map_df(data_cvq, ~as.data.frame(.x), .id="site_name") %>%
     filter(r_mean > 0) %>%
     filter(k_mean > 0) %>%
     #mutate(logmQ = log10(q_mean)) %>%
-    ggplot(aes(x = q_cv, y = r_mean, fill = model)) +
-    geom_point(shape = 21, size = 3, alpha = 0.75) +
-    scale_fill_manual(values = c("black", "white")) +
+    ggplot(aes(x = q_cv, y = r_mean)) +
+    geom_point(shape = 21, size = 5, alpha = 0.75, fill = "black") +
+    #scale_fill_manual(values = c("black", "white")) +
     labs(x = "Coefficient of Variation of Discharge (cm/s)",
          y = "Maximum Growth Rate (r)",
          fill = "Model Structure") +
@@ -413,8 +413,8 @@ data_cvq_params <- map_df(data_cvq, ~as.data.frame(.x), .id="site_name") %>%
 # Also appears that with increasing c.v. values, max growth rate decreases
 
 # ggsave(plot = fig_q2,
-#        filename = "figures/teton_moresites/r_cvq.jpg",
-#        width = 10,
+#        filename = "figures/teton_moresites/r_cvq2.jpg",
+#        width = 8,
 #        height = 6)
 
 #### GPP vs. Growth Parameters ####
