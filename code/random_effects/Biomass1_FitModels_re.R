@@ -1,12 +1,10 @@
 ## Fitting models to data
 ## Step FOUR in Metabolism Modeling Workflow
-## February 7, 2022
+## March 21, 2022
 ## Heili Lowman
 
 # I'll be modifying Joanna's code from the RiverBiomass repository
-# to fit the Ricker model to 132 sites of data without a P term.
-
-# I double-checked all the code steps prior to this one on 01/27/22.
+# to fit the Ricker model to a few sites of data to get the random effect working.
 
 # load packages
 lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
@@ -14,8 +12,8 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
          "bayesplot","shinystan","here"), 
        require, character.only=T)
 
-## Source data
-df <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_moresites/df_207sites_rerun131.rds")
+## Source data - with new index number by site
+df <- readRDS("data_working/df_207sites_indexed.rds")
 
 ####################
 ## Stan data prep ##
@@ -26,7 +24,7 @@ options(mc.cores=6)
 
 ## compile data
 stan_data_compile <- function(x){
-  data <- list(Ndays=length(x$GPP), 
+  data <- list(Ndays = x$Ndays, 
                light = x$light_rel, 
                GPP = x$GPP,
                GPP_sd = x$GPP_sd, 

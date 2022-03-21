@@ -1,8 +1,8 @@
 
 
 data {
-  int<lower=0> sites; // number of sites
-  int Ndays; // number of days
+  int<lower=0> sites; // number of sites (groups)
+  int<lower=1> Ndays; // number of days (observations)
   vector [Ndays] light; // relativized to max value
   vector [Ndays] GPP; // mean estimates from posterior probability distributions
   vector [Ndays] GPP_sd; // sd estimates from posterior probability distributions
@@ -31,11 +31,11 @@ parameters {
 
 transformed parameters {
   
-  real pred_GPP [Ndays];
-  real P [Ndays];
-  
   // Loop over sites
   for(h in 1:sites){ 
+    
+  real pred_GPP [Ndays];
+  real P [Ndays];
     
   for(i in 1:Ndays){
     
