@@ -15,6 +15,45 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
 ## Source data - with new index number by site
 df <- readRDS("data_working/df_207sites_indexed.rds")
 
+# Testing how to pull data from the assembled list into a matrix to pass to the stan file
+# Pull out only light_rel column from each dataframe within the list
+names <- "light_rel"
+test_light <- lapply(df, "[", names)
+
+# Count the length of each line
+length_df <- function(x){
+  data <- length(x$light_rel) # need to go two layers in to calculate length of light_column
+  return(data)
+}
+
+line_lengths <- lapply(test_light, length_df) # apply function to full list
+
+line_lengths <- t(as.data.frame(line_lengths)) # and transpose into a dataframe
+
+# Pad shorter lines with NA below
+test_light[which(line_lengths != max(line_lengths))] <- 
+  lapply(test_light[which(line_lengths != max(line_lengths))], function(x){
+     # create list of existing light values
+    list1 <- x$light_rel
+    list1 <- as.data.frame(list1) %>%
+      rename(light_rel = list1) 
+     # create list of NAs to be added
+    list2 <- rep(NA, times = max(line_lengths)-length(x$light_rel))
+    list2 <- as.data.frame(list2) %>%
+      rename(light_rel = list2)
+    
+     # join the two together
+    rbind(list1, list2)
+  })
+
+# Use the list created above to create a matrix of light values
+test_light_mx <- matrix(NA, 3208, 207)
+test_light_mx <- matrix(unlist(test_light), nrow = 3208, ncol = 207)
+# 207 sites
+# 3208 days is the longest time series
+# Yippee!! This works!!
+
+
 ####################
 ## Stan data prep ##
 ####################
