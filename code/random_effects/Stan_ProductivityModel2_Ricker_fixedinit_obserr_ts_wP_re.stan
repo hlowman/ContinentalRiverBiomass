@@ -107,8 +107,8 @@ model {
   // Random effect priors
   csite[h] ~ normal(c,csigma)T[0,];
   ssite[h] ~ normal(s,ssigma)T[0,];
-  rsite[h] ~ normal(r,rsigma)T[0,];
-  lsite[h] ~ normal(lambda,lsigma)T[0,];
+  rsite[h] ~ normal(r,rsigma); // or T[0,]
+  lsite[h] ~ normal(lambda,lsigma); // or T[,0]
   
   }
 

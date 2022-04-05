@@ -203,6 +203,13 @@ gpp_sd_mx2 <- gpp_sd_mx[1:101,1:2]
 tQ_mx2 <- tQ_mx[1:101,1:2]
 e_mx2 <- e_mx[1:101,1:2]
 
+# Subset to three sites for test ru - with longest column first.
+light_mx3 <- light_mx[1:192,c(3,1:2)]
+gpp_mx3 <- gpp_mx[1:192,c(3,1:2)]
+gpp_sd_mx3 <- gpp_sd_mx[1:192,c(3,1:2)]
+tQ_mx3 <- tQ_mx[1:192,c(3,1:2)]
+e_mx3 <- e_mx[1:192,c(3,1:2)]
+
 ####################
 ## Stan data prep ##
 ####################
@@ -230,6 +237,16 @@ stan_data_l2 <- list(sites = 2, # number of sites
                     tQ = tQ_mx2, # standardized discharge
                     new_e = e_mx2) # indices denoting when to reinitialize biomass estimation
 
+## compile data for 2 site test run (max 101 observations)
+stan_data_l3 <- list(sites = 3, # number of sites 
+                     Nobs = 192, # max number of observations (days)
+                     Ndays = line_lengths[c(3,1:2),], # number of observations per site
+                     light = light_mx3, # standardized light data
+                     GPP = gpp_mx3, # standardized GPP estimates
+                     GPP_sd = gpp_sd_mx3, # standardized GPP standard deviations
+                     tQ = tQ_mx3, # standardized discharge
+                     new_e = e_mx3) # indices denoting when to reinitialize biomass estimation
+
 
 #########################################
 ## Run Stan to get parameter estimates - all sites
@@ -252,5 +269,16 @@ PM_outputlist_Ricker2 <- stan("code/random_effects/Stan_ProductivityModel2_Ricke
 launch_shinystan(PM_outputlist_Ricker2)
 
 saveRDS(PM_outputlist_Ricker2, "data_working/stan_2rivers_output_Ricker_re_2022_04_05.rds")
+
+# test run with longest of 3 sites first in the matrix
+
+PM_outputlist_Ricker3 <- stan("code/random_effects/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re.stan",
+                              data = stan_data_l3, chains = 3,iter = 5000,
+                              #init = init_Ricker, 
+                              control = list(max_treedepth = 12))
+
+launch_shinystan(PM_outputlist_Ricker3)
+
+saveRDS(PM_outputlist_Ricker3, "data_working/stan_3rivers_output_Ricker_re_2022_04_05.rds")
 
 # End of script.
