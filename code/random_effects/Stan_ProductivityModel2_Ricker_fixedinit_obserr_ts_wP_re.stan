@@ -4,14 +4,15 @@ data {
   int<lower=0> sites; // number of sites
   int<lower=0> Nobs; // maximum number of observations possible at a site, to bound the matrices
   
+  int Ndays [sites]; // number of days for each site
+  
   // matrix [rows, columns]
   matrix [Nobs, sites] light; // relativized to max value
   matrix [Nobs, sites] GPP; // mean estimates from posterior probability distributions
   matrix [Nobs, sites] GPP_sd; // sd estimates from posterior probability distributions
   matrix [Nobs, sites] tQ; // standardized discharge
   matrix [Nobs, sites] new_e; // 0/1s denoting new time sequences
- 
-  vector [sites] Ndays; // number of days for each site
+  
 }
 
 
@@ -53,14 +54,15 @@ transformed parameters {
  
   // Loop over sites
   // For each of the 207 sites...
-  for(h in 1:sites){ 
+  for(h in 1:sites) { 
     
   // and for each day within each of the sites...  
-  for (i in 2:(Ndays[h])){
+  for (j in 1:(Ndays[h])) {
     
-      P[i,h] = exp(-exp(ssite[h]*100*(tQ[i,h] - csite[h]))); // persistence as a function of discharge
-      pred_GPP[i,h] = light[i,h]*exp(B[i,h]); // predicted GPP as a function of light and biomass
-    
+      P[j,h] = exp(-exp(ssite[h]*100*(tQ[j,h] - csite[h]))); // persistence as a function of discharge
+      
+      pred_GPP[j,h] = light[j,h]*exp(B[j,h]); // predicted GPP as a function of light and biomass
+      
     }
   
   }
@@ -79,7 +81,7 @@ model {
   
   // and for each day within each of the sites...
   // Process Model - reinitialize for every new time sequence
-  for (j in 2:(Ndays[h])){
+  for (j in 2:(Ndays[h])) {
     
     if (new_e[j,h]==1) { // 1 = TRUE
     
