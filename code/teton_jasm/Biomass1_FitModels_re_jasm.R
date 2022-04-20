@@ -197,12 +197,21 @@ subset_e[which(line_lengths5 != max(line_lengths5))] <-
 e_mx <- matrix(NA, 3208, 206)
 e_mx <- matrix(unlist(subset_e), nrow = 3208, ncol = 206)
 
-# Subset to first ten sites for test run on server prior to sending full job to Teton.
-light_mx10 <- light_mx[1:1948,1:10]
-gpp_mx10 <- gpp_mx[1:1948,1:10]
-gpp_sd_mx10 <- gpp_sd_mx[1:1948,1:10]
-tQ_mx10 <- tQ_mx[1:1948,1:10]
-e_mx10 <- e_mx[1:19148,1:10]
+# Subset to two sites of exact same length for test run prior to sending full job to Teton.
+light_mx2 <- light_mx[1:192,c(3:4)]
+gpp_mx2 <- gpp_mx[1:192,c(3:4)]
+gpp_sd_mx2 <- gpp_sd_mx[1:192,c(3:4)]
+tQ_mx2 <- tQ_mx[1:192,c(3:4)]
+e_mx2 <- e_mx[1:192,c(3:4)]
+
+# Subset to ten sites of a similar length for test run prior to sending full job to Teton.
+light_mx10 <- light_mx[1:192,c(1:5, 31, 40, 78, 94, 129)]
+gpp_mx10 <- gpp_mx[1:192,c(1:5, 31, 40, 78, 94, 129)]
+gpp_sd_mx10 <- gpp_sd_mx[1:192,c(1:5, 31, 40, 78, 94, 129)]
+tQ_mx10 <- tQ_mx[1:192,c(1:5, 31, 40, 78, 94, 129)]
+e_mx10 <- e_mx[1:192,c(1:5, 31, 40, 78, 94, 129)]
+
+# Ok, so server isn't loading R for some reason, so proceeding on desktop.
 
 ####################
 ## Stan data prep ##
@@ -211,14 +220,24 @@ rstan_options(auto_write=TRUE)
 ## specify number of cores
 options(mc.cores=6)
 
-## compile data for 10 site test run (max 1948 observations)
+## compile data for 2 site test run (max 192 observations)
+stan_data_l2 <- list(sites = 2, # number of sites 
+                      Nobs = 192, # max number of observations (days)
+                      Ndays = line_lengths[c(3:4),], # number of observations per site
+                      light = light_mx2, # standardized light data
+                      GPP = gpp_mx2, # standardized GPP estimates
+                      GPP_sd = gpp_sd_mx2, # standardized GPP standard deviations
+                      tQ = tQ_mx2, # 10 yr flood standardized discharge
+                      new_e = e_mx2) # indices denoting when to reinitialize biomass estimation
+
+## compile data for 10 site test run (max 192 observations)
 stan_data_l10 <- list(sites = 10, # number of sites 
-                    Nobs = 1948, # max number of observations (days)
-                    Ndays = line_lengths[1:10,], # number of observations per site
+                    Nobs = 192, # max number of observations (days)
+                    Ndays = line_lengths[c(1:5, 31, 40, 78, 94, 129),], # number of observations per site
                     light = light_mx10, # standardized light data
                     GPP = gpp_mx10, # standardized GPP estimates
                     GPP_sd = gpp_sd_mx10, # standardized GPP standard deviations
-                    tQ = tQ_mx10, # standardized discharge
+                    tQ = tQ_mx10, # 10 yr flood standardized discharge
                     new_e = e_mx10) # indices denoting when to reinitialize biomass estimation
 
 #########################################
@@ -227,14 +246,28 @@ stan_data_l10 <- list(sites = 10, # number of sites
 
 # Latent Biomass (Ricker population) Model
 
+# sets initial values of c and s to help chains converge
+init_Ricker <- function(...) {
+  list(c = 0.5, s = 0.5) # new values as of jan 2022
+}
+
+PM_outputlist_Ricker2 <- stan("code/teton_jasm/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re.stan",
+                               data = stan_data_l2, chains = 1,iter = 5000,
+                               init = init_Ricker,
+                               control = list(max_treedepth = 12)) # works
+
+PM_outputlist_Ricker10 <- stan("code/teton_jasm/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re.stan",
+                            data = stan_data_l10, chains = 1,iter = 5000,
+                            init = init_Ricker,
+                            control = list(max_treedepth = 12)) # breaks
+# but the message outputted during the initialization step is the same
+# Chain 1: Rejecting initial value:
+# Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+# Chain 1:   Stan can't start sampling from this initial value.
+
+launch_shinystan(PM_outputlist_Ricker2)
+
 ## export results
-
-PM_outputlist_Ricker10 <- stan("code/random_effects/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re.stan",
-                            data = stan_data_l10, chains = 3,iter = 5000,
-                            control = list(max_treedepth = 12))
-
-launch_shinystan(PM_outputlist_Ricker10)
-
 # saveRDS(PM_outputlist_Ricker10, "data_working/stan_10rivers_output_Ricker_re_2022_04_20.rds")
 
 # End of script.
