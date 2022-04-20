@@ -32,7 +32,7 @@ line_lengths <- lapply(test_light, length_df) # apply function to full list
 
 line_lengths <- t(as.data.frame(line_lengths)) # and transpose into a dataframe
 
-# Pad shorter lines with NA below
+# Pad shorter lines with 0 below
 test_light[which(line_lengths != max(line_lengths))] <- 
   lapply(test_light[which(line_lengths != max(line_lengths))], function(x){
      # create list of existing light values
@@ -40,7 +40,7 @@ test_light[which(line_lengths != max(line_lengths))] <-
     list1 <- as.data.frame(list1) %>%
       rename(light_rel = list1) 
      # create list of NAs to be added
-    list2 <- rep(NA, times = max(line_lengths)-length(x$light_rel))
+    list2 <- rep(0, times = max(line_lengths)-length(x$light_rel))
     list2 <- as.data.frame(list2) %>%
       rename(light_rel = list2)
     
@@ -73,7 +73,7 @@ line_lengths2 <- lapply(subset_gpp, length_df2) # apply function to full list
 
 line_lengths2 <- t(as.data.frame(line_lengths2)) # and transpose into a dataframe
 
-# Pad shorter lines with NA below
+# Pad shorter lines with 0 below
 subset_gpp[which(line_lengths2 != max(line_lengths2))] <- 
   lapply(subset_gpp[which(line_lengths2 != max(line_lengths2))], function(x){
     # create list of existing GPP values
@@ -81,7 +81,7 @@ subset_gpp[which(line_lengths2 != max(line_lengths2))] <-
     list1 <- as.data.frame(list1) %>%
       rename(GPP = list1) 
     # create list of NAs to be added
-    list2 <- rep(NA, times = max(line_lengths2)-length(x$GPP))
+    list2 <- rep(0, times = max(line_lengths2)-length(x$GPP))
     list2 <- as.data.frame(list2) %>%
       rename(GPP = list2)
     # join the two together
@@ -108,7 +108,7 @@ line_lengths3 <- lapply(subset_gppsd, length_df3) # apply function to full list
 
 line_lengths3 <- t(as.data.frame(line_lengths3)) # and transpose into a dataframe
 
-# Pad shorter lines with NA below
+# Pad shorter lines with 0 below
 subset_gppsd[which(line_lengths3 != max(line_lengths3))] <- 
   lapply(subset_gppsd[which(line_lengths3 != max(line_lengths3))], function(x){
     # create list of existing GPP sd values
@@ -116,7 +116,7 @@ subset_gppsd[which(line_lengths3 != max(line_lengths3))] <-
     list1 <- as.data.frame(list1) %>%
       rename(GPP_sd = list1) 
     # create list of NAs to be added
-    list2 <- rep(NA, times = max(line_lengths3)-length(x$GPP_sd))
+    list2 <- rep(0, times = max(line_lengths3)-length(x$GPP_sd))
     list2 <- as.data.frame(list2) %>%
       rename(GPP_sd = list2)
     # join the two together
@@ -143,7 +143,7 @@ line_lengths4 <- lapply(subset_tQ, length_df4) # apply function to full list
 
 line_lengths4 <- t(as.data.frame(line_lengths4)) # and transpose into a dataframe
 
-# Pad shorter lines with NA below
+# Pad shorter lines with 0 below
 subset_tQ[which(line_lengths4 != max(line_lengths4))] <- 
   lapply(subset_tQ[which(line_lengths4 != max(line_lengths4))], function(x){
     # create list of existing tQ values
@@ -151,7 +151,7 @@ subset_tQ[which(line_lengths4 != max(line_lengths4))] <-
     list1 <- as.data.frame(list1) %>%
       rename(tQ = list1) 
     # create list of NAs to be added
-    list2 <- rep(NA, times = max(line_lengths4)-length(x$tQ))
+    list2 <- rep(0, times = max(line_lengths4)-length(x$tQ))
     list2 <- as.data.frame(list2) %>%
       rename(tQ = list2)
     # join the two together
@@ -177,7 +177,7 @@ line_lengths5 <- lapply(subset_e, length_df5) # apply function to full list
 
 line_lengths5 <- t(as.data.frame(line_lengths5)) # and transpose into a dataframe
 
-# Pad shorter lines with NA below
+# Pad shorter lines with 0 below
 subset_e[which(line_lengths5 != max(line_lengths5))] <- 
   lapply(subset_e[which(line_lengths5 != max(line_lengths5))], function(x){
     # create list of existing e values
@@ -185,7 +185,7 @@ subset_e[which(line_lengths5 != max(line_lengths5))] <-
     list1 <- as.data.frame(list1) %>%
       rename(new_e = list1) 
     # create list of NAs to be added
-    list2 <- rep(NA, times = max(line_lengths5)-length(x$new_e))
+    list2 <- rep(0, times = max(line_lengths5)-length(x$new_e))
     list2 <- as.data.frame(list2) %>%
       rename(new_e = list2)
     # join the two together
@@ -203,12 +203,12 @@ gpp_sd_mx2 <- gpp_sd_mx[1:101,1:2]
 tQ_mx2 <- tQ_mx[1:101,1:2]
 e_mx2 <- e_mx[1:101,1:2]
 
-# Subset to three sites for test ru - with longest column first.
-light_mx3 <- light_mx[1:192,c(3,1:2)]
-gpp_mx3 <- gpp_mx[1:192,c(3,1:2)]
-gpp_sd_mx3 <- gpp_sd_mx[1:192,c(3,1:2)]
-tQ_mx3 <- tQ_mx[1:192,c(3,1:2)]
-e_mx3 <- e_mx[1:192,c(3,1:2)]
+# Subset to three sites for test run.
+light_mx3 <- light_mx[1:192,c(1:3)]
+gpp_mx3 <- gpp_mx[1:192,c(1:3)]
+gpp_sd_mx3 <- gpp_sd_mx[1:192,c(1:3)]
+tQ_mx3 <- tQ_mx[1:192,c(1:3)]
+e_mx3 <- e_mx[1:192,c(1:3)]
 
 ####################
 ## Stan data prep ##
@@ -237,10 +237,10 @@ stan_data_l2 <- list(sites = 2, # number of sites
                     tQ = tQ_mx2, # standardized discharge
                     new_e = e_mx2) # indices denoting when to reinitialize biomass estimation
 
-## compile data for 2 site test run (max 101 observations)
+## compile data for 3 site test run (max 192 observations)
 stan_data_l3 <- list(sites = 3, # number of sites 
                      Nobs = 192, # max number of observations (days)
-                     Ndays = line_lengths[c(3,1:2),], # number of observations per site
+                     Ndays = line_lengths[c(1:3),], # number of observations per site
                      light = light_mx3, # standardized light data
                      GPP = gpp_mx3, # standardized GPP estimates
                      GPP_sd = gpp_sd_mx3, # standardized GPP standard deviations
@@ -255,9 +255,9 @@ stan_data_l3 <- list(sites = 3, # number of sites
 # Latent Biomass (Ricker population) Model
 
 # sets initial values of c and s to help chains converge
-init_Ricker <- function(...) {
-  list(c = 0.5, s = 0.5) # new values as of jan 2022
-}
+# init_Ricker <- function(...) {
+#   list(c = 0.5, s = 0.5) # new values as of jan 2022
+# }
 
 ## export results
 
@@ -268,9 +268,9 @@ PM_outputlist_Ricker2 <- stan("code/random_effects/Stan_ProductivityModel2_Ricke
 
 launch_shinystan(PM_outputlist_Ricker2)
 
-saveRDS(PM_outputlist_Ricker2, "data_working/stan_2rivers_output_Ricker_re_2022_04_05.rds")
+# saveRDS(PM_outputlist_Ricker2, "data_working/stan_2rivers_output_Ricker_re_2022_04_05.rds")
 
-# test run with longest of 3 sites first in the matrix
+# test run with 3 sites and empty spaces in the matrix filled with zeros
 
 PM_outputlist_Ricker3 <- stan("code/random_effects/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re.stan",
                               data = stan_data_l3, chains = 3,iter = 5000,
@@ -279,6 +279,6 @@ PM_outputlist_Ricker3 <- stan("code/random_effects/Stan_ProductivityModel2_Ricke
 
 launch_shinystan(PM_outputlist_Ricker3)
 
-saveRDS(PM_outputlist_Ricker3, "data_working/stan_3rivers_output_Ricker_re_2022_04_05.rds")
+saveRDS(PM_outputlist_Ricker3, "data_working/stan_3rivers_output_Ricker_re_2022_04135.rds")
 
 # End of script.
