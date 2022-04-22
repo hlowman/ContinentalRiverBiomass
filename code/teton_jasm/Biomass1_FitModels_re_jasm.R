@@ -197,6 +197,14 @@ subset_e[which(line_lengths5 != max(line_lengths5))] <-
 e_mx <- matrix(NA, 3208, 206)
 e_mx <- matrix(unlist(subset_e), nrow = 3208, ncol = 206)
 
+# Export these matrices for use in the actual Teton run.
+saveRDS(line_lengths, "data_working/line_lengths206.rds")
+saveRDS(light_mx, "data_working/light_mx206.rds")
+saveRDS(gpp_mx, "data_working/gpp_mx206.rds")
+saveRDS(gpp_sd_mx, "data_working/gpp_sd_mx206.rds")
+saveRDS(tQ_mx, "data_working/tQ_mx206.rds")
+saveRDS(e_mx, "data_working/e_mx206.rds")
+
 # Subset to two sites of exact same length for test run prior to sending full job to Teton.
 light_mx2 <- light_mx[1:192,c(3:4)]
 gpp_mx2 <- gpp_mx[1:192,c(3:4)]
@@ -246,28 +254,39 @@ stan_data_l10 <- list(sites = 10, # number of sites
 
 # Latent Biomass (Ricker population) Model
 
-# sets initial values of c and s to help chains converge
+# sets initial values to help chains converge
+# this was particularly problematic for 10+ sites
 init_Ricker <- function(...) {
-  list(c = 0.5, s = 0.5) # new values as of jan 2022
+  list(csite = rep(0.5,length.out = 10), 
+       ssite = rep(0.5,length.out = 10),
+       rsite = rep(0.5,length.out = 10),
+       lsite = rep(0.5,length.out = 10)) # new values as of apr 2022
 }
 
-PM_outputlist_Ricker2 <- stan("code/teton_jasm/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re.stan",
-                               data = stan_data_l2, chains = 1,iter = 5000,
-                               init = init_Ricker,
-                               control = list(max_treedepth = 12)) # works
+# PM_outputlist_Ricker2 <- stan("code/teton_jasm/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re.stan",
+#                                data = stan_data_l2, chains = 1,iter = 5000,
+#                                init = init_Ricker,
+#                                control = list(max_treedepth = 12)) # works
 
+# The following takes ~3 hours to run on desktop.
 PM_outputlist_Ricker10 <- stan("code/teton_jasm/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re.stan",
-                            data = stan_data_l10, chains = 1,iter = 5000,
+                            data = stan_data_l10, chains = 3,iter = 5000,
                             init = init_Ricker,
-                            control = list(max_treedepth = 12)) # breaks
-# but the message outputted during the initialization step is the same
+                            control = list(max_treedepth = 12)) # RUNS!! OMGEEEE!!!
+
+# At first, it was breaking but the message output during the
+# initialization step is the same as for some runs that do work.
 # Chain 1: Rejecting initial value:
 # Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
 # Chain 1:   Stan can't start sampling from this initial value.
 
-launch_shinystan(PM_outputlist_Ricker2)
+# However, this was fixed by giving the sampler an initialization value of 0.5
+# for all four parameters (csite, ssite, rsite, lsite).
+
+launch_shinystan(PM_outputlist_Ricker10)
+# Well, it looks terrible, but it ran.
 
 ## export results
-# saveRDS(PM_outputlist_Ricker10, "data_working/stan_10rivers_output_Ricker_re_2022_04_20.rds")
+saveRDS(PM_outputlist_Ricker10, "data_working/stan_10rivers_output_Ricker_re_2022_04_22.rds")
 
 # End of script.
