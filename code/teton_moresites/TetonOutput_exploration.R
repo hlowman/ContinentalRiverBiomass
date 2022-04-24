@@ -19,7 +19,7 @@ lapply(c("calecopal", "cowplot", "viridis",
          "PerformanceAnalytics","jpeg","grid",
          "rstan","bayesplot","shinystan", "here",
          "ggrepel", "patchwork", "grid","gridExtra",
-         "sf", "viridis", "maps", "mapproj"), require, character.only=T)
+         "sf", "viridis", "maps", "mapproj", "ggextra"), require, character.only=T)
 
 #### Data Import ####
 
@@ -497,23 +497,27 @@ states_sf <- st_as_sf(states,
                  fill = "white", color = "black") + # map of states
     geom_point(data = sites_sf %>% 
                  filter(r_mean > 0) %>%
-                 filter(k_mean > 0) %>%
+                 #filter(k_mean > 0) %>%
                  filter(site_name != "nwis_15298040"), # removing 1 alaska site for now
-               aes(x = lon, y = lat, fill = r_mean), 
-               shape = 21, size = 4, alpha = 0.75) + # map of sites
-    scale_fill_viridis() +
+               aes(x = lon, y = lat, size = r_mean),
+               fill = "#4CA49E", shape = 21, alpha = 0.8) + # map of sites
+    scale_size(range = c(1, 6)) + # change scaling of points
+    #scale_fill_viridis() +
     theme_classic() + # remove grid
-    labs(fill = "Maximum Growth Rate (r)",
+    labs(size = "Maximum Growth Rate (r)",
          x = "Longitude",
          y = "Latitude") +
     theme(legend.position = "bottom") + # reposition legend
     coord_map(projection = "albers", lat0 = 39, lat1 = 45))
-# Hard to see a real pattern other than at a few sites
 
-# ggsave(plot = sitemap2,
-#        filename = "figures/teton_moresites/map_r.jpg",
-#        width = 10,
-#        height = 6)
+# Add histograms along axes
+(sitemap2.2 <- ggMarginal(sitemap2, type = 'density', margins = 'both',
+                         size = 10, fill = '#4CA49E', alpha = 0.8))
+
+# ggsave(plot = sitemap2.2,
+#        filename = "figures/teton_moresites/map_r_marginals.jpg",
+#        width = 12,
+#        height = 8)
 
 # site map colored by K
 (sitemap3 <- ggplot(states_sf) + # base plot
