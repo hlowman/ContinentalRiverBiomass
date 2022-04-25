@@ -32,7 +32,7 @@ options(mc.cores=6)
 ## compile data for full run of 206 sites (max of 3208 observations)
 stan_data_l <- list(sites = 206, # number of sites 
                     Nobs = 3208, # max number of observations (days)
-                    Ndays = line_lengths, # number of observations per site
+                    Ndays = line_lengths[c(1:206),], # number of observations per site
                     light = light_mx, # standardized light data
                     GPP = gpp_mx, # standardized GPP estimates
                     GPP_sd = gpp_sd_mx, # standardized GPP standard deviations
@@ -47,10 +47,10 @@ stan_data_l <- list(sites = 206, # number of sites
 
 # sets initial values of c and s to help chains converge
 init_Ricker <- function(...) {
-  list(csite = rep(0.5,length.out = 10), 
-       ssite = rep(0.5,length.out = 10),
-       rsite = rep(0.5,length.out = 10),
-       lsite = rep(0.5,length.out = 10)) # new values as of apr 2022
+  list(csite = rep(0.5,length.out = 206), 
+       ssite = rep(0.5,length.out = 206),
+       rsite = rep(0.5,length.out = 206),
+       lsite = rep(0.5,length.out = 206)) # new values as of apr 2022
 }
 
 ## export results
@@ -62,6 +62,6 @@ PM_outputlist_Ricker <- stan("/project/modelscape/users/hlowman/jobscripts/teton
                              init = init_Ricker,
                              control = list(max_treedepth = 12))
 
-saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_jasm/teton_206rivers_output_Ricker_2022_04_22.rds")
+saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_jasm/teton_206rivers_output_Ricker_2022_04_24.rds")
 
 # End of script.
