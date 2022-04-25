@@ -248,6 +248,8 @@ stan_data_l10 <- list(sites = 10, # number of sites
                     tQ = tQ_mx10, # 10 yr flood standardized discharge
                     new_e = e_mx10) # indices denoting when to reinitialize biomass estimation
 
+saveRDS(stan_data_l10, "data_working/stan_10rivers_input_list.rds")
+
 #########################################
 ## Run Stan to get parameter estimates - all sites
 #########################################
