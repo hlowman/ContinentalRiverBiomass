@@ -62,6 +62,6 @@ PM_outputlist_Ricker <- stan("/project/modelscape/users/hlowman/jobscripts/teton
                              init = init_Ricker,
                              control = list(max_treedepth = 12))
 
-saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_jasm/teton_206rivers_output_Ricker_2022_04_24.rds")
+saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_jasm/teton_206rivers_output_Ricker_2022_04_26.rds")
 
 # End of script.
