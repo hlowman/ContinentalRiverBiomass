@@ -67,8 +67,8 @@ df_pred_ed <- df_pred[1:101,]
         axis.title.y = element_text(size=12)))
 
 # ggsave(("figures/teton_jasm/gpp_vs_pred_gpp_test.png"),
-#        width = 20,
-#        height = 5,
+#        width = 12,
+#        height = 8,
 #        units = "cm"
 # )
 
