@@ -19,6 +19,9 @@ data_in <- readRDS("data_working/stan_10rivers_input_list.rds")
 ## Model output
 data_out <- readRDS("data_working/stan_10rivers_output_Ricker_re_2022_04_22.rds")
 
+# Testing out some code
+data_out_test <- extract(data_out, c("c", "csite"))
+
 # Extract only predicted GPP data from the model
 data_out_gpp <- extract(data_out, c("pred_GPP"))
 # so, this is an array in the format (rows, columns, matrices)
