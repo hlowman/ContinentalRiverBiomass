@@ -19,7 +19,7 @@ lapply(c("calecopal", "cowplot", "viridis",
          "PerformanceAnalytics","jpeg","grid",
          "rstan","bayesplot","shinystan", "here",
          "ggrepel", "patchwork", "grid","gridExtra",
-         "sf", "viridis", "maps", "mapproj", "ggextra"), require, character.only=T)
+         "sf", "viridis", "maps", "mapproj", "ggExtra"), require, character.only=T)
 
 #### Data Import ####
 
@@ -88,11 +88,20 @@ data_diags_all <- rbind(data_diags, data_diags2) # and join together
 
 # And now to calculate means by site.
 data_params_means <- data_params_all %>%
-  group_by(model,site_name) %>%
-  summarize(r_mean = mean(r),
-            k_mean = mean(k),
-            s_mean = mean(s),
-            c_mean = mean(c)) %>%
+  dplyr::group_by(model, site_name) %>%
+  summarize(r_mean = mean(r, na.rm = TRUE),
+            k_mean = mean(k, na.rm = TRUE),
+            s_mean = mean(s, na.rm = TRUE),
+            c_mean = mean(c, na.rm = TRUE)) %>%
+  ungroup()
+
+# Dataset used in Jasm poster figures
+data_params_meanp <- data_params %>%
+  dplyr::group_by(site_name) %>%
+  dplyr::summarize(r_mean = mean(r, na.rm = TRUE),
+            k_mean = mean(k, na.rm = TRUE),
+            s_mean = mean(s, na.rm = TRUE),
+            c_mean = mean(c, na.rm = TRUE)) %>%
   ungroup()
 
 # Export dataset
@@ -198,6 +207,23 @@ fig1
 #        filename = "figures/teton_moresites/r_strord2.jpg",
 #        width = 6,
 #        height = 4)
+
+# Basic plot of r values vs. stream order.
+(fig1_jasm <- full_join(data_params_meanp, data_info, by = c("site_name")) %>%
+  filter(r_mean > 0) %>%
+  #filter(k_mean > 0) %>%
+  mutate(so = factor(NHD_STREAMORDE)) %>%
+  ggplot(aes(x = so, y = r_mean)) +
+  geom_boxplot(fill = NA) +
+  geom_jitter(color = "black", alpha = 0.5, width = 0.1) +
+  labs(x = "Stream Order",
+       y = expression('Maximum Growth Rate ('~r[max]~')')) +
+  theme(legend.position = "none",
+        panel.background = element_rect(color = "black", fill=NA, size=1),
+        axis.title.x = element_text(size=12), 
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        axis.title.y = element_text(size=12)))
 
 fig2 <- full_join(data_params_mean, data_info) %>%
   #filter(r_mean > 0) %>%
@@ -328,6 +354,10 @@ data_light_params <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
   rename(light_mean = `.x`) %>%
   left_join(data_params_mean, by = "site_name")
 
+data_light_paramsp <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
+  rename(light_mean = `.x`) %>%
+  left_join(data_params_meanp, by = "site_name")
+
 # Light vs.maximum growth rate
 # light vs. r
 (fig_light1 <- data_light_params %>%
@@ -347,6 +377,23 @@ data_light_params <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>%
 #        filename = "figures/teton_moresites/r_light2.jpg",
 #        width = 8,
 #        height = 6)
+
+# light vs. r
+(fig_light1_jasm <- data_light_paramsp %>%
+    filter(r_mean > 0) %>%
+    #filter(k_mean > 0) %>%
+    ggplot(aes(x = light_mean, y = r_mean)) +
+    geom_point(shape = 21, size = 5, alpha = 0.75, fill = "black") +
+    #scale_fill_manual(values = c("black", "white")) +
+    labs(x = "Mean Light Availability (PAR)",
+         y = expression('Maximum Growth Rate ('~r[max]~')')) +
+    theme(legend.position = "none",
+          panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.title.x = element_text(size=12), 
+          axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12),
+          axis.title.y = element_text(size=12)))
+# Roughly, r appears to decrease with increasing light availability
 
 #### Discharge vs. Growth Parameters ####
 
@@ -397,6 +444,10 @@ data_cvq_params <- map_df(data_cvq, ~as.data.frame(.x), .id="site_name") %>%
   rename(q_cv = `.x`) %>%
   left_join(data_params_mean, by = "site_name")
 
+data_cvq_paramsp <- map_df(data_cvq, ~as.data.frame(.x), .id="site_name") %>%
+  rename(q_cv = `.x`) %>%
+  left_join(data_params_meanp, by = "site_name")
+
 # C.V. Q vs. r
 (fig_q2 <- data_cvq_params %>%
     filter(r_mean > 0) %>%
@@ -416,6 +467,24 @@ data_cvq_params <- map_df(data_cvq, ~as.data.frame(.x), .id="site_name") %>%
 #        filename = "figures/teton_moresites/r_cvq2.jpg",
 #        width = 8,
 #        height = 6)
+
+# C.V. Q vs. r
+(fig_q2_jasm <- data_cvq_paramsp %>%
+    filter(r_mean > 0) %>%
+    #filter(k_mean > 0) %>%
+    #mutate(logmQ = log10(q_mean)) %>%
+    ggplot(aes(x = q_cv, y = r_mean)) +
+    geom_point(shape = 21, size = 5, alpha = 0.75, fill = "black") +
+    #scale_fill_manual(values = c("black", "white")) +
+    labs(x = "Coefficient of Variation of Discharge (cm/s)",
+         y = expression('Maximum Growth Rate ('~r[max]~')'),
+         fill = "Model Structure") +
+    theme(legend.position = "none",
+          panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.title.x = element_text(size=12), 
+          axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12),
+          axis.title.y = element_text(size=12)))
 
 #### GPP vs. Growth Parameters ####
 
@@ -455,7 +524,12 @@ data_gpp_params <- map_df(data_gpp, ~as.data.frame(.x), .id="site_name") %>%
 #### Geography vs. Growth Parameters ####
 
 # make data sf object
-sites_sf <- st_as_sf(full_join(data_info,data_params_mean),
+sites_sf <- st_as_sf(full_join(data_info,data_params_means),
+                     coords = c("lon", "lat"), # always put lon (x) first
+                     remove = F, # leave the lat/lon columns in too
+                     crs = 4269) # projection: NAD83
+
+sites_sfp <- st_as_sf(full_join(data_info,data_params_meanp),
                      coords = c("lon", "lat"), # always put lon (x) first
                      remove = F, # leave the lat/lon columns in too
                      crs = 4269) # projection: NAD83
@@ -491,20 +565,27 @@ states_sf <- st_as_sf(states,
 #        width = 10,
 #        height = 6)
 
+#big sur color palette to fit 196 sites
+bs<- c("#E4DECE", "#E4DDCC", "#E4DCCB", "#E4DBC9", "#E4DAC8", "#E5D9C6", "#E5D8C5", "#E5D8C3", "#E5D7C2", "#E5D6C0", "#E6D5BF", "#E6D4BD", "#E6D3BC", "#E6D3BB", "#E6D2B9", "#E7D1B8", "#E7D0B6", "#E7CFB5", "#E7CEB3", "#E7CDB2", "#E8CDB0", "#E8CCAF", "#E8CBAD", "#E8CAAC", "#E8C9AA", "#E9C8A9", "#E9C8A8", "#E9C7A6", "#E9C6A5", "#E9C5A3", "#EAC4A2", "#EAC3A0", "#EAC29F", "#EAC29D", "#EAC19C", "#EBC09A", "#EBBF99", "#EBBE97", "#EBBD96", "#ECBD95", "#E9BC95", "#E7BC96", "#E5BC97", "#E3BB98", "#E1BB99", "#DFBB9A", "#DDBA9B", "#DBBA9C", "#D9BA9D", "#D7B99E", "#D5B99F", "#D3B9A0", "#D1B9A1", "#CEB8A2", "#CCB8A3", "#CAB8A4", "#C8B7A5", "#C6B7A6", "#C4B7A7", "#C2B6A8", "#C0B6A9", "#BEB6AA", "#BCB5AB",
+"#BAB5AC", "#B8B5AD", "#B6B5AE", "#B3B4AF", "#B1B4B0", "#AFB4B1", "#ADB3B2", "#ABB3B3", "#A9B3B4", "#A7B2B5", "#A5B2B6", "#A3B2B7", "#A1B1B8", "#9FB1B9", "#9DB1BA", "#9BB1BB", "#9AB0BB", "#99B0BB", "#98B0BB", "#97B0BB", "#96B0BB", "#95B0BB", "#94B0BB", "#94AFBB", "#93AFBB", "#92AFBB", "#91AFBB", "#90AFBB", "#8FAFBB", "#8EAFBB", "#8DAFBB", "#8DAEBB", "#8CAEBB", "#8BAEBB", "#8AAEBB", "#89AEBC", "#88AEBC", "#87AEBC", "#86AEBC", "#86ADBC", "#85ADBC", "#84ADBC", "#83ADBC", "#82ADBC", "#81ADBC", "#80ADBC", "#7FADBC", "#7FACBC", "#7EACBC", "#7DACBC", "#7CACBC", "#7BACBC", "#7AACBC", "#79ACBC", "#79ACBD", "#77AABB", "#75A8B9", "#73A6B7", "#71A4B5", "#70A2B3", "#6EA1B1", "#6C9FB0", "#6A9DAE",
+"#699BAC", "#6799AA", "#6597A8", "#6396A6", "#6294A5", "#6092A3", "#5E90A1", "#5C8E9F", "#5A8D9D", "#598B9B", "#578999", "#558798", "#538596", "#528394", "#508292", "#4E8090", "#4C7E8E", "#4B7C8D", "#497A8B", "#477989", "#457787", "#437585", "#427383", "#407181", "#3E6F80", "#3C6E7E", "#3B6C7C", "#396A7A", "#376878", "#356676", "#346575", "#326472", "#316370", "#30626E", "#2F616C", "#2E606A", "#2D5F68", "#2C5E65", "#2B5D63", "#2A5C61", "#295C5F", "#285B5D", "#275A5B", "#265959", "#255856", "#245754", "#235652", "#225550", "#21544E", "#20534C", "#1E5349", "#1D5247", "#1C5145", "#1B5043", "#1A4F41", "#194E3F", "#184D3D", "#174C3A", "#164B38", "#154A36", "#144A34", "#134932", "#124830",
+"#11472D", "#10462B", "#0F4529", "#0E4427", "#0D4325", "#0C4223", "#0B4221")
+
 # site map colored by r
 (sitemap2 <- ggplot(states_sf) + # base plot
     geom_polygon(aes(x = long, y = lat, group = group), 
                  fill = "white", color = "black") + # map of states
-    geom_point(data = sites_sf %>% 
+    geom_point(data = sites_sfp %>% 
                  filter(r_mean > 0) %>%
                  #filter(k_mean > 0) %>%
                  filter(site_name != "nwis_15298040"), # removing 1 alaska site for now
-               aes(x = lon, y = lat, size = r_mean),
-               fill = "#4CA49E", shape = 21, alpha = 0.8) + # map of sites
-    scale_size(range = c(1, 6)) + # change scaling of points
-    #scale_fill_viridis() +
+               aes(x = lon, y = lat, size = r_mean, fill = r_mean),
+               shape = 21, alpha = 1) + # map of sites
+    scale_fill_gradient(low="white", high='#4CA49E')+
+    scale_size() + # change scaling of points
     theme_classic() + # remove grid
-    labs(size = "Maximum Growth Rate (r)",
+    labs(size = expression('Maximum Growth Rate ('~r[max]~')'),
+         fill = " ",
          x = "Longitude",
          y = "Latitude") +
     theme(legend.position = "bottom") + # reposition legend
@@ -609,6 +690,44 @@ full_fig5
 #        height = 10)
 
 #### STOPPED HERE ON FEBRUARY 17 ####
+
+# New figure for jasm poster
+# import 10 year flood info
+ten_yr_floods <- read_csv("data_working/RI_10yr_flood_206riv.csv")
+
+# import original dataset to calculate Qmax
+data_origin <- readRDS("data_working/NWIS_207sites_subset.rds")
+maxQs <- data_origin %>%
+  group_by(site_name) %>%
+  summarize(maxQ = max(Q)) %>%
+  ungroup()
+
+Q_info <- full_join(ten_yr_floods, maxQs)
+
+(fig_q10_c_jasm <- full_join(data_params_meanp, Q_info) %>%
+    filter(r_mean > 0) %>%
+    #filter(k_mean > 0) %>%
+    ggplot(aes(x = site_name, y = (c_mean*maxQ)/RI_10yr_Q)) +
+    geom_point(shape = 21, size = 5, alpha = 0.75, fill = "black") +
+    geom_hline(yintercept = 1) +
+    labs(x = "Sites",
+         y = expression(' '~Q[c]~':'~Q[10]~' ')) +
+    theme(axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          legend.position = "none",
+          panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.title.x = element_text(size=12), 
+          axis.text.y = element_text(size=12),
+          axis.title.y = element_text(size=12)))
+
+jasm_fig <- (fig_light1_jasm + fig_q2_jasm) / (fig1_jasm + fig_q10_c_jasm)
+
+# ggsave(jasm_fig,
+#        filename = "figures/teton_moresites/jasm_covars.jpg",
+#        width = 10,
+#        height = 10)
+
+#### STOPPED HERE ON APRIL 29 ####
 
 #### Critical Discharge / Sensitivity of Persistence Curve ####
 
