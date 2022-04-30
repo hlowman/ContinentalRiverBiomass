@@ -20,23 +20,27 @@ lapply(c("calecopal", "cowplot",
 ### If I load this on my desktop, it crashes (cannot allocate vector size xyz).
 
 # Import Teton run results.
-data_out <- readRDS("data_teton/teton_206rivers_output_Ricker_2022_04_26.rds")
-
+#data_out <- readRDS("data_teton/teton_206rivers_output_Ricker_2022_04_26.rds")
+data_out43 <- readRDS("data_teton/teton_43rivers_output_Ricker_2022_04_27.rds") # took ~20 minutes
 ###
 
 # Pulling out parameters separately for now.
 
 # Extract only r data from the model
-data_out_r <- extract(data_out, c("r", "rsite"))
+#data_out_r <- extract(data_out, c("r", "rsite"))
+data_out_r43 <- extract(data_out43, c("r", "rsite"))
 # so, this is an array in the format (rows, columns, matrices)
 
 # Export data.
-saveRDS(data_out_r, "data_working/teton_206rivers_r_all_iterations_042922.rds")
+#saveRDS(data_out_r, "data_working/teton_206rivers_r_all_iterations_042922.rds")
+saveRDS(data_out_r43, "data_working/teton_43rivers_r_all_iterations_042922.rds")
 
 # Extract only c data from the model
-data_out_c <- extract(data_out, c("c", "csite"))
+#data_out_c <- extract(data_out, c("c", "csite"))
+data_out_c43 <- extract(data_out43, c("c", "csite"))
 
 # Export data.
-saveRDS(data_out_c, "data_working/teton_206rivers_c_all_iterations_042922.rds")
+#saveRDS(data_out_c, "data_working/teton_206rivers_c_all_iterations_042922.rds")
+saveRDS(data_out_c43, "data_working/teton_43rivers_c_all_iterations_042922.rds")
 
 # End of script.
