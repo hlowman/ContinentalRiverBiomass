@@ -291,4 +291,67 @@ launch_shinystan(PM_outputlist_Ricker10)
 ## export results
 saveRDS(PM_outputlist_Ricker10, "data_working/stan_10rivers_output_Ricker_re_2022_04_22.rds")
 
+#### Additional runs performed on the server ####
+
+# In response to the terrible number of divergent transitions, I'm going to run
+# a 10 site model on the server to speed things up but try and change the allowed
+# variance on parameter sigma values per Ana's suggestion.
+
+# First, load in 43 site dataset we know performed poorly.
+## Source data - all in matrix format for new random effects structure
+line_lengths <- readRDS("data_working/line_lengths206.rds")
+light_mx <- readRDS("data_working/light_mx43.rds")
+gpp_mx <- readRDS("data_working/gpp_mx43.rds")
+gpp_sd_mx <- readRDS("data_working/gpp_sd_mx43.rds")
+tQ_mx <- readRDS("data_working/tQ_mx43.rds")
+e_mx <- readRDS("data_working/e_mx43.rds")
+
+# And trim down to first 5 sites
+light_test5 <- light_mx[1:2374,c(1:5)]
+gpp_test5 <- gpp_mx[1:2374,c(1:5)]
+gpp_sd_test5 <- gpp_sd_mx[1:2374,c(1:5)]
+tQ_test5 <- tQ_mx[1:2374,c(1:5)]
+e_test5 <- e_mx[1:2374,c(1:5)]
+
+rstan_options(auto_write=TRUE)
+## specify number of cores
+options(mc.cores=6)
+
+## compile data for partial run of 5 sites (max of 2374 observations)
+stan_data_l_test5 <- list(sites = 5, # number of sites 
+                    Nobs = 2374, # max number of observations (days)
+                    Ndays = line_lengths[c(7:9, 12, 15),], # number of observations per site
+                    light = light_test5, # standardized light data
+                    GPP = gpp_test5, # standardized GPP estimates
+                    GPP_sd = gpp_sd_test5, # standardized GPP standard deviations
+                    tQ = tQ_test5, # 10 yr flood standardized discharge
+                    new_e = e_test5) # indices denoting when to reinitialize biomass estimation
+
+# sets initial values of c and s to help chains converge
+init_Ricker <- function(...) {
+  list(csite = rep(0.5,length.out = 5), 
+       ssite = rep(0.5,length.out = 5),
+       rsite = rep(0.5,length.out = 5),
+       lsite = rep(0.5,length.out = 5)) # new values as of apr 2022
+}
+
+## export results
+# cauchy(0,10) - ten sites
+# took too long on the server so i cancelled it
+# PM_outputlist_Ricker_test10_1 <- stan("code/teton_jasm/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re_wide.stan",
+#                              data = stan_data_l_test10, 
+#                              chains = 3,
+#                              iter = 5000,
+#                              init = init_Ricker,
+#                              control = list(max_treedepth = 12))
+
+# cauchy(0, 100) - five sites
+# also stopped this - the second chain taking FOR EV ER to converge.
+# PM_outputlist_Ricker_test5_1 <- stan("code/teton_jasm/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re_wide.stan",
+#                                       data = stan_data_l_test5, 
+#                                       chains = 3,
+#                                       iter = 5000,
+#                                       init = init_Ricker,
+#                                       control = list(max_treedepth = 12))
+
 # End of script.
