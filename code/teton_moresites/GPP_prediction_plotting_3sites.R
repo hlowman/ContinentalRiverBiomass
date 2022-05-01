@@ -14,7 +14,7 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
 ## Source data - 
 data_in <- readRDS("data_working/df_207sites.rds")
 ## Tidied Teton output for pred GPP only -
-data_out <- readRDS("data_working/teton_207rivers_predGPP_withP_021322.rds")
+data_out207 <- readRDS("data_working/teton_207rivers_model_predGPP_all_iterations_020622.rds")
 ## Site info -
 data_info <- readRDS("data_working/NWIS_207sitesinfo_subset.rds")
 ## Tidied parameter data -
@@ -47,7 +47,12 @@ data_best <- left_join(data_divs10, data_params)
 # - 97.5% and 2.5% percentiles
 
 # Going to pull out just the first site
-data_out_gpp1 <- data_out_gpp[,,1]
+data_out_gpp1 <- data_out207 %>%
+  filter(site_name == "nwis_07061270")
+
+data_out_gpp1 <- data_out_gpp1[,-1] # remove site name column
+# also checked to be sure data only populated through column 2319
+# to match orig_gpp dimensions
 
 # Calculate median and confidence intervals
 median_gpp <- apply(data_out_gpp1, 2, median)
@@ -55,18 +60,22 @@ lowerci_gpp <- apply(data_out_gpp1, 2, function(x) quantile(x, probs = 0.025, na
 upperci_gpp <- apply(data_out_gpp1, 2, function(x) quantile(x, probs = 0.975, na.rm = TRUE))
 
 # Pull out original GPP values used
-orig_gpp <- data_in$GPP[,1]
+orig_gpp <- data_in$nwis_07061270$GPP
 
-# Dummy date column
-date <- seq(from = 1, to = 192, by = 1)
+# Pull out original dates used
+date <- data_in$nwis_07061270$date
 
 # Bind into a single dataframe
-df_pred <- as.data.frame(cbind(date, orig_gpp, median_gpp, lowerci_gpp, upperci_gpp))
-# And trimming missing dates
-df_pred_ed <- df_pred[1:101,]
+df_pred1 <- as.data.frame(cbind(median_gpp, lowerci_gpp, upperci_gpp))
+
+df_pred1 <- df_pred1 %>%
+  drop_na() %>%
+  mutate(date = ymd(date),
+         orig_gpp = orig_gpp)
 
 # And plot
-(gpp_plot1 <- ggplot(df_pred_ed, aes(date, orig_gpp)) +
+(gpp_plot1 <- ggplot(df_pred1 %>%
+                       filter(date > "2014-12-31"), aes(date, orig_gpp)) +
     geom_point(size = 2, color = "chartreuse4") +
     geom_line(aes(date, median_gpp), color = "darkolivegreen2", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
@@ -80,11 +89,99 @@ df_pred_ed <- df_pred[1:101,]
           axis.title.x = element_text(size=12), 
           axis.text.x = element_text(size=12),
           axis.text.y = element_text(size=12),
-          axis.title.y = element_text(size=12)))
+          axis.title.y = element_text(size=12))) # 2015-2016?
 
-# ggsave(("figures/teton_jasm/gpp_vs_pred_gpp_test.png"),
-#        width = 12,
-#        height = 8,
+# And now to pull out just the second site
+data_out_gpp2 <- data_out207 %>%
+  filter(site_name == "nwis_07332622")
+
+data_out_gpp2 <- data_out_gpp2[,-1] # remove site name column
+
+# Calculate median and confidence intervals
+median_gpp2 <- apply(data_out_gpp2, 2, median)
+lowerci_gpp2 <- apply(data_out_gpp2, 2, function(x) quantile(x, probs = 0.025, na.rm = TRUE))
+upperci_gpp2 <- apply(data_out_gpp2, 2, function(x) quantile(x, probs = 0.975, na.rm = TRUE))
+
+# Pull out original GPP values used
+orig_gpp2 <- data_in$nwis_07332622$GPP
+
+# Pull out original dates used
+date2 <- data_in$nwis_07332622$date
+
+# Bind into a single dataframe
+df_pred2 <- as.data.frame(cbind(median_gpp2, lowerci_gpp2, upperci_gpp2))
+
+df_pred2 <- df_pred2 %>%
+  drop_na() %>%
+  mutate(date = ymd(date2),
+         orig_gpp = orig_gpp2)
+
+# And plot
+(gpp_plot2 <- ggplot(df_pred2 %>%
+                       filter(date > "2015-12-31"), aes(date, orig_gpp)) +
+    geom_point(size = 2, color = "chartreuse4") +
+    geom_line(aes(date, median_gpp2), color = "darkolivegreen2", size = 1.2) +
+    labs(#y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date") +
+    geom_ribbon(aes(ymin = lowerci_gpp2,
+                    ymax = upperci_gpp2),
+                fill = "darkolivegreen2",
+                alpha = 0.3) +
+    theme(legend.position = "none",
+          panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.title.x = element_text(size=12), 
+          axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12),
+          axis.title.y = element_blank())) # 2016-2017?
+
+# And now to pull out just the third site
+data_out_gpp3 <- data_out207 %>%
+  filter(site_name == "nwis_03025500")
+
+data_out_gpp3 <- data_out_gpp3[,-1] # remove site name column
+
+# Calculate median and confidence intervals
+median_gpp3 <- apply(data_out_gpp3, 2, median)
+lowerci_gpp3 <- apply(data_out_gpp3, 2, function(x) quantile(x, probs = 0.025, na.rm = TRUE))
+upperci_gpp3 <- apply(data_out_gpp3, 2, function(x) quantile(x, probs = 0.975, na.rm = TRUE))
+
+# Pull out original GPP values used
+orig_gpp3 <- data_in$nwis_03025500$GPP
+
+# Pull out original dates used
+date3 <- data_in$nwis_03025500$date
+
+# Bind into a single dataframe
+df_pred3 <- as.data.frame(cbind(median_gpp3, lowerci_gpp3, upperci_gpp3))
+
+df_pred3 <- df_pred3 %>%
+  drop_na() %>%
+  mutate(date = ymd(date3),
+         orig_gpp = orig_gpp3)
+
+# And plot
+(gpp_plot3 <- ggplot(df_pred3 %>%
+                       filter(date > "2015-12-31"), aes(date, orig_gpp)) +
+    geom_point(size = 2, color = "chartreuse4") +
+    geom_line(aes(date, median_gpp3), color = "darkolivegreen2", size = 1.2) +
+    labs(#y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date") +
+    geom_ribbon(aes(ymin = lowerci_gpp3,
+                    ymax = upperci_gpp3),
+                fill = "darkolivegreen2",
+                alpha = 0.3) +
+    theme(legend.position = "none",
+          panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.title.x = element_text(size=12), 
+          axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12),
+          axis.title.y = element_blank())) # 2016-2017
+
+gpp_pred_fig <- gpp_plot1 | gpp_plot2 | gpp_plot3
+
+# ggsave(("figures/teton_moresites/gpp_vs_pred_gpp_3site.png"),
+#        width = 40,
+#        height = 10,
 #        units = "cm"
 # )
 
