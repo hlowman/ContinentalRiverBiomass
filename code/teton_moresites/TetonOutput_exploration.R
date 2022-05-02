@@ -565,11 +565,11 @@ states_sf <- st_as_sf(states,
 #        width = 10,
 #        height = 6)
 
-#big sur color palette to fit 196 sites
-bs<- c("#E4DECE", "#E4DDCC", "#E4DCCB", "#E4DBC9", "#E4DAC8", "#E5D9C6", "#E5D8C5", "#E5D8C3", "#E5D7C2", "#E5D6C0", "#E6D5BF", "#E6D4BD", "#E6D3BC", "#E6D3BB", "#E6D2B9", "#E7D1B8", "#E7D0B6", "#E7CFB5", "#E7CEB3", "#E7CDB2", "#E8CDB0", "#E8CCAF", "#E8CBAD", "#E8CAAC", "#E8C9AA", "#E9C8A9", "#E9C8A8", "#E9C7A6", "#E9C6A5", "#E9C5A3", "#EAC4A2", "#EAC3A0", "#EAC29F", "#EAC29D", "#EAC19C", "#EBC09A", "#EBBF99", "#EBBE97", "#EBBD96", "#ECBD95", "#E9BC95", "#E7BC96", "#E5BC97", "#E3BB98", "#E1BB99", "#DFBB9A", "#DDBA9B", "#DBBA9C", "#D9BA9D", "#D7B99E", "#D5B99F", "#D3B9A0", "#D1B9A1", "#CEB8A2", "#CCB8A3", "#CAB8A4", "#C8B7A5", "#C6B7A6", "#C4B7A7", "#C2B6A8", "#C0B6A9", "#BEB6AA", "#BCB5AB",
-"#BAB5AC", "#B8B5AD", "#B6B5AE", "#B3B4AF", "#B1B4B0", "#AFB4B1", "#ADB3B2", "#ABB3B3", "#A9B3B4", "#A7B2B5", "#A5B2B6", "#A3B2B7", "#A1B1B8", "#9FB1B9", "#9DB1BA", "#9BB1BB", "#9AB0BB", "#99B0BB", "#98B0BB", "#97B0BB", "#96B0BB", "#95B0BB", "#94B0BB", "#94AFBB", "#93AFBB", "#92AFBB", "#91AFBB", "#90AFBB", "#8FAFBB", "#8EAFBB", "#8DAFBB", "#8DAEBB", "#8CAEBB", "#8BAEBB", "#8AAEBB", "#89AEBC", "#88AEBC", "#87AEBC", "#86AEBC", "#86ADBC", "#85ADBC", "#84ADBC", "#83ADBC", "#82ADBC", "#81ADBC", "#80ADBC", "#7FADBC", "#7FACBC", "#7EACBC", "#7DACBC", "#7CACBC", "#7BACBC", "#7AACBC", "#79ACBC", "#79ACBD", "#77AABB", "#75A8B9", "#73A6B7", "#71A4B5", "#70A2B3", "#6EA1B1", "#6C9FB0", "#6A9DAE",
-"#699BAC", "#6799AA", "#6597A8", "#6396A6", "#6294A5", "#6092A3", "#5E90A1", "#5C8E9F", "#5A8D9D", "#598B9B", "#578999", "#558798", "#538596", "#528394", "#508292", "#4E8090", "#4C7E8E", "#4B7C8D", "#497A8B", "#477989", "#457787", "#437585", "#427383", "#407181", "#3E6F80", "#3C6E7E", "#3B6C7C", "#396A7A", "#376878", "#356676", "#346575", "#326472", "#316370", "#30626E", "#2F616C", "#2E606A", "#2D5F68", "#2C5E65", "#2B5D63", "#2A5C61", "#295C5F", "#285B5D", "#275A5B", "#265959", "#255856", "#245754", "#235652", "#225550", "#21544E", "#20534C", "#1E5349", "#1D5247", "#1C5145", "#1B5043", "#1A4F41", "#194E3F", "#184D3D", "#174C3A", "#164B38", "#154A36", "#144A34", "#134932", "#124830",
-"#11472D", "#10462B", "#0F4529", "#0E4427", "#0D4325", "#0C4223", "#0B4221")
+# Add column to designate which sites are pulled out in the panels
+mylist <- c("nwis_07061270", "nwis_07332622","nwis_03025500")
+sites_sfp <- sites_sfp %>%
+  mutate(bolding = dplyr::case_when(site_name %in% mylist ~ "B",
+                              TRUE ~ "A"))
 
 # site map colored by r
 (sitemap2 <- ggplot(states_sf) + # base plot
@@ -579,10 +579,12 @@ bs<- c("#E4DECE", "#E4DDCC", "#E4DCCB", "#E4DBC9", "#E4DAC8", "#E5D9C6", "#E5D8C
                  filter(r_mean > 0) %>%
                  #filter(k_mean > 0) %>%
                  filter(site_name != "nwis_15298040"), # removing 1 alaska site for now
-               aes(x = lon, y = lat, size = r_mean, fill = r_mean),
+               aes(x = lon, y = lat, size = r_mean, 
+                   fill = r_mean, stroke = bolding),
                shape = 21, alpha = 1) + # map of sites
-    scale_fill_gradient(low="white", high='#4CA49E')+
-    scale_size() + # change scaling of points
+    scale_fill_gradient(low="white", high='lightseagreen')+ #'#4CA49E'
+    scale_discrete_manual(aesthetics = "stroke",
+      values = c(`A` = 0.5, `B` = 1.75), guide = "none") + # make paneled sites bolder
     theme_classic() + # remove grid
     labs(size = expression('Maximum Growth Rate ('~r[max]~')'),
          fill = " ",
@@ -593,10 +595,10 @@ bs<- c("#E4DECE", "#E4DDCC", "#E4DCCB", "#E4DBC9", "#E4DAC8", "#E5D9C6", "#E5D8C
 
 # Add histograms along axes
 (sitemap2.2 <- ggMarginal(sitemap2, type = 'density', margins = 'both',
-                         size = 10, fill = '#4CA49E', alpha = 0.8))
+                         size = 10, fill = 'lightseagreen', alpha = 0.8)) #'#4CA49E'
 
 # ggsave(plot = sitemap2.2,
-#        filename = "figures/teton_moresites/map_r_marginals.jpg",
+#        filename = "figures/teton_moresites/map_r_marginals_bolded.jpg",
 #        width = 12,
 #        height = 8)
 
