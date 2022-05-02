@@ -40,7 +40,88 @@ data_best <- left_join(data_divs10, data_params)
 # 50% - nwis_07332622 - Bois D'Arc Ck at FM 409 nr Honey Grove, TX
 # 97.5% - nwis_03025500 - Allegheny River at Franklin, PA
 
-# Use data_out above for pred_GPP values.
+#### New Prediction of GPP Workflow ####
+
+# Previously, I was just pulling model fit. The below workflow should now
+# re-predict GPP values for plotting purposes.
+
+# Using code from Joanna's scripts "Predicted_ProductivityModel_Ricker.R"
+# and "Biomass2_WSpredictions.R".
+
+# First, need to create the function for predicting the actual values.
+PM_Ricker <- function(r, lambda, s, c, sig_p, sig_o, df) {
+  
+  ## Data
+  Ndays <- length(df$GPP)
+  GPP <- df$GPP
+  GPP_sd <- df$GPP_sd
+  light <- df$light_rel_PAR
+  tQ <- df$tQ # discharge standardized to max value
+  new_e <- df$new_e
+  
+  ## Vectors for model output of P, B, pred_GPP
+  P <- numeric(Ndays)
+  P[1] <- 1
+  for(i in 2:length(tQ)){
+    P[i] = exp(-exp(s*100(tQ[i] - c)))
+  }
+  
+  B <- numeric(Ndays)
+  B[1] <- log(GPP[1]/light[1])
+  pred_GPP <- numeric(Ndays)
+  pred_GPP[1] <- light[1]*exp(B[1])
+  
+  ## Process Model
+  for(j in 2:Ndays){
+    # adding in section for my re-initialization functionality
+    if (new_e[j]==1) {
+    
+    B[j] ~ MCMCglmm::rtnorm(1, mean = log(GPP[j]/light[j])) }
+    
+    else {
+    
+    B[j] <- MCMCglmm::rtnorm(1, mean = (B[j-1] + r + lambda*exp(B[j-1]))*P[j],
+                             sd = sig_p, upper = 5) }
+    
+  }
+  
+  for(i in 2:Ndays){
+    pred_GPP[i] <- MCMCglmm::rtnorm(1, mean = light[i]*exp(B[i]), 
+                                    sd = sig_o, lower = 0.01)
+  }
+  
+  return(pred_GPP)
+}
+
+# Next, need to write the function with which to perform the simulation.
+Ricker_sim_fxn <- function(x){
+  # separate data
+  output <- x[[1]]
+  df <- x
+  
+  # extract parameters from STAN output
+  pars <- extract(output, c("r", "lambda", "s", "c", "B", "P", "pred_GPP", "sig_p", "sig_o"))
+  
+  # create empty matrix with days of GPP x length of iterations to receive values
+  simmat <- matrix(NA, length(df$GPP), length(unlist(pars$sig_p)))
+  
+  # simulate pred_GPP holding a parameter set for a given iteration constant
+  # and then predict forward for the time period of interest (i.e., length(df$GPP))
+  for(i in 1:length(pars$r)){
+    simmat[,i] <- PM_Ricker(pars$r[i], pars$lambda[i], pars$s[i], pars$c[i], pars$sig_p[i], pars$sig_p[i], df)
+    rmsemat[i] <- sqrt(sum((simmat[,i] - df$GPP)^2)/length(df$GPP))
+  }
+  
+  l <- list(simmat, rmsemat)
+  return(l)
+  
+}
+
+# And finally, apply to my data.
+Ricker_sim <- lapply(Ricker_list, function(x) Ricker_sim_fxn(x))
+
+# Save simulation.
+# saveRDS(Ricker_sim, "data_working/Sim_3riv_Ricker_jasm_2022_05_02.rds")
 
 # And for each day at each site, I would like to calculate
 # - mean GPP
