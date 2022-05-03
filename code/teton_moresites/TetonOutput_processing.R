@@ -87,6 +87,42 @@ data_out_gpp_df <- map_df(data_out_gpp, ~as.data.frame(.x), .id="site_name")
 # saveRDS(data_out_gpp_df,
 #        file = "data_working/teton_207rivers_model_predgpp_all_iterations_020622.rds")
 
+#### EXTRACTED MORE PARAMS MAY 2, 2022####
+
+# Make sure we can extract by testing at one site.
+test_all <- extract(data_out$nwis_01608500, c("r", "lambda", "s", "c", "B", "P", "pred_GPP", "sig_p", "sig_o"))
+# Yay - this works!
+
+# Going to create a function of the above to pull out data of interest from
+# all sites.
+extract_all <- function(df){
+  extract(df, c("r", "lambda", "s", "c", "B", "P", "pred_GPP", "sig_p", "sig_o"))
+}
+
+# And now map this to the entire output list.
+data_out_all <- map(data_out, extract_all)
+# the above line of code sometimes doesn't play nicely if R has been up and running
+# for awhile, so the fix is to exit RStudio and reopen the project/file
+# OR, as is the case with this code, where data_out has just taken an hour to load,
+# you should instead uncheck and re-check 'rstan' so that it's extract function
+# takes precedence over the same function in the 'tidyr' package.
+
+# Export only list - this takes forever to save so not doing it right now.
+# saveRDS(data_out_all,
+#        file = "data_working/teton_207rivers_model_all_params_all_iterations_020622.rds")
+
+# Instead, pulling out just my three sites for the JASM poster.
+data_mo_site <- extract_all(data_out$nwis_07061270)
+data_tx_site <- extract_all(data_out$nwis_07332622)
+data_pa_site <- extract_all(data_out$nwis_03025500)
+
+# saveRDS(data_mo_site,
+#        file = "data_working/teton_mo_model_all_params_all_iterations_020622.rds")
+# saveRDS(data_tx_site,
+#        file = "data_working/teton_tx_model_all_params_all_iterations_020622.rds")
+# saveRDS(data_pa_site,
+#        file = "data_working/teton_pa_model_all_params_all_iterations_020622.rds")
+
 #### Divergences ####
 
 # Also, need to extract divergence information from the sites.
