@@ -211,6 +211,7 @@ fig1
 # Basic plot of r values vs. stream order.
 (fig1_jasm <- full_join(data_params_meanp, data_info, by = c("site_name")) %>%
   filter(r_mean > 0) %>%
+  filter(is.na(NHD_STREAMORDE) == FALSE) %>% #remove NA level
   #filter(k_mean > 0) %>%
   mutate(so = factor(NHD_STREAMORDE)) %>%
   ggplot(aes(x = so, y = r_mean)) +
@@ -395,6 +396,10 @@ data_light_paramsp <- map_df(data_light, ~as.data.frame(.x), .id="site_name") %>
           axis.title.y = element_text(size=12)))
 # Roughly, r appears to decrease with increasing light availability
 
+lm1 <- lm(data_light_paramsp$r_mean ~ data_light_paramsp$light_mean)
+# checked, and the relationship does not appear significant
+# p = 0.1957
+
 #### Discharge vs. Growth Parameters ####
 
 # Create a function to calculate mean discharge
@@ -485,6 +490,12 @@ data_cvq_paramsp <- map_df(data_cvq, ~as.data.frame(.x), .id="site_name") %>%
           axis.text.x = element_text(size=12),
           axis.text.y = element_text(size=12),
           axis.title.y = element_text(size=12)))
+
+# again, checking the relationship
+lm2 <- lm(data_cvq_paramsp$r_mean ~ data_cvq_paramsp$q_cv)
+# hah, even less, p = 0.3508
+lm3 <- lm(data_cvq_paramsp$r_mean ~ log10(data_cvq_paramsp$q_cv))
+# maybe a logarithmic relationship? p = 0.10
 
 #### GPP vs. Growth Parameters ####
 
@@ -694,7 +705,7 @@ full_fig5
 #### STOPPED HERE ON FEBRUARY 17 ####
 
 # New figure for jasm poster
-# import 10 year flood info
+# import 10 year flood info (newly recalculated May 5, 2022)
 ten_yr_floods <- read_csv("data_working/RI_10yr_flood_206riv.csv")
 
 # import original dataset to calculate Qmax
@@ -705,18 +716,20 @@ maxQs <- data_origin %>%
   ungroup()
 
 Q_info <- full_join(ten_yr_floods, maxQs)
+Q_info2 <- full_join(Q_info, data_info)
 
-(fig_q10_c_jasm <- full_join(data_params_meanp, Q_info) %>%
+(fig_q10_c_jasm <- full_join(data_params_meanp, Q_info2) %>%
     filter(r_mean > 0) %>%
+    filter(is.na(NHD_STREAMORDE) == FALSE) %>% #remove NA level
+    mutate(so = factor(NHD_STREAMORDE)) %>%
     #filter(k_mean > 0) %>%
-    ggplot(aes(x = site_name, y = (c_mean*maxQ)/RI_10yr_Q)) +
-    geom_point(shape = 21, size = 5, alpha = 0.75, fill = "black") +
+    ggplot(aes(x = so, y = (c_mean*maxQ)/RI_10yr_Q_cms)) +
+    geom_boxplot(fill = NA) +
+    geom_jitter(color = "black", alpha = 0.5, width = 0.1) +
     geom_hline(yintercept = 1) +
-    labs(x = "Sites",
+    labs(x = "Stream Order",
          y = expression(' '~Q[c]~':'~Q[10]~' ')) +
-    theme(axis.text.x=element_blank(),
-          axis.ticks.x=element_blank(),
-          legend.position = "none",
+    theme(legend.position = "none",
           panel.background = element_rect(color = "black", fill=NA, size=1),
           axis.title.x = element_text(size=12), 
           axis.text.y = element_text(size=12),
@@ -727,7 +740,7 @@ jasm_fig <- (fig_light1_jasm + fig_q2_jasm) / (fig1_jasm + fig_q10_c_jasm)
 # ggsave(jasm_fig,
 #        filename = "figures/teton_moresites/jasm_covars.jpg",
 #        width = 10,
-#        height = 10)
+#        height = 8)
 
 #### STOPPED HERE ON APRIL 29 ####
 
