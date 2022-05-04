@@ -51,7 +51,13 @@ DailyQ_clean <- lapply(DailyQ, function(x) return(x[which(x$X_00060_00003_cd %in
 
 # testing at a single site since I'm getting some errors applying the function to all 207 sites
 #Grouping maximum average daily discharge for each year
-tmax.by.year<- DailyQ_clean$`02266200` %>% group_by(year=floor_date(Date, "year")) %>% summarize(amount=max(X_00060_00003))
+tmax.year <- DailyQ_clean$`0112400` %>% 
+  mutate(Year = year(Date))
+
+tmax.by.year <- tmax.year %>%
+  group_by(Year) %>% 
+  summarize(amount=max(X_00060_00003, na.rm = TRUE)) %>%
+  ungroup()
 
 #Recording the maximum discharges by year and removing N.A. values
 tmaximas<-tmax.by.year$amount
@@ -89,7 +95,14 @@ tyr_10 <- exp((0.1 - tl$int)/tl$slope) # Adjust depending on timeframe of flood 
 ten_year_flood <- function(data){
   
   #Grouping maximum average daily discharge for each year
-  max.by.year<-data %>% group_by(year=floor_date(Date, "year")) %>% summarize(amount=max(X_00060_00003))
+  
+  max.year <- data %>% 
+    mutate(Year = year(Date))
+  
+  max.by.year <- max.year %>%
+    group_by(Year) %>% 
+    summarize(amount=max(X_00060_00003, na.rm = TRUE)) %>%
+    ungroup()
   
   #Recording the maximum discharges by year and removing N.A. values
   maximas<-max.by.year$amount
@@ -130,6 +143,7 @@ RI_ten <- ldply(lapply(DailyQ_clean, function(y) ten_year_flood(y)), data.frame)
 colnames(RI_ten) <- c(".id","RI_10yr_Q")
 RI_ten$site_name <- paste("nwis_",RI_ten$.id, sep = "")
 RI_ten <- RI_ten[,c("site_name","RI_10yr_Q")]
+RI_ten$RI_10yr_Q_cms <- RI_ten$RI_10yr_Q/35.314666212661 # convert to cms from cfs
 
 ## Export - save to data folder
 write_csv(RI_ten, "data_working/RI_10yr_flood_206riv.csv") ## in cfs

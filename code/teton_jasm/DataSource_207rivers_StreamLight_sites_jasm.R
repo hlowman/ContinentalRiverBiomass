@@ -120,7 +120,7 @@ l <- map(l, swap_light)
 rel_LQT <- function(x){
   x$light_rel <- x$PAR_new/max(x$PAR_new)
   x$temp_rel <- x$temp/max(x$temp)
-  x$tQ <- x$Q/x$RI_10yr_Q # standardizing instead by 10 year flood
+  x$tQ <- x$Q/x$RI_10yr_Q_cms # standardizing by 10 year flood in cubic meters/second
 
   x<-x[order(x$date),]
   return(x)
@@ -128,12 +128,12 @@ rel_LQT <- function(x){
 
 # apply relativizing/standardizing function
 dat <- lapply(l, function(x) rel_LQT(x))
-#NOte - no discharge data for nwis 03293500 so removing it
 
+#Note - no discharge data for nwis 03293500 so removing it
 # trim and rename dataset
 df <- dat[-89]
 
 # Exporting dataset
-saveRDS(df, "data_working/df_206sites_10yrQnorm.rds") # data for full JASM run
+saveRDS(df, "data_working/df_206sites_10yrQnorm.rds") # data for random effects testing runs
 
 # End of script.
