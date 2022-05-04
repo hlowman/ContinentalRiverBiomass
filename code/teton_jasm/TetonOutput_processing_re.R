@@ -20,9 +20,12 @@ lapply(c("calecopal", "cowplot",
 ### If I load this on my desktop, it crashes (cannot allocate vector size xyz).
 
 # Import Teton run results.
-#data_out <- readRDS("data_teton/teton_206rivers_output_Ricker_2022_04_26.rds")
+#data_out <- readRDS("data_teton/teton_206rivers_output_Ricker_2022_04_26.rds") # doesn't work even on server
 data_out43 <- readRDS("data_teton/teton_43rivers_output_Ricker_2022_04_27.rds") # took ~20 minutes
 ###
+
+# Examine for chains mixing - too big doesn't work
+# launch_shinystan(data_out43)
 
 # Pulling out parameters separately for now.
 
