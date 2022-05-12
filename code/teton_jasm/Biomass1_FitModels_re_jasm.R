@@ -370,4 +370,53 @@ launch_shinystan(PM_outputlist_Ricker_test10_again)
 
 saveRDS(PM_outputlist_Ricker_test10_again, "data_working/stan_10rivers_output_Ricker_re_2022_05_04.rds")
 
+#### Models run after chatting with Joanna and Bob 5/10/22 ####
+
+# Attempt #1: added to initialization values and removed erroneous rsigma and lsigma from 
+# STAN script
+
+rstan_options(auto_write=TRUE)
+## specify number of cores
+options(mc.cores=6)
+
+## compile data for partial run of 10 sites (max of 2374 observations)
+stan_data_l_test10_again_again <- list(sites = 10, # number of sites 
+                                 Nobs = 2374, # max number of observations (days)
+                                 Ndays = line_lengths[c(7:9, 12, 15, 16, 22, 23, 25, 32),], # number of observations per site
+                                 light = light_test10_again, # standardized light data
+                                 GPP = gpp_test10_again, # standardized GPP estimates
+                                 GPP_sd = gpp_sd_test10_again, # standardized GPP standard deviations
+                                 tQ = tQ_test10_again, # 10 yr flood standardized discharge
+                                 new_e = e_test10_again) # indices denoting when to reinitialize biomass estimation
+
+# sets initial values of c and s to help chains converge
+init_Ricker <- function(...) {
+  list(csite = rep(0.5,length.out = 10), 
+       ssite = rep(1.5,length.out = 10),
+       rsite = rep(0.3,length.out = 10),
+       lsite = rep(-0.05,length.out = 10),
+       c = rep(0.5,length.out = 1), 
+       s = rep(1.5,length.out = 1),
+       r = rep(0.3,length.out = 1),
+       lambda = rep(-0.05,length.out = 1),
+       csigma = rep(0.1,length.out = 1), 
+       ssigma = rep(0.1,length.out = 1),
+       rsigma = rep(0.1,length.out = 1),
+       lsigma = rep(0.1,length.out = 1)) # more new values as of MAY 2022
+}
+
+## run test model and export results
+# started at 5:13PM
+PM_outputlist_Ricker_test10_again_again <- stan("code/teton_jasm/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re_newpriors.stan",
+                                          data = stan_data_l_test10_again_again,
+                                          chains = 3,
+                                          iter = 5000,
+                                          init = init_Ricker,
+                                          control = list(max_treedepth = 12))
+
+launch_shinystan(PM_outputlist_Ricker_test10_again_again)
+# Still looks terrible.
+
+saveRDS(PM_outputlist_Ricker_test10_again_again, "data_working/stan_10rivers_output_Ricker_re_2022_05_10.rds")
+
 # End of script.

@@ -91,7 +91,7 @@ model {
     
     else { // 0 = FALSE
     
-    B[j,h] ~ normal(((B[(j-1),h] + rsite[h]*rsigma + lsite[h]*lsigma*exp(B[(j-1),h]))*P[j,h]), sig_p);
+    B[j,h] ~ normal(((B[(j-1),h] + rsite[h] + lsite[h]*exp(B[(j-1),h]))*P[j,h]), sig_p);
     
     }
     
