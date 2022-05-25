@@ -315,6 +315,13 @@ gpp_sd_test10_again <- gpp_sd_mx[1:2374,c(7:9, 12, 15, 16, 22, 23, 25, 32)]
 tQ_test10_again <- tQ_mx[1:2374,c(7:9, 12, 15, 16, 22, 23, 25, 32)]
 e_test10_again <- e_mx[1:2374,c(7:9, 12, 15, 16, 22, 23, 25, 32)]
 
+# export for use on Teton.
+saveRDS(light_test10_again, "data_working/light_test10.rds")
+saveRDS(gpp_test10_again, "data_working/gpp_test10.rds")
+saveRDS(gpp_sd_test10_again, "data_working/gpp_sd_test10.rds")
+saveRDS(tQ_test10_again, "data_working/tQ_test10.rds")
+saveRDS(e_test10_again, "data_working/e_test10.rds")
+
 rstan_options(auto_write=TRUE)
 ## specify number of cores
 options(mc.cores=6)
@@ -418,5 +425,106 @@ launch_shinystan(PM_outputlist_Ricker_test10_again_again)
 # Still looks terrible.
 
 saveRDS(PM_outputlist_Ricker_test10_again_again, "data_working/stan_10rivers_output_Ricker_re_2022_05_10.rds")
+
+# Attempt #2: running with no truncation
+
+rstan_options(auto_write=TRUE)
+## specify number of cores
+options(mc.cores=6)
+
+## compile data for partial run of 10 sites (max of 2374 observations)
+# using same list of data as attempt #1
+stan_data_l_test10_again_again <- list(sites = 10, # number of sites 
+                                       Nobs = 2374, # max number of observations (days)
+                                       Ndays = line_lengths[c(7:9, 12, 15, 16, 22, 23, 25, 32),], # number of observations per site
+                                       light = light_test10_again, # standardized light data
+                                       GPP = gpp_test10_again, # standardized GPP estimates
+                                       GPP_sd = gpp_sd_test10_again, # standardized GPP standard deviations
+                                       tQ = tQ_test10_again, # 10 yr flood standardized discharge
+                                       new_e = e_test10_again) # indices denoting when to reinitialize biomass estimation
+
+# sets initial values of c and s to help chains converge
+init_Ricker <- function(...) {
+  list(csite = rep(0.5,length.out = 10), 
+       ssite = rep(1.5,length.out = 10),
+       rsite = rep(0.3,length.out = 10),
+       lsite = rep(-0.05,length.out = 10),
+       c = rep(0.5,length.out = 1), 
+       s = rep(1.5,length.out = 1),
+       r = rep(0.3,length.out = 1),
+       lambda = rep(-0.05,length.out = 1),
+       csigma = rep(0.1,length.out = 1), 
+       ssigma = rep(0.1,length.out = 1),
+       rsigma = rep(0.1,length.out = 1),
+       lsigma = rep(0.1,length.out = 1)) # more new values as of MAY 2022
+}
+
+## run test model and export results
+# started at 3:46PM
+PM_outputlist_Ricker_test10_again3 <- stan("code/teton_jasm/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re_newpriors_notrunc.stan",
+                                                data = stan_data_l_test10_again_again,
+                                                chains = 3,
+                                                iter = 5000,
+                                                init = init_Ricker,
+                                                control = list(max_treedepth = 12))
+
+# took forever...like days...
+
+launch_shinystan(PM_outputlist_Ricker_test10_again3)
+# 3233 divergent transitions, so that's halfway better!
+
+saveRDS(PM_outputlist_Ricker_test10_again3, "data_working/stan_10rivers_output_Ricker_re_2022_05_13.rds")
+
+# Attempt #3: moving pred_GPP into main model equation - RAN ON TETON INSTEAD
+# SEE teton_re FOLDER
+
+rstan_options(auto_write=TRUE)
+options(mc.cores=6) ## specify number of cores
+
+# first, need to test the code at one site to be sure it runs
+# for some reason the single site was giving me issues so just going to run at the full 10 sites
+## compile data for partial run of 10 sites (max of 2374 observations)
+# using same list of data as attempts #1 + #2
+stan_data_l_test10_3 <- list(sites = 10, # number of sites 
+                             Nobs = 2374, # max number of observations (days)
+                             Ndays = line_lengths[c(7:9, 12, 15, 16, 22, 23, 25, 32),], # number of observations per site
+                             light = light_test10_again, # standardized light data
+                             GPP = gpp_test10_again, # standardized GPP estimates
+                             GPP_sd = gpp_sd_test10_again, # standardized GPP standard deviations
+                             tQ = tQ_test10_again, # 10 yr flood standardized discharge
+                             new_e = e_test10_again) # indices denoting when to reinitialize biomass estimation
+
+# sets initial values of c and s to help chains converge
+init_Ricker <- function(...) {
+  list(csite = rep(0.5,length.out = 10), 
+       ssite = rep(1.5,length.out = 10),
+       rsite = rep(0.3,length.out = 10),
+       lsite = rep(-0.05,length.out = 10),
+       c = rep(0.5,length.out = 1), 
+       s = rep(1.5,length.out = 1),
+       r = rep(0.3,length.out = 1),
+       lambda = rep(-0.05,length.out = 1),
+       csigma = rep(0.1,length.out = 1), 
+       ssigma = rep(0.1,length.out = 1),
+       rsigma = rep(0.1,length.out = 1),
+       lsigma = rep(0.1,length.out = 1)) # more new values as of MAY 2022
+}
+
+## run test model and export results
+# started at 11:08AM
+PM_outputlist_Ricker_test10_v3 <- stan("code/teton_jasm/Stan_ProductivityModel2_Ricker_fixedinit_obserr_ts_wP_re_newpriors_notrunc_nopredGPP.stan",
+                                           data = stan_data_l_test10_3,
+                                           chains = 3,
+                                           iter = 5000,
+                                           init = init_Ricker,
+                                           control = list(max_treedepth = 12))
+# proceeded to chains fairly quickly.
+# took ???
+
+launch_shinystan(PM_outputlist_Ricker_test10_v3)
+# ??? divergent transitions, so ???
+
+saveRDS(PM_outputlist_Ricker_test10_v3, 
+        "data_working/stan_10rivers_output_Ricker_re_2022_05_25.rds")
 
 # End of script.
