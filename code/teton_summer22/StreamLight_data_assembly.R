@@ -38,5 +38,8 @@ myfilter <- function(x){
   
 }
 
-filterSL <- lapply(rawSL, myfilter)
+filterSL <- lapply(rawSL, myfilter) # only 7 sites matched :(
+
+# End of script.
+
 
