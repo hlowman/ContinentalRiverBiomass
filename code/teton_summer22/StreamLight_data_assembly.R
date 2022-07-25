@@ -2,7 +2,8 @@
 ## July 5, 2022
 ## Heili Lowman
 
-# Datasets downloaded from : https://github.com/streampulse/metabolism_synthesis/tree/master/output_data
+# Datasets downloaded from : 
+# https://github.com/streampulse/metabolism_synthesis/tree/master/output_data
 
 ## Load packages
 lapply(c("tidyverse", "lubridate", "rstan",
@@ -47,6 +48,8 @@ filterSL <- lapply(rawSL, myfilter) # only 7 sites matched :(
 # Using Phil's code to pull the sites I need
 sites_100 <- siteswoSL
 
+lotic_site_info_full <- readRDS("data_raw/metabolism_synthesis_output_data/lotic_site_info_full.rds")
+
 #Merge together the site information
 info_merged <- merge(
   sites_100[, c("nwis_id", "nhdplus_id", "lat", "lon", "long_name")], 
@@ -54,6 +57,8 @@ info_merged <- merge(
   by.x = "long_name",
   by.y = "Name"
 )
+
+lotic_standardized_full <- readRDS("data_raw/metabolism_synthesis_output_data/lotic_standardized_full.rds")
 
 #Subset the list just for the sites of interest
 standard_ized_subset <- lotic_standardized_full[info_merged[, "Site_ID"]]
@@ -84,6 +89,14 @@ final_subset <- standard_ized_subset[has_light]
 # Export data
 saveRDS(final_subset, "data_working/StreamLight_daily_85site_list.rds")
 
+# What are the remaining 14 sites for which I need to calculate light?
+does_not_have_light <- light_check %>%
+  filter(no_light == TRUE) %>%
+  pull(Site_ID)
+
+# [1] "nwis_023362095"       "nwis_01656903"        "nwis_04174500"        "nwis_385520094420000"
+# [5] "nwis_06893300"        "nwis_04168400"        "nwis_03098600"        "nwis_04167150"       
+# [9] "nwis_02336120"        "nwis_02336240"        "nwis_02336152"        "nwis_08057000"       
+# [13] "nwis_04199500"        "nwis_040871488"
+
 # End of script.
-
-
