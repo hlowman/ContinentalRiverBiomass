@@ -41,7 +41,7 @@ my_site_locs <- left_join(sites_need_SL, site_lls, by = c("sites" = "site_name")
 sites <- my_site_locs
 
 #Make a table for the MODIS request 
-request_sites <- sites[, c("Site_ID", "Lat", "Lon")] 
+request_sites <- sites[, c("Site_ID", "Lat", "Lon")]
 
 #Export your sites as a .csv for the AppEEARS request  
 write.table(
@@ -55,11 +55,47 @@ write.table(
 
 # Request for data mades through AppEEARS website at 2:30pm 6/2/2022.
 
+# SECOND REQUEST: 11:50am 7/28/2022.
+# I've re-run the request because the previous output wasn't cooperating
+# when I noticed an error in how I'd saved things out and tried to re-do it.
+
+# Create a list of the sites of interest.
+my14sites <- c("nwis_023362095","nwis_01656903","nwis_04174500",
+               "nwis_385520094420000","nwis_06893300","nwis_04168400",
+               "nwis_03098600","nwis_04167150","nwis_02336120",
+               "nwis_02336240","nwis_02336152",
+               "nwis_08057000","nwis_04199500","nwis_040871488")
+
+# New trimmed dataset for second request.
+request_sites2 <- request_sites %>%
+  dplyr::filter(Site_ID %in% my14sites) %>%
+  dplyr::select(Site_ID, Lat, Lon)
+
+#Export your sites as a .csv for the AppEEARS request  
+write.table(
+  request_sites2, 
+  paste0("data_working/PM_sites14.csv"), 
+  sep = ",", 
+  row.names = FALSE,
+  quote = FALSE, 
+  col.names = FALSE
+)
+
+# When I went back to re-do this, I had to delete the former PM_site folder, 
+# reset the working directory using the code below, and re-run the following.
+# setwd("C:/Users/hlowman/Documents/ContinentalRiverBiomass/data_raw/StreamLight_MODIS")
+
+# Also, the AppEEARS website drops the "_" in all the sitenames, so I
+# need to create a new column that does that as well, otherwise no data
+# is pulled out of the .csv file.
+request_sites2 <- request_sites2 %>%
+  mutate(SiteID = gsub("_","", Site_ID))
+
 # Unpack MODIS data received.
 MOD_unpack <- AppEEARS_unpack_QC(
-  zip_file = "PM_sites.zip", 
+  zip_file = "PM_sites14.zip", 
   zip_dir = "C:/Users/hlowman/Documents/ContinentalRiverBiomass/data_raw/StreamLight_MODIS", 
-  request_sites[, "Site_ID"]
+  request_sites2[, "SiteID"]
 )
 
 # Process and plot MODIS data received.
@@ -69,6 +105,9 @@ MOD_processed <- AppEEARS_proc(
   plot = TRUE
 )
 
-saveRDS(NLDAS_processed, "C:/Users/hlowman/Documents/ContinentalRiverBiomass/data_raw/MODIS_processed_060222.rds")
+# Received the following error:
+# Error in ts[, "FparLai_QC_SCF_QC"] : incorrect number of dimensions
+
+# saveRDS(MOD_processed, "C:/Users/hlowman/Documents/ContinentalRiverBiomass/data_raw/MODIS_processed_072822.rds")
 
 # End of MODIS data download and processing script.

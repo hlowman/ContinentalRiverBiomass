@@ -68,6 +68,6 @@ NLDAS_list <- stringr::str_sub(list.files("C:/Users/hlowman/Documents/Continenta
 #Processing the downloaded NLDAS data
 NLDAS_processed <- StreamLightUtils::NLDAS_proc(read_dir = "C:/Users/hlowman/Documents/ContinentalRiverBiomass/data_raw/StreamLight_NLDAS", NLDAS_list)
 
-saveRDS(NLDAS_processed, "C:/Users/hlowman/Documents/ContinentalRiverBiomass/data_raw/NLDAS_processed_060222.rds")
+saveRDS(NLDAS_processed, "C:/Users/hlowman/Documents/ContinentalRiverBiomass/data_raw/NLDAS_processed_072822.rds")
 
 # End of NLDAS data download and processing script.

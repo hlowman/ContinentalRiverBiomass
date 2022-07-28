@@ -28,6 +28,10 @@ NWIS_207sites_Ndays <- readRDS("data_working/NWIS_207sites_Ndays.rds")
 # Load in dataset created in StreamLight_data_assembly script.
 SL_85sites <- readRDS("data_working/StreamLight_daily_85site_list.rds")
 
+############################
+## Join Allison + Phil's datasets
+############################
+
 ## Sites of interest that have StreamLight data
 sites <- NWIS_207sitesinfo_subset$site_name
 sites_files <- rep(NA, length(sites))
