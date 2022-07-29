@@ -44,7 +44,7 @@ for(i in 1:length(sites)){
 filenames <- intersect(sites_files, list.files(here("data_raw/individual_files")))
 
 ## Import StreamLight
-SL <- ldply(filenames, function(filename) {
+SL <- plyr::ldply(filenames, function(filename) {
   d <- read.table(here("data_raw", "individual_files", filename), header = T, sep = "\t")
   d$file <- filename
   return(d)
@@ -70,7 +70,7 @@ SL_daily <- lapply(SL_split, function(x) meandaily_PAR(x))
 ## Join and evaluate NAs
 ###########################
 # Appling SL data
-SL_App_df <- ldply(SL_daily, data.frame)
+SL_App_df <- plyr::ldply(SL_daily, data.frame)
 
 ## add site_name
 SL_App_df$site_name <- substr(SL_App_df$.id, 1, nchar(SL_App_df$.id)-17)
@@ -81,7 +81,7 @@ SL_App_df <- SL_App_df %>%
 
 
 # Savoy SL data
-SL_Sav_df <- ldply(SL_85sites, data.frame)
+SL_Sav_df <- plyr::ldply(SL_85sites, data.frame)
 
 # trim down to necessary columns
 SL_Sav_df <- SL_Sav_df %>%
