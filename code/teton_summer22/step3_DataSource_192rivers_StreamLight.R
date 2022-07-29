@@ -117,8 +117,8 @@ l <- lapply(l, function(x) seqFUN(x))
 # Create function for relative light and temperature as well as
 # standardized discharge columns relative to 10yr flood
 rel_LTQ <- function(x){
-  x$light_rel <- x$PAR_surface/max(x$PAR_surface)
-  x$temp_rel <- x$temp/max(x$temp)
+  x$light_rel <- x$PAR_surface/max(x$PAR_surface, na.rm = TRUE)
+  x$temp_rel <- x$temp/max(x$temp, na.rm = TRUE)
   x$Q_rel <- x$Q/x$RI_10yr_Q_cms # standardizing by 10 year flood in cubic meters/second
 
   x<-x[order(x$date),]
