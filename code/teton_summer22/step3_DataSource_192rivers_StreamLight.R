@@ -180,4 +180,16 @@ dat22_list <- split(dat22_df2, dat22_df2$.id)
 saveRDS(dat22_df2, "data_working/df_190sites_10yrQnorm_allSL.rds")
 saveRDS(dat22_list, "data_working/list_190sites_10yrQnorm_allSL.rds")
 
+# Also breaking the list up into 4 parts for parallel jobs.
+dat22_list_pt1 <- dat22_list[1:50]
+dat22_list_pt2 <- dat22_list[51:100]
+dat22_list_pt3 <- dat22_list[101:150]
+dat22_list_pt4 <- dat22_list[151:190]
+
+# Exporting these four lists
+saveRDS(dat22_list_pt1, "data_working/list_190sites_10yrQnorm_allSL_pt1.rds")
+saveRDS(dat22_list_pt2, "data_working/list_190sites_10yrQnorm_allSL_pt2.rds")
+saveRDS(dat22_list_pt3, "data_working/list_190sites_10yrQnorm_allSL_pt3.rds")
+saveRDS(dat22_list_pt4, "data_working/list_190sites_10yrQnorm_allSL_pt4.rds")
+
 # End of script.
