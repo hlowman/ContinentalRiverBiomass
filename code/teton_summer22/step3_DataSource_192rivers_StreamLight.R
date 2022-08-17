@@ -44,44 +44,51 @@ q10 <- read_csv("data_working/RI_10yr_flood_206riv.csv")
 ## Join GPP data and StreamLight
 data_join <- left_join(data, SL, by=c("site_name", "Date"))
 
+# But need to again remove days for which we don't have light estimates
+data_join_tidylight <- data_join %>%
+  filter(!is.na(PAR_surface))
+
 ## Join this dataset and q10
-data_join <- left_join(data_join, q10, by = c("site_name"))
+data_join2 <- left_join(data_join_tidylight, q10, by = c("site_name"))
 
 ## How many days of data per site per year
-data_join$year <- year(data_join$date)
+data_join2$year <- year(data_join2$date)
 
-data_siteyears <- data_join %>%
-  count(site_name, year) # 784 unique site-years
+data_siteyears <- data_join2 %>%
+  count(site_name, year) # 720 unique site-years
 
-sum(data_siteyears$n) # 219,871 days = 602.39 years
+sum(data_siteyears$n) # 203,312 days ~ 557 years
 
 ## Set any GPP < 0 to a small value between 0.05 to 0.13 g O2 m-2 d-1
-data_join[which(data_join$GPP < 0),]$GPP <- sample(exp(-3):exp(-2), 1)
+data_join2[which(data_join2$GPP < 0),]$GPP <- sample(exp(-3):exp(-2), 1)
 
 ## Create a GPP SD; SD = (CI - mean)/1.96
-data_join$GPP_sd <- (((data_join$GPP.upper - data_join$GPP)/1.96) + 
-                       ((data_join$GPP.lower - data_join$GPP)/-1.96))/2
+data_join2$GPP_sd <- (((data_join2$GPP.upper - data_join2$GPP)/1.96) + 
+                       ((data_join2$GPP.lower - data_join2$GPP)/-1.96))/2
 
 # Addition of time-series delineation column using seqFUN function created below
 # Borrowing this code from code/teton_moresites/Data_Availability_figures.R
 
+# Made sure the light data that needed to be removed (due to NAs and NaNs) was
+# taken care of above, since this would affect the gaps in data.
+
 # create placeholder columns for day to day differences and sequences
-data_join <- data_join %>%
+data_join2 <- data_join2 %>%
   mutate(diff_time = 0, seq = 1, new_e = 0)
 
 # Addition of site numbers for model for loops.
-sites <- unique(data_join$site_name)
-index <- seq(1:207)
+sites <- unique(data_join2$site_name)
+index <- seq(1:191)
 sites_index <- as.data.frame(cbind(index, sites))
 
-data_join <- left_join(data_join, sites_index, by = c("site_name" = "sites"))
+data_join2 <- left_join(data_join2, sites_index, by = c("site_name" = "sites"))
 
 # Addition of day numbers for further model indexing.
-data_join <- left_join(data_join, data_siteyears) %>%
+data_join2 <- left_join(data_join2, data_siteyears) %>%
   rename(Ndays = n)
 
 ## split list by ID
-l <- split(data_join, data_join$site_name)
+l <- split(data_join2, data_join2$site_name)
 
 # loop over the separate time sequences for a given site
 seqFUN <- function(d){
@@ -114,6 +121,9 @@ seqFUN <- function(d){
 # apply event delineation function
 l <- lapply(l, function(x) seqFUN(x))
 
+# Did spot check on a few sites to be sure (a) delineation function works and 
+# (b) no NAs or NaNs in light values.
+
 # Create function for relative light and temperature as well as
 # standardized discharge columns relative to 10yr flood
 rel_LTQ <- function(x){
@@ -131,53 +141,20 @@ dat22 <- lapply(l, function(x) rel_LTQ(x))
 # Turn back into a dataframe for final filtering steps.
 dat22_df <- plyr::ldply(dat22, data.frame)
 
-# No discharge data for nwis 03293500, so need to remove it.
-# But can't remove just NA records, because this will capture other
-# sites as well, so first need to take the mean RI_10yr_Q_cms at each site.
-means <- dat22_df %>%
-  group_by(site_name) %>%
-  summarize(meanQ = mean(RI_10yr_Q_cms, na.rm = TRUE)) %>%
-  ungroup()
-
-means_na <- means %>%
-  filter(is.na(meanQ))
-
-# Filter by missing mean.
+# No discharge data with which to calculate 10-year flood  for nwis 03293500, 
+# so need to remove it.
 dat22_df1 <- dat22_df %>%
   filter(site_name != "nwis_03293500")
 
 # Double check to be sure it was removed.
-length(unique(dat22_df$site_name)) # 207
-length(unique(dat22_df1$site_name)) # 206
-
-# For sites without StreamLight data, remove them.
-meansSL <- dat22_df1 %>%
-  group_by(site_name) %>%
-  summarize(meanSL = mean(PAR_surface, na.rm = TRUE)) %>%
-  ungroup()
-
-meansSL_na <- meansSL %>%
-  filter(is.na(meanSL)) # 16 sites
-
-# Make a list of these sites
-to_remove <- meansSL_na$site_name
-
-# And filter by this liste
-dat22_df2 <- dat22_df1 %>%
-  filter(!site_name %in% to_remove)
-
-# Double check to be sure the sites that should have been removed
-# were indeed removed.
-length(unique(dat22_df1$site_name)) # 206
-length(unique(dat22_df2$site_name)) # 190
-
-# And did a few spot checks for sites that shouldn't be in there.
+length(unique(dat22_df$site_name)) # 191
+length(unique(dat22_df1$site_name)) # 190
 
 # Create the final dataset in list form as well.
-dat22_list <- split(dat22_df2, dat22_df2$.id)
+dat22_list <- split(dat22_df1, dat22_df1$.id)
 
 # Exporting datasets, both formats
-saveRDS(dat22_df2, "data_working/df_190sites_10yrQnorm_allSL.rds")
+saveRDS(dat22_df1, "data_working/df_190sites_10yrQnorm_allSL.rds")
 saveRDS(dat22_list, "data_working/list_190sites_10yrQnorm_allSL.rds")
 
 # Also breaking the list up into 4 parts for parallel jobs.
