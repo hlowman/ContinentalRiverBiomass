@@ -95,12 +95,13 @@ SL_Sav_df <- SL_Sav_df %>%
 # And finally JOIN the two together.
 SL_joined_df <- full_join(SL_App_df, SL_Sav_df)
 
-# And create a list form as well.
-SL_joined_list <- split(SL_joined_df, SL_joined_df$site_name)
+# Remove NA and NaN values, because these will cause the model to break.
+SL_joined_clean <- SL_joined_df %>%
+  filter(!is.na(PAR_surface)) %>% # removes NAs
+  filter(!is.nan(PAR_surface)) # removes NaNs
 
-# Check for NA and NaN values.
-lapply(SL_joined_list, function(x) sum(is.na(x$PAR_surface))) # max ~30/site, most ~0-1/site
-lapply(SL_joined_list, function(x) sum(is.nan(x$PAR_surface))) # max ~30/site, most ~0-1/site
+# And create a list form as well.
+SL_joined_list <- split(SL_joined_clean, SL_joined_clean$site_name)
 
 ## Save both formats, df and list.
 
