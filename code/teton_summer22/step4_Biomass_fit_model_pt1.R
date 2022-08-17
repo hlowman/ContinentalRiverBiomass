@@ -27,9 +27,6 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
 ## Source data
 df <- readRDS("/project/modelscape/users/hlowman/jobscripts/teton_summer22/list_190sites_10yrQnorm_allSL_pt1.rds")
 
-# Remove site that is causing issues - nwis 02110500
-df <- df[-31]
-
 ####################
 ## Stan data prep ##
 ####################
@@ -69,6 +66,6 @@ PM_outputlist_Ricker <- lapply(stan_data_l,
                                                 init = init_Ricker,
                                                 control = list(max_treedepth = 12)))
 
-saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_summer22/teton_190rivers_output_pt1_2022_07_29.rds")
+saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_summer22/teton_190rivers_output_pt1_2022_08_17.rds")
 
 # End of script.
