@@ -29,7 +29,7 @@ lapply(c("tidyverse", "lubridate",
 # Import all five outputs from Teton. First four, because I'd split them
 # to run in parallel and the fifth because on site misbehaved on it's 
 # first run.
-data_out1 <- readRDS("data_teton/teton_190rivers_output_pt1_2022_07_29.rds")
+data_out1 <- readRDS("data_teton/teton_190rivers_output_pt1_2022_08_17.rds")
 data_out2 <- readRDS("data_teton/teton_190rivers_output_pt2_2022_07_29.rds")
 data_out3 <- readRDS("data_teton/teton_190rivers_output_pt3_2022_07_29.rds")
 data_out4 <- readRDS("data_teton/teton_190rivers_output_pt4_2022_07_29.rds")
