@@ -66,6 +66,6 @@ PM_outputlist_Ricker <- lapply(stan_data_l,
                                                 init = init_Ricker,
                                                 control = list(max_treedepth = 12)))
 
-saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_summer22/teton_190rivers_output_pt3_2022_07_29.rds")
+saveRDS(PM_outputlist_Ricker, "/project/modelscape/users/hlowman/jobresults/teton_summer22/teton_190rivers_output_pt3_2022_08_18.rds")
 
 # End of script.
