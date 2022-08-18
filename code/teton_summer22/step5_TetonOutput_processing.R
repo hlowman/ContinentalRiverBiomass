@@ -80,4 +80,7 @@ data_out_divs_all <- rbind(data_out_divs_all, data_out5_divs_df)
 # saveRDS(data_out_divs_all, 
 #         file = "data_working/teton_190rivers_model_divs_081622.rds")
 
+# And extract parameters at one site to be sure they're working.
+test_params <- extract(data_out1$nwis_01124000, c("r","lambda","s","c")) # :)
+
 # End of script.
