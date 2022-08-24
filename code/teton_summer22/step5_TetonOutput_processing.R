@@ -180,6 +180,85 @@ sites_to_remove <- unique(alln$site_name)
 
 #### Parameter Posteriors ####
 
+# Note - I crashed the desktop trying to run this, so only do the below
+# using the Pinyon server !!!
 
+# Going to create a function to pull out all iterations.
+
+extract_all <- function(df){
+  extract(df, c("r", "lambda", "s", "c", 
+                "B", "P", "pred_GPP", "sig_p", "sig_o"))
+}
+
+# And now map this to all output lists. 
+# (Be patient - this step takes a while.)
+data_out1_its <- map(data_out1, extract_all)
+data_out2_its <- map(data_out2, extract_all)
+data_out3_its <- map(data_out3, extract_all)
+data_out4_its <- map(data_out4, extract_all)
+
+# Saving these four out just in case because the load-in took so long.
+# saveRDS(data_out1_its,
+#        file = "data_working/teton_190rivers_model_all_params_all_iterations_082322pt1.rds")
+# saveRDS(data_out2_its,
+#        file = "data_working/teton_190rivers_model_all_params_all_iterations_082322pt2.rds")
+# saveRDS(data_out3_its,
+#        file = "data_working/teton_190rivers_model_all_params_all_iterations_082322pt3.rds")
+# saveRDS(data_out4_its,
+#        file = "data_working/teton_190rivers_model_all_params_all_iterations_082322pt4.rds")
+
+# So, these can't be bound together because I've extracted "B" and "pred_GPP"
+# which have different numbers of days and prevent the rbind() function below
+# from working.
+
+# Instead, I'm going to proceed with extracting only the "r" values for now.
+
+#### Load-in for Parameter Extraction ####
+
+# Load in the datasets saved above.
+data_out1_its <- readRDS("data_working/teton_190rivers_model_all_params_all_iterations_082322pt1.rds")
+data_out2_its <- readRDS("data_working/teton_190rivers_model_all_params_all_iterations_082322pt2.rds")
+data_out3_its <- readRDS("data_working/teton_190rivers_model_all_params_all_iterations_082322pt3.rds")
+data_out4_its <- readRDS("data_working/teton_190rivers_model_all_params_all_iterations_082322pt4.rds")
+
+#### r, lambda, c, s Parameters ####
+
+# Select the site-level parameter posterior predictions only.
+# create a function to do so.
+param_compile <- function(x){
+  data <- list(r = x$r,         # maximum growth rate
+               lambda = x$lambda,   # carrying capacity
+               c = x$c,        # critical discharge to scour biomass
+               s = x$s)     # sensitivity of persistence curve
+  
+  return(data)
+}
+
+# And apply to each of the four lists.
+data_out1_its_params <- lapply(data_out1_its, function(x) param_compile(x))
+data_out2_its_params <- lapply(data_out2_its, function(x) param_compile(x))
+data_out3_its_params <- lapply(data_out3_its, function(x) param_compile(x))
+data_out4_its_params <- lapply(data_out4_its, function(x) param_compile(x))
+
+# And create dataframes.
+data_out1_its_pdf <- map_df(data_out1_its_params, ~as.data.frame(.x), .id="site_name")
+data_out2_its_pdf <- map_df(data_out2_its_params, ~as.data.frame(.x), .id="site_name")
+data_out3_its_pdf <- map_df(data_out3_its_params, ~as.data.frame(.x), .id="site_name")
+data_out4_its_pdf <- map_df(data_out4_its_params, ~as.data.frame(.x), .id="site_name")
+
+# And join them together.
+data_out_its_pall <- rbind(data_out1_its_pdf, data_out2_its_pdf)
+data_out_its_pall <- rbind(data_out_its_pall, data_out3_its_pdf)
+data_out_its_pall <- rbind(data_out_its_pall, data_out4_its_pdf)
+
+# the above line of code sometimes doesn't play nicely if R has been running
+# for awhile, so the fix is to exit RStudio and reopen the project/file
+# OR, as is the case with this, where data_out has just taken an hour to load,
+# you should instead uncheck and re-check 'rstan' so that extract function
+# takes precedence over the same function in the 'tidyr' package.
+
+# Export data.
+# saveRDS(data_out_its_pall,
+#        file = "data_working/teton_190rivers_model_site_params_all_iterations_082422.rds")
 
 # End of script.
