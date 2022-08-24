@@ -7,7 +7,8 @@ library(tidyverse)
 library(rstan)
 library(shinystan)
 library(MCMCglmm)
-library(rethinking)
+# library(rethinking) - no longer works with 6/2022 version of R
+library(here)
 
 # Run each time you load in "rstan"
 rstan_options(auto_write=TRUE)
@@ -29,7 +30,7 @@ dat_stan <- list(
 
 # Linear model run
 # .stan file must end in a BLANK LINE, otherwise it will spit out an error
-test_run <- stan("code/practice_model.stan",
+test_run <- stan(file = "code/practice_model.stan",
                  data = dat_stan)
 # default of 4 chains, 2000 chains
 

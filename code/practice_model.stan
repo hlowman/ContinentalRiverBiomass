@@ -14,7 +14,7 @@
 
 // The input data is two vectors 'y' and 'x' of length 'N'.
 data {
-  int<lower=0> N; // # of observations
+  int<lower=0> N; // number of observations
   vector[N] y; // outcome
   vector[N] x; // predictor
 }
