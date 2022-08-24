@@ -18,7 +18,9 @@
 
 ## Load packages
 lapply(c("tidyverse", "lubridate", "data.table",
-         "rstan","bayesplot","shinystan", "here"), require, character.only=T)
+         "rstan","bayesplot","shinystan", "here",
+         "GGally", "glmmTMB", "MuMIn", "effects",
+         "DHARMa", "lme4", "multcomp", "patchwork"), require, character.only=T)
 
 #### Data Import ####
 
@@ -28,6 +30,9 @@ site <- fread("data_raw/site_data.tsv")
 
 # Load site-level parameters dataset with all iterations included.
 dat <- readRDS("data_working/teton_190rivers_model_site_params_all_iterations_082422.rds")
+
+# Load in original data fed into the model.
+dat_in <- readRDS("data_working/df_190sites_10yrQnorm_allSL.rds")
 
 #### Data Processing ####
 
@@ -52,9 +57,18 @@ dat_mean_r180 <- dat_mean_r %>%
 dat_exp <- left_join(dat_mean_r180, site_info, by = c("site_name"="SiteID"))
 dat_exp <- left_join(dat_exp, site)
 
+# Also need to compile stats from the original dataset.
+dat_in_summ <- dat_in %>%
+  group_by(site_name) %>%
+  summarize(PAR_surf_mean = mean(PAR_surface, na.rm = TRUE),
+            Q_mean = mean(Q, na.rm = TRUE))
+
+# And join this with the larger dataset.
+dat_exp <- left_join(dat_exp, dat_in_summ)
+
 #### Exploration ####
 
-# exploratory plots of rmax vs. lat, lon, elevation, dam, and canal influences
+# exploratory plots of rmax vs. lat, lon, elevation, dam, canal influences
 
 (fig1 <- ggplot(dat_exp, aes(x = Lat_WGS84, y = r_mean)) +
   geom_point(color = "#E29244", alpha = 0.75) +
@@ -86,13 +100,20 @@ dat_exp <- left_join(dat_exp, site)
 # unclear if there is any pattern w/ dams (which is still interesting!)
 
 (fig5 <- ggplot(dat_exp, aes(x = struct.canal_flag, y = r_mean)) +
-  geom_point(color = "#69B9FA", alpha = 0.75) +
+  geom_point(color = "#97C2E2", alpha = 0.75) +
   labs(x = "Distance to Nearest Ditch/Canal\nas Quantile of Daily Average Distance\nto 80% Oxygen Turnover\n0 = Near, 95 = Far",
        y = "Maximum Growth Rate (rmax)") + 
   theme_bw())
 # much lower influence of canals, but higher rmax with less canal influence
 
-(fig6 <- ggplot(dat_exp, aes(x = NHD_AREASQKM, y = r_mean)) +
+(fig6 <- ggplot(dat_exp, aes(x = struct.npdes_flag, y = r_mean)) +
+    geom_point(color = "#69B9FA", alpha = 0.75) +
+    labs(x = "Distance to Nearest NPDES\nas Quantile of Daily Average Distance\nto 80% Oxygen Turnover\n0 = Near, 95 = Far",
+         y = "Maximum Growth Rate (rmax)") + 
+    theme_bw())
+# much lower influence of canals, but higher rmax with less canal influence
+
+(fig7 <- ggplot(dat_exp, aes(x = NHD_AREASQKM, y = r_mean)) +
     geom_point(color = "#59A3F8", alpha = 0.75) +
     labs(x = "Watershed Area (sq km)",
          y = "Maximum Growth Rate (rmax)") + 
@@ -100,7 +121,7 @@ dat_exp <- left_join(dat_exp, site)
 # rmax appears to increase with declining watershed area, but that may
 # be due to clustering of smaller watersheds
 
-(fig7 <- ggplot(dat_exp, aes(x = NHD_RdDensCat, y = r_mean)) +
+(fig8 <- ggplot(dat_exp, aes(x = NHD_RdDensCat, y = r_mean)) +
     geom_point(color = "#4B8FF7", alpha = 0.75) +
     labs(x = "Road Density in Catchment",
          y = "Maximum Growth Rate (rmax)") + 
@@ -108,20 +129,94 @@ dat_exp <- left_join(dat_exp, site)
 # rmax appears to increase with lower density of roads
 # less roads = less flashy flows = higher rmax??
 
-(fig8 <- ggplot(dat_exp, aes(x = LU_category, y = r_mean)) +
+(fig9 <- ggplot(dat_exp, aes(x = LU_category, y = r_mean)) +
     geom_boxplot(color = "#5A7ECB", alpha = 0.75) +
     labs(x = "Land Use",
          y = "Maximum Growth Rate (rmax)") + 
     theme_bw())
 # higher rmax in agricultural/urban, lower in forested/grassland
 
-fig_compiled <- (fig1 + fig2) / (fig3 + fig4) / (fig5 + fig6) / (fig7 + fig8)
+(fig10 <- ggplot(dat_exp, aes(x = PAR_surf_mean, y = r_mean)) +
+    geom_point(color = "#6B6D9F", alpha = 0.75) +
+    labs(x = "Mean Daily PAR at Stream Surface",
+         y = "Maximum Growth Rate (rmax)") + 
+    theme_bw())
+# a cluster at the bottom, but also a hump shape centered about 500?
+
+(fig11 <- ggplot(dat_exp, aes(x = log10(Q_mean), y = r_mean)) +
+    geom_point(color = "#4C4976", alpha = 0.75) +
+    labs(x = "Log of Mean Daily Discharge",
+         y = "Maximum Growth Rate (rmax)") + 
+    theme_bw())
+# with increasing discharge, increasing rmax?
+
+(fig12 <- ggplot(dat_exp, aes(x = pre_mm_cyr, y = r_mean)) +
+    geom_point(color = "#151E2F", alpha = 0.75) +
+    labs(x = "Mean Annual Precipitation in the Catchment",
+         y = "Maximum Growth Rate (rmax)") + 
+    theme_bw())
+
+fig_compiled <- fig12 + fig1 + fig2 + fig3 + fig4 + fig5 + fig6 +
+  fig7 + fig8 + fig9 + fig10 + fig11 + plot_layout(ncol = 4)
 
 # export exploratory figures
-# ggsave(("figures/teton_summer22/rmax_exploration_figs.png"),
-#        width = 20,
-#        height = 32,
-#        units = "cm"
-# )
+ggsave(("figures/teton_summer22/rmax_exploration_figs.png"),
+       width = 32,
+       height = 28,
+       units = "cm"
+)
+
+#### Modeling ####
+
+# Select for only columns of interest
+covars <- dat_exp %>%
+  dplyr::select(site_name, Lat_WGS84, Lon_WGS84, ele_mt_cav, NHD_AREASQKM,
+         dis_m3_pyr, pre_mm_cyr, LU_category, NHD_RdDensCat,
+         PAR_surf_mean, Q_mean)
+
+#### Correlation ####
+
+# check correlation of variables independent of rmax
+(corr_sites <- ggpairs(covars %>% 
+                         dplyr::select(-c(site_name, Lat_WGS84, 
+                                          Lon_WGS84, ele_mt_cav))))
+
+# discharge is correlated with a few other things
+
+#### Linear Model ####
+
+# log-transform prior to running model
+dat_exp <- dat_exp %>%
+  mutate(log_r = log10(r_mean),
+         log_Q = log10(Q_mean)) %>%
+  # and make land use a factor
+  mutate(LU_cat_f = factor(LU_category))
+
+# full model
+m1 <- glmmTMB(log_r ~ NHD_AREASQKM + LU_cat_f + # subsidy vars
+                NHD_RdDensCat + PAR_surf_mean + log_Q, #disturbance vars
+              data = dat_exp)
+
+# bare bones model
+m2 <- glmmTMB(log_r ~ PAR_surf_mean + log_Q, #disturbance vars
+              data = dat_exp)
+
+AICc(m1, m2) # m1 better
+
+# Output of the model.
+# Note, summary() function looks at contrasts between singular effects.
+summary(m1)
+
+# discharge, road density, land use, and watershed size all significant
+
+# Checking residuals. - need to figure out how in new package
+#plot(m1, col = 1)
+#qqnorm(m1)
+
+# Post-hoc:
+mHSD <- glht(m1, linfct=mcp(LU_cat_f="Tukey")) # Run a Tukey's post hoc analysis on land use.
+summary(mHSD) 
+# forested and grassland both have significantly higher rmax values
+# than agricultural
 
 # End of script.
