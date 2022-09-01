@@ -60,7 +60,7 @@ c_summary <- dat_out_4 %>%
             q90_c = quantile(c, c(.90))) %>%
   ungroup()
 
-# Identify ten year flood values to back calculate c in cms.
+# Identify ten year flood values to back calculate c in cfs.
 Q10_4 <- dat_in %>%
   filter(site_name %in% my_list) %>%
   distinct(site_name,RI_10yr_Q,RI_10yr_Q_cms)
@@ -75,11 +75,18 @@ c_Q10_4 <- c_Q10_4 %>%
          q10_c_cms = q10_c * RI_10yr_Q_cms,
          q90_c_cms = q90_c * RI_10yr_Q_cms)
 
+# Convert to cfs.
+c_Q10_4 <- c_Q10_4 %>%
+  mutate(mean_c_cfs = mean_c_cms * 35.3147,
+         q50_c_cfs = q50_c_cms * 35.3147,
+         q10_c_cfs = q10_c_cms * 35.3147,
+         q90_c_cfs = q90_c_cms * 35.3147)
+
 # Trim and export data.
 c_Q10_4_trim <- c_Q10_4 %>%
-  select(site_name, mean_c_cms, q10_c_cms, q50_c_cms, q90_c_cms)
+  select(site_name, mean_c_cfs, q10_c_cfs, q50_c_cfs, q90_c_cfs)
 
 write_csv(c_Q10_4_trim, 
-          "data_working/critical_discharge_4_sites_083122.csv")
+          "data_working/critical_discharge_cfs_4_sites_090122.csv")
 
 # End of script.
