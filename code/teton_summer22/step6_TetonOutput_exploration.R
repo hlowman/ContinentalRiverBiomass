@@ -20,7 +20,8 @@
 lapply(c("tidyverse", "lubridate", "data.table",
          "rstan","bayesplot","shinystan", "here",
          "GGally", "glmmTMB", "MuMIn", "effects",
-         "DHARMa", "lme4", "multcomp", "patchwork"), require, character.only=T)
+         "DHARMa", "lme4", "multcomp", "patchwork",
+         "calecopal"), require, character.only=T)
 
 #### Data Import ####
 
@@ -41,6 +42,9 @@ dat_mean_r <- dat %>%
   group_by(site_name) %>%
   summarize(r_mean = mean(r, na.rm = TRUE)) %>%
   ungroup()
+
+# Export this data for future use.
+saveRDS(dat_mean_r, "data_working/teton_190rivers_mean_r_090122.rds")
 
 # And remove 10 sites that didn't pass the diagnostics checks:
 to_remove <- c("nwis_0165389205", "nwis_02171645", "nwis_02336300",
@@ -135,6 +139,24 @@ dat_exp <- left_join(dat_exp, dat_in_summ)
          y = "Maximum Growth Rate (rmax)") + 
     theme_bw())
 # higher rmax in agricultural/urban, lower in forested/grassland
+
+(fig9.2 <- ggplot(dat_exp, aes(x = LU_category, y = r_mean,
+                               color = LU_category)) +
+    geom_boxplot() +
+    geom_jitter(alpha = 0.75, width = 0.2) +
+    scale_color_manual(values = cal_palette("sierra1")) +
+    labs(x = "Land Use",
+         y = expression(Maximum~Growth~Rate~(r[max]))) + 
+    theme_bw() +
+    theme(legend.position = "none"))
+# revised boxplot for lab meeting
+
+# export exploratory figures
+ggsave(("figures/teton_summer22/rmax_landuse_fig.png"),
+       width = 12,
+       height = 9,
+       units = "cm"
+)
 
 (fig10 <- ggplot(dat_exp, aes(x = PAR_surf_mean, y = r_mean)) +
     geom_point(color = "#6B6D9F", alpha = 0.75) +
