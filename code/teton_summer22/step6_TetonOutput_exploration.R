@@ -65,7 +65,8 @@ dat_exp <- left_join(dat_exp, site)
 dat_in_summ <- dat_in %>%
   group_by(site_name) %>%
   summarize(PAR_surf_mean = mean(PAR_surface, na.rm = TRUE),
-            Q_mean = mean(Q, na.rm = TRUE))
+            Q_mean = mean(Q, na.rm = TRUE),
+            CV_Q = (sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE)))
 
 # And join this with the larger dataset.
 dat_exp <- left_join(dat_exp, dat_in_summ)
@@ -165,12 +166,35 @@ ggsave(("figures/teton_summer22/rmax_landuse_fig.png"),
     theme_bw())
 # a cluster at the bottom, but also a hump shape centered about 500?
 
+(fig10.2 <- ggplot(dat_exp, aes(x = PAR_surf_mean, y = r_mean)) +
+    geom_point(color = "#7AC9B7", alpha = 0.75, size = 3) +
+    labs(x = "Mean Daily PAR at Stream Surface",
+         y = expression(Maximum~Growth~Rate~(r[max]))) + 
+    theme_bw())
+# revised figure for lab meeting
+
 (fig11 <- ggplot(dat_exp, aes(x = log10(Q_mean), y = r_mean)) +
     geom_point(color = "#4C4976", alpha = 0.75) +
     labs(x = "Log of Mean Daily Discharge",
          y = "Maximum Growth Rate (rmax)") + 
     theme_bw())
 # with increasing discharge, increasing rmax?
+
+(fig11.2 <- ggplot(dat_exp, aes(x = CV_Q, y = r_mean)) +
+    geom_point(color = "#3793EC", alpha = 0.75, size = 3) +
+    labs(x = "Coefficient of Variation of Discharge",
+         y = expression(Maximum~Growth~Rate~(r[max])))+ 
+    theme_bw())
+# revised figure for lab meeting
+
+(bernhardt_lab_fig <- fig10.2 + fig11.2)
+
+# export exploratory figures
+ggsave(("figures/teton_summer22/rmax_light_cvq_fig.png"),
+       width = 18,
+       height = 9,
+       units = "cm"
+)
 
 (fig12 <- ggplot(dat_exp, aes(x = pre_mm_cyr, y = r_mean)) +
     geom_point(color = "#151E2F", alpha = 0.75) +
