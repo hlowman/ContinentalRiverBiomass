@@ -34,6 +34,7 @@ data_out4 <- readRDS("data_teton/teton_190rivers_output_pt4_2022_08_18.rds")
 
 # This data was part of a re-run where Q was normalized to Qmax instead of Q10yr flood.
 data_out5 <- readRDS("data_teton/teton_4rivers_output_2022_09_08.rds")
+data_out6 <- readRDS("data_teton/teton_2rivers_output_2022_09_12.rds")
 
 #### Divergences ####
 
@@ -200,8 +201,9 @@ data_out2_its <- map(data_out2, extract_all)
 data_out3_its <- map(data_out3, extract_all)
 data_out4_its <- map(data_out4, extract_all)
 
-# And for re-run
+# And for re-runs
 data_out5_its <- map(data_out5, extract_all)
+data_out6_its <- map(data_out6, extract_all)
 
 # Saving these four out just in case because the load-in took so long.
 # saveRDS(data_out1_its,
@@ -248,6 +250,7 @@ data_out4_its_params <- lapply(data_out4_its, function(x) param_compile(x))
 
 # And for re-run.
 data_out5_its_params <- lapply(data_out5_its, function(x) param_compile(x))
+data_out6_its_params <- lapply(data_out6_its, function(x) param_compile(x))
 
 # And create dataframes.
 data_out1_its_pdf <- map_df(data_out1_its_params, ~as.data.frame(.x), .id="site_name")
@@ -262,6 +265,7 @@ data_out_its_pall <- rbind(data_out_its_pall, data_out4_its_pdf)
 
 # And for re-run.
 data_out_its_4sites <- map_df(data_out5_its_params, ~as.data.frame(.x), .id="site_name")
+data_out_its_2sites <- map_df(data_out6_its_params, ~as.data.frame(.x), .id="site_name")
 
 # the above line of code sometimes doesn't play nicely if R has been running
 # for awhile, so the fix is to exit RStudio and reopen the project/file
@@ -276,5 +280,7 @@ data_out_its_4sites <- map_df(data_out5_its_params, ~as.data.frame(.x), .id="sit
 # saveRDS(data_out_its_4sites,
 #        file = "data_working/teton_4rivers_model_site_params_all_iterations_090822.rds")
 
+# saveRDS(data_out_its_2sites,
+#        file = "data_working/teton_2rivers_model_site_params_all_iterations_091222.rds")
 
 # End of script.
