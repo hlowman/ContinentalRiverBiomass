@@ -21,7 +21,7 @@ lapply(c("tidyverse", "lubridate", "data.table",
          "rstan","bayesplot","shinystan", "here",
          "GGally", "glmmTMB", "MuMIn", "effects",
          "DHARMa", "lme4", "multcomp", "patchwork",
-         "calecopal"), require, character.only=T)
+         "calecopal", "viridis"), require, character.only=T)
 
 #### Data Import ####
 
@@ -206,13 +206,66 @@ fig_compiled <- fig12 + fig1 + fig2 + fig3 + fig4 + fig5 + fig6 +
   fig7 + fig8 + fig9 + fig10 + fig11 + plot_layout(ncol = 4)
 
 # export exploratory figures
-ggsave(("figures/teton_summer22/rmax_exploration_figs.png"),
-       width = 32,
-       height = 28,
-       units = "cm"
-)
+# ggsave(("figures/teton_summer22/rmax_exploration_figs.png"),
+#        width = 32,
+#        height = 28,
+#        units = "cm"
+# )
 
-#### Modeling ####
+# Following a presentation to the Bernhardt lab group, I will be doing
+# some additional data exploration to see if some groupings of sites
+# can be determined for results reporting purposes.
+
+# Using original data, calculate the change in discharge and GPP
+# experienced at all sites.
+dat_q_gpp_ranges <- dat_in %>%
+  group_by(site_name) %>%
+  summarize(delta_Q = max(Q) - min(Q),
+            max_Q = max(Q),
+            delta_GPP = max(GPP) - min(GPP),
+            mean_GPP = mean(GPP),
+            max_GPP = max(GPP)) %>%
+  ungroup() %>%
+  mutate(fit = case_when(site_name %in% to_remove ~ "Fail",
+                         TRUE ~ "Pass"))
+
+(ggplot(dat_q_gpp_ranges, aes(color = fit,
+                              x = log10(delta_Q), 
+                              y = delta_GPP)) +
+    geom_point(size = 2, alpha = 0.75) +
+    labs(x = "Log of Change in Discharge",
+         y = "Change in GPP") +
+    theme_bw())
+# Hmmm, there doesn't appear to be an immediate "clustering" per se
+# but the "failing" sites that don't pass the modeling diagnostic filter
+# are all low change in GPP sites.
+
+(ggplot(dat_q_gpp_ranges, aes(color = max_GPP,
+                              x = log10(delta_Q), 
+                              y = delta_GPP)) +
+    geom_point(size = 3, alpha = 0.75) +
+    labs(x = "Log of Change in Discharge",
+         y = "Change in GPP",
+         color = "Max GPP") +
+    theme_bw())
+
+# Attach dataset above to dataset of mean r values
+dat_r <- readRDS("data_working/teton_190rivers_mean_r_090122.rds")
+
+dat_r_and_ranges <- left_join(dat_q_gpp_ranges, dat_r)
+
+(ggplot(dat_r_and_ranges %>%
+          filter(fit == "Pass") %>%
+          filter(r_mean > 0), 
+        aes(color = r_mean, x = log10(max_Q), y = log10(max_GPP))) +
+    geom_point(size = 5, alpha = 0.75) +
+    scale_color_viridis() +
+    labs(x = "Log of Maximum Discharge",
+         y = "Log of Maximum GPP",
+         color = "Maximum Growth Rate") +
+    theme_bw())
+
+#### Prep for Post-hoc Modeling ####
 
 # Select for only columns of interest
 covars <- dat_exp %>%
