@@ -153,11 +153,11 @@ dat_exp <- left_join(dat_exp, dat_in_summ)
 # revised boxplot for lab meeting
 
 # export exploratory figures
-ggsave(("figures/teton_summer22/rmax_landuse_fig.png"),
-       width = 12,
-       height = 9,
-       units = "cm"
-)
+# ggsave(("figures/teton_summer22/rmax_landuse_fig.png"),
+#        width = 12,
+#        height = 9,
+#        units = "cm"
+# )
 
 (fig10 <- ggplot(dat_exp, aes(x = PAR_surf_mean, y = r_mean)) +
     geom_point(color = "#6B6D9F", alpha = 0.75) +
@@ -190,11 +190,31 @@ ggsave(("figures/teton_summer22/rmax_landuse_fig.png"),
 (bernhardt_lab_fig <- fig10.2 + fig11.2)
 
 # export exploratory figures
-ggsave(("figures/teton_summer22/rmax_light_cvq_fig.png"),
-       width = 18,
-       height = 9,
-       units = "cm"
-)
+# ggsave(("figures/teton_summer22/rmax_light_cvq_fig.png"),
+#        width = 18,
+#        height = 9,
+#        units = "cm"
+# )
+
+(fig11.3 <- ggplot(dat_exp %>%
+                     mutate(order = factor(NHD_STREAMORDE)) %>%
+                     drop_na(order), 
+                   aes(x = order, y = r_mean)) +
+    geom_boxplot(color = "#7AC9B7") +
+    geom_jitter(color = "#7AC9B7", width = 0.2, alpha = 0.75) +
+    labs(x = "Stream Order",
+         y = expression(Maximum~Growth~Rate~(r[max])))+ 
+    theme_bw())
+# revised figure for seminar
+
+(seminar_fig <- fig11.2 + fig11.3)
+
+# export exploratory figures
+# ggsave(("figures/teton_summer22/rmax_cvq_order_fig.png"),
+#        width = 18,
+#        height = 9,
+#        units = "cm"
+# )
 
 (fig12 <- ggplot(dat_exp, aes(x = pre_mm_cyr, y = r_mean)) +
     geom_point(color = "#151E2F", alpha = 0.75) +
