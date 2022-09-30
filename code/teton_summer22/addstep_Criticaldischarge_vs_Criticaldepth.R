@@ -180,7 +180,7 @@ c_summary_max <- dat_out_max_6 %>%
             q97.5_c = quantile(c, c(.975))) %>%
   ungroup()
 
-# Identify ten year flood values to back calculate c in cfs.
+# Identify maximum discharge values to back calculate c in cfs.
 Qmax_4 <- dat_in2 %>%
   filter(site_name %in% my_list) %>%
   distinct(site_name,maxQ)
@@ -327,16 +327,18 @@ Ricker_sim5 <- Ricker_sim_fxn(data_out6$nwis_0165389205, dat_in3list$nwis_016538
 Ricker_sim6 <- Ricker_sim_fxn(data_out6$nwis_05515500, dat_in3list$nwis_05515500)
 
 # Save simulations.
-saveRDS(Ricker_sim1, "data_working/Sim_Ricker_01645704_2022_09_26.rds")
-saveRDS(Ricker_sim2, "data_working/Sim_Ricker_05451210_2022_09_26.rds")
-saveRDS(Ricker_sim3, "data_working/Sim_Ricker_05524500_2022_09_26.rds")
-saveRDS(Ricker_sim4, "data_working/Sim_Ricker_05579630_2022_09_26.rds")
-saveRDS(Ricker_sim5, "data_working/Sim_Ricker_0165389205_2022_09_26.rds")
-saveRDS(Ricker_sim6, "data_working/Sim_Ricker_05515500_2022_09_26.rds")
+# saveRDS(Ricker_sim1, "data_working/Sim_Ricker_01645704_2022_09_26.rds")
+# saveRDS(Ricker_sim2, "data_working/Sim_Ricker_05451210_2022_09_26.rds")
+# saveRDS(Ricker_sim3, "data_working/Sim_Ricker_05524500_2022_09_26.rds")
+# saveRDS(Ricker_sim4, "data_working/Sim_Ricker_05579630_2022_09_26.rds")
+# saveRDS(Ricker_sim5, "data_working/Sim_Ricker_0165389205_2022_09_26.rds")
+# saveRDS(Ricker_sim6, "data_working/Sim_Ricker_05515500_2022_09_26.rds")
 
 # And for each day at each site, I would like to calculate
 # - mean GPP
 # - 97.5% and 2.5% percentiles
+
+#### Difficult Run, VA ####
 
 # Going to pull out just the first site
 data_sim1_gpp <- Ricker_sim1[[1]]
@@ -353,15 +355,22 @@ orig_gpp1 <- dat_in2list$nwis_01645704$GPP
 # Pull out original dates used
 date1 <- dat_in2list$nwis_01645704$date
 
+# Pull out original discharge values used
+discharge1 <- dat_in2list$nwis_01645704$Q
+
 # Bind into a single dataframe
 df_sim1_pred <- as.data.frame(cbind(median_gpp1, lowerci_gpp1, upperci_gpp1))
 
 df_pred1 <- df_sim1_pred %>%
   mutate(date = ymd(date1),
-         orig_gpp = orig_gpp1)
+         orig_gpp = orig_gpp1,
+         discharge = discharge1)
 
 # calculate RMSE
 mean_sim1_rmse <- mean(data_sim1_rmse)
+
+# calculate normalized RMSE
+nrmse1 <- mean_sim1_rmse/(max(df_pred1$orig_gpp)-min(df_pred1$orig_gpp))
 
 # And plot
 (gpp_plot1 <- ggplot(df_pred1, aes(date, orig_gpp)) +
@@ -369,19 +378,44 @@ mean_sim1_rmse <- mean(data_sim1_rmse)
     geom_line(aes(date, median_gpp1), color = "darkolivegreen2", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Difficult Run, Fairfax, VA") +
+         title = "Difficult Run, Fairfax, VA\nnwis 01645704") +
     geom_ribbon(aes(ymin = lowerci_gpp1,
                     ymax = upperci_gpp1),
                 fill = "darkolivegreen2",
                 alpha = 0.3) +
     annotate(geom = "text", x = date("2016-07-01"), y = 10, 
-             label = paste("RMSE = ", round(mean_sim1_rmse, digits = 2), sep = "")) +
+             label = paste("Normalized RMSE = ", 
+                           round(nrmse1, digits = 2), 
+                           sep = "")) +
     theme(legend.position = "none",
           panel.background = element_rect(color = "black", fill=NA, size=1),
           axis.title.x = element_text(size=12), 
           axis.text.x = element_text(size=12),
           axis.text.y = element_text(size=12),
           axis.title.y = element_text(size=12)))
+
+# Plot hydrograph as well.
+(gpp_plot1.2 <- ggplot(df_pred1, aes(date, discharge1)) +
+    geom_line(aes(date, discharge1), color = "deepskyblue4", size = 1.2) +
+    labs(y = "Discharge (cms)",
+         x = "Date") +
+    theme(legend.position = "none",
+          panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.title.x = element_text(size=12), 
+          axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12),
+          axis.title.y = element_text(size=12)))
+
+(VA_plot <- gpp_plot1 / gpp_plot1.2)
+
+# Export to send to Jud.
+# ggsave(("figures/teton_summer22/GPP_and_predGPP_difficultrun.png"),
+#        width = 30,
+#        height = 20,
+#        units = "cm"
+# )
+
+#### South Fork, IA ####
 
 # Going to pull out just the second site
 data_sim2_gpp <- Ricker_sim2[[1]]
@@ -398,15 +432,22 @@ orig_gpp2 <- dat_in2list$nwis_05451210$GPP
 # Pull out original dates used
 date2 <- dat_in2list$nwis_05451210$date
 
+# Pull out original discharge values used
+discharge2 <- dat_in2list$nwis_05451210$Q
+
 # Bind into a single dataframe
 df_sim2_pred <- as.data.frame(cbind(median_gpp2, lowerci_gpp2, upperci_gpp2))
 
 df_pred2 <- df_sim2_pred %>%
   mutate(date = ymd(date2),
-         orig_gpp = orig_gpp2)
+         orig_gpp = orig_gpp2,
+         discharge = discharge2)
 
 # calculate RMSE
 mean_sim2_rmse <- mean(data_sim2_rmse)
+
+# calculate normalized RMSE
+nrmse2 <- mean_sim2_rmse/(max(df_pred2$orig_gpp)-min(df_pred2$orig_gpp))
 
 # And plot
 (gpp_plot2 <- ggplot(df_pred2, aes(date, orig_gpp)) +
@@ -414,19 +455,44 @@ mean_sim2_rmse <- mean(data_sim2_rmse)
     geom_line(aes(date, median_gpp2), color = "darkolivegreen2", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "South Fork Iowa River, New Providence, IA") +
+         title = "South Fork Iowa River, New Providence, IA\nnwis 05451210") +
     geom_ribbon(aes(ymin = lowerci_gpp2,
                     ymax = upperci_gpp2),
                 fill = "darkolivegreen2",
                 alpha = 0.3) +
     annotate(geom = "text", x = date("2010-09-01"), y = 20, 
-             label = paste("RMSE = ", round(mean_sim2_rmse, digits = 2), sep = "")) +
+             label = paste("Normalized RMSE = ", 
+                           round(nrmse2, digits = 2), 
+                           sep = "")) +
     theme(legend.position = "none",
           panel.background = element_rect(color = "black", fill=NA, size=1),
           axis.title.x = element_text(size=12), 
           axis.text.x = element_text(size=12),
           axis.text.y = element_text(size=12),
           axis.title.y = element_text(size=12)))
+
+# Plot hydrograph as well.
+(gpp_plot2.2 <- ggplot(df_pred2, aes(date, discharge)) +
+    geom_line(aes(date, discharge), color = "deepskyblue4", size = 1.2) +
+    labs(y = "Discharge (cms)",
+         x = "Date") +
+    theme(legend.position = "none",
+          panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.title.x = element_text(size=12), 
+          axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12),
+          axis.title.y = element_text(size=12)))
+
+(IA_plot <- gpp_plot2 / gpp_plot2.2)
+
+# Export to send to Jud.
+# ggsave(("figures/teton_summer22/GPP_and_predGPP_southfork.png"),
+#        width = 30,
+#        height = 20,
+#        units = "cm"
+# )
+
+#### Iroquois River, IN ####
 
 # Going to pull out just the third site
 data_sim3_gpp <- Ricker_sim3[[1]]
@@ -473,6 +539,8 @@ mean_sim3_rmse <- mean(data_sim3_rmse)
           axis.text.y = element_text(size=12),
           axis.title.y = element_text(size=12)))
 
+#### Kickapoo Creek, IL ####
+
 # Going to pull out just the fourth site
 data_sim4_gpp <- Ricker_sim4[[1]]
 data_sim4_rmse <- Ricker_sim4[[2]]
@@ -518,6 +586,7 @@ mean_sim4_rmse <- mean(data_sim4_rmse)
           axis.text.y = element_text(size=12),
           axis.title.y = element_text(size=12)))
 
+#### Accotink Creek, VA ####
 # Going to pull out just the fifth site
 data_sim5_gpp <- Ricker_sim5[[1]]
 data_sim5_rmse <- Ricker_sim5[[2]]
@@ -533,15 +602,22 @@ orig_gpp5 <- dat_in3list$nwis_0165389205$GPP
 # Pull out original dates used
 date5 <- dat_in3list$nwis_0165389205$date
 
+# Pull out original discharge used
+discharge5 <- dat_in3list$nwis_0165389205$Q
+
 # Bind into a single dataframe
 df_sim5_pred <- as.data.frame(cbind(median_gpp5, lowerci_gpp5, upperci_gpp5))
 
 df_pred5 <- df_sim5_pred %>%
   mutate(date = ymd(date5),
-         orig_gpp = orig_gpp5)
+         orig_gpp = orig_gpp5,
+         discharge = discharge5)
 
 # calculate RMSE
 mean_sim5_rmse <- mean(data_sim5_rmse)
+
+# calculate normalized RMSE
+nrmse5 <- mean_sim5_rmse/(max(df_pred5$orig_gpp)-min(df_pred5$orig_gpp))
 
 # And plot
 (gpp_plot5 <- ggplot(df_pred5, aes(date, orig_gpp)) +
@@ -549,19 +625,44 @@ mean_sim5_rmse <- mean(data_sim5_rmse)
     geom_line(aes(date, median_gpp5), color = "darkolivegreen2", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Accotink Creek, Ranger Road, VA") +
+         title = "Accotink Creek, Ranger Road, VA\nnwis 0165389205") +
     geom_ribbon(aes(ymin = lowerci_gpp5,
                     ymax = upperci_gpp5),
                 fill = "darkolivegreen2",
                 alpha = 0.3) +
     annotate(geom = "text", x = date("2013-12-01"), y = 6.5, 
-             label = paste("RMSE = ", round(mean_sim5_rmse, digits = 2), sep = "")) +
+             label = paste("Normalized RMSE = ", 
+                           round(nrmse5, digits = 2), 
+                           sep = "")) +
     theme(legend.position = "none",
           panel.background = element_rect(color = "black", fill=NA, size=1),
           axis.title.x = element_text(size=12), 
           axis.text.x = element_text(size=12),
           axis.text.y = element_text(size=12),
           axis.title.y = element_text(size=12)))
+
+# Plot hydrograph as well.
+(gpp_plot5.2 <- ggplot(df_pred5, aes(date, discharge)) +
+    geom_line(aes(date, discharge), color = "deepskyblue4", size = 1.2) +
+    labs(y = "Discharge (cms)",
+         x = "Date") +
+    theme(legend.position = "none",
+          panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.title.x = element_text(size=12), 
+          axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12),
+          axis.title.y = element_text(size=12)))
+
+(VA_plot2 <- gpp_plot5 / gpp_plot5.2)
+
+# Export to send to Jud.
+# ggsave(("figures/teton_summer22/GPP_and_predGPP_accotink.png"),
+#        width = 30,
+#        height = 20,
+#        units = "cm"
+# )
+
+#### Kankakee River, IN ####
 
 # Going to pull out just the sixth site
 data_sim6_gpp <- Ricker_sim6[[1]]
@@ -610,10 +711,10 @@ mean_sim6_rmse <- mean(data_sim6_rmse)
 
 (gpp_pred_fig <- gpp_plot1 / gpp_plot2 / gpp_plot3 / gpp_plot4 / gpp_plot5 / gpp_plot6)
 
-ggsave(("figures/teton_summer22/GPP_and_predGPP_6site.png"),
-       width = 40,
-       height = 60,
-       units = "cm"
-)
+# ggsave(("figures/teton_summer22/GPP_and_predGPP_6site.png"),
+#        width = 40,
+#        height = 60,
+#        units = "cm"
+# )
 
 # End of script.
