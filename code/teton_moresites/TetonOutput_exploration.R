@@ -744,6 +744,81 @@ jasm_fig <- (fig_light1_jasm + fig_q2_jasm) / (fig1_jasm + fig_q10_c_jasm)
 
 #### STOPPED HERE ON APRIL 29 ####
 
+# Some additional figures for job applications
+
+# Revised map:
+
+# site map colored by r
+# (sitemap2_job <- ggplot(states_sf) + # base plot
+#    geom_polygon(aes(x = long, y = lat, group = group), 
+#                 fill = "white", color = "black") + # map of states
+#    geom_point(data = sites_sfp %>% 
+#                 filter(r_mean > 0) %>%
+#                 filter(site_name != "nwis_15298040"), 
+#               # removing 1 alaska site for now
+#               aes(x = lon, y = lat, fill = r_mean, size = r_mean),
+#               shape = 21, alpha = 1) + # map of sites
+#    scale_fill_gradient(low="white", high='lightseagreen')+ #'#4CA49E'
+#    theme_classic() + # remove grid
+#    labs(size = expression(r["max"]),
+#         #fill = expression(r["max"]),
+#         x = "Longitude",
+#         y = "Latitude") +
+#    theme(legend.position = "none", # reposition legend
+#          text = element_text(family = "serif", size = 40)) + # fix fonts
+#    coord_map(projection = "albers", lat0 = 39, lat1 = 45))
+
+# Revised version of rmax vs. CVQ:
+
+# C.V. Q vs. r
+(fig_q2_job <- data_cvq_paramsp %>%
+   filter(r_mean > 0) %>%
+   ggplot(aes(x = q_cv, y = r_mean)) +
+   geom_point(size = 3) +
+   labs(x = expression(CV["Q "] (m^3/s))) +
+   labs(y = bquote(Maximum~Growth~Rate~(r[max]))) +
+   
+   #bquote(Vc[max](mu~mol ~CO[2]~ m^-2~s^-1))
+ 
+   theme_bw() +
+   theme(text = element_text(family = "serif", size = 40)))
+
+# Revised version of c vs. land use:
+
+# Qc:Q10yr vs. land use
+
+# need to import dataset with LU_category
+site_info <- read_csv("data_raw/GRDO_GEE_HA_NHD_2021_02_07.csv")
+
+all_info <- left_join(Q_info2, site_info, by = c("site_name" = "SiteID"))
+
+(fig_q10_c_job <- full_join(data_params_meanp, all_info) %>%
+    filter(r_mean > 0) %>%
+    filter(LU_category != "water") %>%
+    filter(LU_category != "wetland") %>%
+    ggplot(aes(x = LU_category, 
+               y = (c_mean*maxQ)/RI_10yr_Q_cms)) +
+    geom_boxplot(aes(fill = LU_category)) +
+    scale_fill_manual(values = c("#BEAB91", "#5A870A", "#BDD0A2", "#555B53")) +
+    geom_hline(yintercept = 1) +
+    labs(x = "Land Use",
+         y = expression(' '~Q[c]~':'~Q[10]~' ')) +
+    theme_bw() +
+    theme(text = element_text(family = "serif", size = 40),
+          legend.position = "none"))
+
+# Combine the figures and export
+
+(fig_job_app <- fig_q2_job + fig_q10_c_job +
+  plot_annotation(tag_levels = "A") +
+  plot_layout(nrow = 2))
+
+ggsave(("job_app_figure.png"),
+       path = "figures/teton_moresites",
+       width = 25,
+       height = 40,
+       units = "cm")
+
 #### Critical Discharge / Sensitivity of Persistence Curve ####
 
 # and exploring disturbance metrics
