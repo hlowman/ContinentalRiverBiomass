@@ -150,7 +150,7 @@ NWIS_sub$year <- year(NWIS_sub$date)
 
 ## count days per year
 dat_per_year <- NWIS_sub %>%
-  count(site_name, year)
+  dplyr::count(site_name, year)
 
 hist(dat_per_year$n)
 median(dat_per_year$n) # 248.5
@@ -294,11 +294,11 @@ lapply(site_sub_list, function(x) ggsave(plot = plotting_covar(x),
 
 ## NWIS site subset
 saveRDS(site_subset, 
-        "data_working/NWIS_198sites_101022.rds") # GPP data
+        "data_working/NWIS_198sites_101222.rds") # GPP data
 saveRDS(TS_site_subset, 
-        "data_working/NWIS_198sitesinfo_101022.rds") # Site data
+        "data_working/NWIS_198sitesinfo_101222.rds") # Site data
 saveRDS(site_subset_numdays,
-        "data_working/NWIS_198sites_101022.rds") # Gaps in data
+        "data_working/NWIS_198sitesNdays_101222.rds") # Gaps in data
 
 # NOTE: THERE IS NO DAM FILTER.
 
