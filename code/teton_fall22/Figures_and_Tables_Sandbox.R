@@ -18,6 +18,9 @@ lapply(c("tidyverse", "cowplot", "gt",
 # Site information
 site_info <- readRDS("data_working/NWIS_198sitesinfo_101222.rds")
 
+# Unedited site information from hypoxia project.
+hypox_info <- read_csv("data_raw/GRDO_GEE_HA_NHD_2021_02_07.csv")
+
 # Raw data used to fit models on Teton.
 site_dat <- readRDS("data_working/df_182sites_Qmaxnorm_allSL.rds")
 
@@ -25,6 +28,9 @@ site_dat <- readRDS("data_working/df_182sites_Qmaxnorm_allSL.rds")
 
 # Join together site info and raw data.
 site_all <- left_join(site_dat, site_info)
+
+# Also join with all site info courtesy of hypoxia dataset.
+site_all <- left_join(site_all, hypox_info, by = c("site_name" = "SiteID"))
 
 # Going to make a gt summary table of the sites used for the run on 10/12/22.
 # These will calculate mean values at the timescales denoted below.
@@ -34,13 +40,19 @@ site_summary <- site_all %>%
             temp_mean = mean(temp, na.rm = TRUE), # daily
             Q_mean = mean(Q, na.rm = TRUE), # daily
             light_mean = mean(PAR_surface, na.rm = TRUE), # daily
+            #ws_mean = mean(NHD_AREASQKM, na.rm = TRUE), # by site
             records = n()) %>% # total
   ungroup()
 
 # Pivot for easier creation of the gt table.
 summary_pivot <- site_summary %>%
   pivot_longer(!site_name, names_to = "covariate", values_to = "value") %>%
-  group_by(covariate) %>%
+  mutate(cov_f = factor(covariate, levels = c("records",
+                                              "GPP_mean",
+                                              "Q_mean",
+                                              "light_mean",
+                                              "temp_mean"))) %>%
+  group_by(cov_f) %>%
   summarize(Minimum = round(min(value, na.rm = TRUE), digits = 2),
             Median = round(median(value, na.rm = TRUE), digits = 2), 
             Mean = round(mean(value, na.rm = TRUE), digits = 2), 
@@ -48,14 +60,18 @@ summary_pivot <- site_summary %>%
   ungroup() %>%
   # Adding new column for easier formatting
   # With unicode versions of super/subscripts pasted in
-  mutate(Covariate = c("Mean Daily Gross Primary Production (gO₂ m⁻² d⁻¹)",
-                       "Mean Daily Light Availability (µmol m⁻² s⁻¹)",
+  mutate(Covariate = c("Total Number of Daily Records",
+                       "Mean Daily Gross Primary Production (gO₂ m⁻² d⁻¹)",
                        "Mean Daily Discharge (m³ s⁻¹)",
-                       "Total Number of Daily Records",
+                       "Mean Daily Light Availability (µmol m⁻² s⁻¹)",
                        "Mean Daily Temperature (°C)"))
 
+# Turns out the hypoxia dataset doesn't have the Miss. R. watershed area size,
+# which was obviously our maximum but wasn't appearing as such, so I'm leaving
+# watershed size off of the summary statistics table for now.
+
 ( summary_table <- summary_pivot %>%
-    select(!covariate) %>% # remove old covariate column
+    select(!cov_f) %>% # remove old covariate column
   # Base table creation/call
   gt(rowname_col = "Covariate") %>%
     # Add helpful (sub)titles
