@@ -57,6 +57,7 @@ sum(data_siteyears$n) # 196,963 days ~ 540 years
 data_join_tidylight[which(data_join_tidylight$GPP < 0),]$GPP <- sample(exp(-3):exp(-2), 1)
 
 ## Create a GPP SD; SD = (CI - mean)/1.96
+# Assuming a normal distribution: mean - 1.96*SD = lower CI (2.5%tile)
 data_join_tidylight$GPP_sd <- (((data_join_tidylight$GPP.upper - data_join_tidylight$GPP)/1.96) + 
                        ((data_join_tidylight$GPP.lower - data_join_tidylight$GPP)/-1.96))/2
 
