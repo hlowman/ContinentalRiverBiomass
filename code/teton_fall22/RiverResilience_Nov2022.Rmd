@@ -72,11 +72,11 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "summary_data_tabl
 
 ##### Revised Results
 
-Figures of all available covariates (discharge, temperature, light) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and between parameters and stream order (*H~1~*).
+Figures of all available covariates (discharge, temperature, light) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and site covariates.
 
-```{r results1, fig.align = "center", fig.cap = "Figure 7. Plots of mean maximum growth rates (r) and the log of mean carrying capacities (K) for individual sites colored by (A) the model structure used and (B) Pearson's correlation coefficient values. Note, 9 sites with negative mean r and K values have been removed.", out.width = "100%", echo = FALSE}
+```{r results1, fig.align = "center", fig.cap = "Figure 4. Plots of mean maximum growth rates as (A) an overall distribution across all sites and (B) versus the coefficient of variation in discharge.", out.width = "100%", echo = FALSE}
 
-knitr::include_graphics(here::here("figures", "teton_moresites", "r_k_allsites_bothmodels_cc.jpg"))
+knitr::include_graphics(here::here("figures", "teton_fall22", "r_cvQ.jpg"))
 
 ```
 
