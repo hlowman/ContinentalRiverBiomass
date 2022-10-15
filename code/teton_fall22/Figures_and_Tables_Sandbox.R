@@ -82,8 +82,8 @@ summary_pivot <- site_summary %>%
 # everything at a daily scale to make things more comparable.
 
 # Export table.
-gtsave(summary_table,
-       "summary_data_table_101222.png",
-       path = "figures/teton_fall22") 
+# gtsave(summary_table,
+#        "summary_data_table_101222.png",
+#        path = "figures/teton_fall22") 
             
 # End of script.

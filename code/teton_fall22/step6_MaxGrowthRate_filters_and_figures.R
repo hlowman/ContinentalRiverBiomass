@@ -32,10 +32,10 @@ site <- fread("data_raw/site_data.tsv")
 dat_in <- readRDS("data_working/list_182sites_Qmaxnorm_allSL.rds")
 
 # Load in model diagnostics for site-level parameters.
-dat_diag <- readRDS("data_working/teton_182rivers_model_diags_101422.rds")
+dat_diag <- readRDS("data_working/teton_182rivers_model_diags_101522.rds")
 
 # Load in list containing all iterations of site-level parameters.
-dat_out <- readRDS("data_working/teton_182rivers_model_params_all_iterations_101422.rds")
+dat_out <- readRDS("data_working/teton_182rivers_model_params_all_iterations_101522.rds")
 
 #### Data Prep ####
 
@@ -58,7 +58,7 @@ dat_out_rmean <- dat_out_df %>%
 
 # And remove negative values.
 dat_out_rmean_pos <- dat_out_rmean %>%
-  filter(r_mean > 0) # Removes 7 sites.
+  filter(r_mean > 0) # Removes 12 sites.
 
 #### Rhat filter for rmax ####
 
@@ -68,7 +68,7 @@ dat_out_rmean_pos <- dat_out_rmean %>%
 
 dat_diag_rfilter1 <- dat_diag %>%
   filter(parameter == "r") %>%
-  filter(Rhat < 1.05) # 6 sites drop off
+  filter(Rhat < 1.05) # 12 sites drop off
 
 #### normRMSE filter ####
 
@@ -180,7 +180,8 @@ dat_rmse_rfilter2 <- nRMSE_60sitesdf %>%
 
 # Next, append the positive rmax values to the Rhat filter to remove
 # appropriate sites.
-dat_out_rmean_Rhat <- inner_join(dat_diag_rfilter1, dat_out_rmean_pos)
+dat_out_rmean_Rhat <- inner_join(dat_diag_rfilter1, dat_out_rmean_pos) 
+# 159 sites remaining
 
 # Then, remove any sites based on RMSE values.
 #dat_out_rmean_Rhat_rmse <- left_join(dat_rmse_rfilter2, dat_out_rmean_Rhat)
@@ -199,23 +200,72 @@ dat_out_yas <- left_join(dat_out_rmean_Rhat, dat_in_cvq)
 (fig1 <- ggplot(dat_out_yas, aes(x = r_mean)) +
   geom_histogram(bins = 60, alpha = 0.8, 
                  fill = "#A99CD9", color = "#A99CD9") +
-  labs(x = "Maximum Growth Rate (r)",
+  labs(x = expression(Maximum~Growth~Rate~(r[max])),
        y = "Count") +
   theme_bw())
 
 # CV of Discharge vs. rmax:
 (fig2 <- ggplot(dat_out_yas, aes(x = cvQ, y = r_mean)) +
-    geom_point(alpha = 0.8, fill = "808C91") +
-    labs(x = "Coefficient of Variation in Discharge (CVq)",
-         y = "Maximum Growth Rate (r)") +
-    theme_bw())
+    geom_point(alpha = 0.8, size = 3) +
+    labs(x = expression(CV[Q]),
+         y = expression(r[max])) +
+    theme_bw() +
+    theme(text = element_text(family = "serif", size = 40)))
 
 # Combine figures above.
-(fig_r <- fig1 + fig2)
+# (fig_r <- fig1 + fig2)
 
 # ggsave(fig_r,
 #        filename = "figures/teton_fall22/r_cvQ.jpg",
 #        width = 10,
 #        height = 5)
+
+# Raw GPP and Q for Potomac River site to add alongside CVq figure for job
+# application materials:
+
+# Pull out only data of interest
+potomac <- dat_in$nwis_01608500
+
+# And filter for year of interest.
+potomac12 <- potomac %>%
+  filter(date > "2011-12-31") %>%
+  filter(date < "2013-01-01")
+
+# And plot using similar format as found in Step 1.
+(fig_gpp <- ggplot(potomac12, aes(date, GPP)) +
+  geom_point(color="#6CA184", size=3) +
+  geom_errorbar(aes(ymin = GPP.lower, ymax = GPP.upper), 
+                width=0.2, color="#6CA184") +
+  labs(y=expression(atop('GPP', '(g'*~O[2]~m^-2~d^-1*')'))) +
+  annotate("rect", xmin = as.Date("2012-02-01"), xmax = as.Date("2012-04-01"),
+           ymin = -2, ymax = 12.5, 
+           color = "#233D3F", fill = NA, size = 2) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(), axis.text.x = element_blank(),
+        text = element_text(family = "serif", size = 40)))
+
+(fig_q <- ggplot(potomac12, aes(date, Q)) +
+  geom_line(color="#3793EC", size=2) +
+  labs(y=expression('Q ('*m^3~s^-1*')'),
+       x = "Date") +
+  scale_x_date(date_labels = "%b") +
+  theme_bw() +
+  theme(legend.position = "none",
+        text = element_text(family = "serif", size = 40)))
+
+# Combine figures above.
+(fig_potomac <- fig_gpp / fig_q)
+
+# Compile full figure
+(figure_app <- ((fig_gpp / fig_q) | fig2) +
+  plot_annotation(tag_levels = 'A') +
+  plot_layout(widths = c(4,3)))
+
+# ggsave(figure_app,
+#        filename = "figures/teton_fall22/gpp_q_r_cvQ.jpg",
+#        width = 55,
+#        height = 25,
+#        units = "cm")
 
 # End of script.
