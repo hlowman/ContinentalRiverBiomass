@@ -25,6 +25,7 @@ lapply(c("tidyverse", "lubridate",
 # Import all outputs from Teton.
 data_out1 <- readRDS("data_teton/teton_182rivers_output_pt1_2022_10_12.rds")
 data_out2 <- readRDS("data_teton/teton_182rivers_output_pt2_2022_10_12.rds")
+data_out3 <- readRDS("data_teton/teton_182rivers_output_pt3_2022_10_12.rds")
 
 #### Parameter Posteriors ####
 
@@ -43,12 +44,15 @@ extract_all <- function(df){
 # (Be patient - this step takes a while.)
 data_out1_its <- map(data_out1, extract_all)
 data_out2_its <- map(data_out2, extract_all)
+data_out3_its <- map(data_out3, extract_all)
 
 # Saving these out because the load-in took so long.
 # saveRDS(data_out1_its,
 #        file = "data_working/teton_182rivers_model_all_params_all_iterations_101322pt1.rds")
 # saveRDS(data_out2_its,
 #        file = "data_working/teton_182rivers_model_all_params_all_iterations_101422pt2.rds")
+# saveRDS(data_out3_its,
+#        file = "data_working/teton_182rivers_model_all_params_all_iterations_101422pt3.rds")
 
 # So, these can't be bound together because I've extracted "B" and "pred_GPP"
 # which have different numbers of days and prevent the rbind() function below
@@ -66,13 +70,14 @@ extract_siteparams <- function(df){
 # And now map this to output lists.
 data_out1_its_params <- map(data_out1, extract_siteparams)
 data_out2_its_params <- map(data_out2, extract_siteparams)
+data_out3_its_params <- map(data_out3, extract_siteparams)
 
 # Concatenate lists.
-data_out12_its_params <- c(data_out1_its_params, data_out2_its_params)
+data_out_its_params_all <- c(data_out1_its_params, data_out2_its_params, data_out3_its_params)
 
 # Saving this out too, but keeping as a list for iteration purposes.
-# saveRDS(data_out12_its_params,
-#        file = "data_working/teton_182rivers_model_params_all_iterations_101422.rds")
+saveRDS(data_out_its_params_all,
+       file = "data_working/teton_182rivers_model_params_all_iterations_101522.rds")
 
 #### Diagnostics ####
 
@@ -93,21 +98,23 @@ extract_summary <- function(x){
 # (Be patient - this step takes a while.)
 data_out1_diags <- map(data_out1, extract_summary)
 data_out2_diags <- map(data_out2, extract_summary)
+data_out3_diags <- map(data_out3, extract_summary)
 
 # And create a dataframe
 data_out1_diags_df <- map_df(data_out1_diags, 
                              ~as.data.frame(.x), .id="site_name")
 data_out2_diags_df <- map_df(data_out2_diags,
                              ~as.data.frame(.x), .id="site_name")
+data_out3_diags_df <- map_df(data_out3_diags,
+                             ~as.data.frame(.x), .id="site_name")
 
 # And join them together.
 data_out_diags_12 <- rbind(data_out1_diags_df, data_out2_diags_df)
-# data_out_diags_all <- rbind(data_out_diags_all, data_out3_diags_df)
-data_out_diags_all <- data_out_diags_12
+data_out_diags_all <- rbind(data_out_diags_all, data_out3_diags_df)
 
 # Export dataset
 saveRDS(data_out_diags_all,
-        file = "data_working/teton_182rivers_model_diags_101422.rds")
+        file = "data_working/teton_182rivers_model_diags_101522.rds")
 
 #### Divergences ####
 
@@ -120,6 +127,7 @@ extract_divergences <- function(df){
 # This function may be finicky and require you to quit R and re-load.
 data_out1_divs <- map(data_out1, extract_divergences)
 data_out2_divs <- map(data_out2, extract_divergences)
+data_out3_divs <- map(data_out3, extract_divergences)
 
 # Make all of the above dataframes.
 data_out1_divs_df <- map_df(data_out1_divs, 
@@ -130,13 +138,17 @@ data_out2_divs_df <- map_df(data_out2_divs,
                             ~as.data.frame(.x), .id="site_name") %>%
   rename(divergences = `.x`) %>%
   mutate(dataset = 1)
+data_out3_divs_df <- map_df(data_out3_divs, 
+                            ~as.data.frame(.x), .id="site_name") %>%
+  rename(divergences = `.x`) %>%
+  mutate(dataset = 1)
 
 # And join them together.
 data_out_divs_12 <- rbind(data_out1_divs_df, data_out2_divs_df)
-#data_out_divs_all <- rbind(data_out_divs_all, data_out3_divs_df)
-data_out_divs_all <- data_out_divs_12
+data_out_divs_all <- rbind(data_out_divs_all, data_out3_divs_df)
+
 # Export dataset
 saveRDS(data_out_divs_all,
-        file = "data_working/teton_182rivers_model_divs_101422.rds")
+        file = "data_working/teton_182rivers_model_divs_101522.rds")
 
 # End of script.
