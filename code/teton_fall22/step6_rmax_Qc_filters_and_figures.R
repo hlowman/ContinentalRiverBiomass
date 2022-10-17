@@ -1,0 +1,489 @@
+## Resilience of Stream Productivity to Disturbance
+## October 13, 2022
+## Heili Lowman
+
+# The following set of scripts will walk through the steps necessary to
+# prep and send data to Teton as well as process the model outputs.
+
+# Much of this code has been modified from the RiverBiomass repository
+# found at: https://github.com/jrblaszczak/RiverBiomass 
+
+# Please note, the "data_raw" and "data_working" folders have been ignored
+# using git.ignore, so links to the raw data sets are provided in the step1
+# file. If you are accessing the code via GitHub, these will need to be 
+# downloaded and added to a folder of the appropriate name prior to running
+# the code.
+
+#### Setup ####
+
+# Load necessary packages.
+lapply(c("tidyverse", "lubridate", "data.table",
+         "rstan","bayesplot","shinystan", "here",
+         "GGally", "glmmTMB", "MuMIn", "effects",
+         "DHARMa", "lme4", "multcomp", "patchwork",
+         "calecopal", "viridis"), require, character.only=T)
+
+# Load necessary datasets.
+# Load site-level info (hypoxia and Appling datasets).
+site_info <- read_csv("data_raw/GRDO_GEE_HA_NHD_2021_02_07.csv")
+site <- fread("data_raw/site_data.tsv")
+
+# Load in original list of data fed into the model.
+dat_in <- readRDS("data_working/list_182sites_Qmaxnorm_allSL.rds")
+
+# Load in model diagnostics for site-level parameters.
+dat_diag <- readRDS("data_working/teton_182rivers_model_diags_101522.rds")
+
+# Load in list containing all iterations of site-level parameters.
+dat_out <- readRDS("data_working/teton_182rivers_model_params_all_iterations_101522.rds")
+
+# Load in 2 year flood values.
+dat_2yr <- read_csv("data_working/RI_2yr_flood_182riv.csv")
+
+#### Data Prep ####
+
+# Take list containing all input data and make into a df.
+dat_in_df <- map_df(dat_in, ~as.data.frame(.x), .id="site_name")
+
+# Take list containing all iterations of parameters and make into a df.
+dat_out_df <- map_df(dat_out, ~as.data.frame(.x), .id="site_name")
+
+#### Value filter for rmax ####
+
+# Negative rmax values are not biologically reasonable, so I've 
+# removed them.
+
+# First, calculate mean rmax values at all the sites.
+dat_out_rmean <- dat_out_df %>%
+  group_by(site_name) %>%
+  summarize(r_mean = mean(r)) %>%
+  ungroup()
+
+# And remove negative values.
+dat_out_rmean_pos <- dat_out_rmean %>%
+  filter(r_mean > 0) # Removes 12 sites.
+
+#### Rhat filter for rmax ####
+
+# Before proceeding with the first step on my analyses, I will be filtering out 
+# sites at which the model did not converge well for the rmax parameter.
+# Sites with Rhat > 1.05 will not pass muster.
+
+dat_diag_rfilter1 <- dat_diag %>%
+  filter(parameter == "r") %>%
+  filter(Rhat < 1.05) # 12 sites drop off
+
+#### normRMSE filter ####
+
+# Next, I will be filtering out sites that do not do a good job of predicting
+# GPP using the original data.
+
+# Using code from Joanna's scripts "Predicted_ProductivityModel_Ricker.R"
+# and "Biomass2_WSpredictions.R".
+
+# First, need to create the function for predicting GPP.
+PM_Ricker <- function(r, lambda, s, c, sig_p, sig_o, df) {
+  
+  ## Data
+  Ndays <- length(df$GPP)
+  GPP <- df$GPP
+  GPP_sd <- df$GPP_sd
+  light <- df$light_rel
+  tQ <- df$Q_rel # discharge standardized to max value
+  new_e <- df$new_e
+  
+  ## Vectors for model output of P, B, pred_GPP
+  P <- numeric(Ndays)
+  P[1] <- 1
+  for(i in 2:length(tQ)){
+    P[i] = exp(-exp(s*100*(tQ[i] - c)))
+  }
+  
+  B <- numeric(Ndays)
+  B[1] <- log(GPP[1]/light[1])
+  pred_GPP <- numeric(Ndays)
+  pred_GPP[1] <- light[1]*exp(B[1])
+  
+  ## Process Model
+  for(j in 2:Ndays){
+    # adding in section for my re-initialization functionality
+    if (new_e[j]==1) {
+      
+      B[j] ~ MCMCglmm::rtnorm(1, mean = log(GPP[j]/light[j])) }
+    
+    else {
+      
+      B[j] <- MCMCglmm::rtnorm(1, mean = (B[j-1] + r + lambda*exp(B[j-1]))*P[j],
+                               sd = sig_p, upper = 5) }
+    
+  }
+  
+  for(i in 2:Ndays){
+    pred_GPP[i] <- MCMCglmm::rtnorm(1, mean = light[i]*exp(B[i]), 
+                                    sd = sig_o, lower = 0.01)
+  }
+  
+  return(pred_GPP)
+}
+
+# Next, need to write the function with which to perform the simulation.
+Ricker_sim_fxn <- function(y, x){
+  # identify data
+  output <- y # Teton/stan output
+  df <- x # original data input
+  
+  # extracted parameters from STAN output already
+  pars <- output
+  
+  # create empty matrix with days of GPP x length of iterations to receive values
+  simmat <- matrix(NA, length(df$GPP), length(unlist(pars$sig_p)))
+  rmsemat <- matrix(NA, length(df$GPP), 1)
+  
+  # simulate pred_GPP holding a parameter set for a given iteration constant
+  # and then predict forward for the time period of interest (i.e., length(df$GPP))
+  for(i in 1:length(pars$r)){
+    simmat[,i] <- PM_Ricker(pars$r[i], pars$lambda[i], pars$s[i], pars$c[i], pars$sig_p[i], pars$sig_p[i], df)
+    rmsemat[i] <- sqrt(sum((simmat[,i] - df$GPP)^2)/length(df$GPP))
+  }
+  
+  l <- list(simmat, rmsemat)
+  return(l)
+  
+}
+
+# And finally, apply the function to my data.
+Ricker_sim_60sites <- mapply(Ricker_sim_fxn, dat_out, dat_in)
+
+#predGPP <- Ricker_sim_2sites[[1]]
+#rmse <- Ricker_sim_2sites[[2]]
+
+# Adding the nRMSE calculation into the function above didn't play nicely with
+# the list that existed, so calculating outside instead.
+nRMSE_fxn <- function(df, df_orig){
+  
+  # Calculate the mean RMSE value for each site.
+  nRMSE <- mean(df)/(max(df_orig$GPP) - min(df_orig$GPP))
+  
+}
+
+nRMSE_60sites <- mapply(nRMSE_fxn, Ricker_sim_60sites, dat_in)
+
+nRMSE_60sitesdf <- as.data.frame(nRMSE_60sites) %>%
+  rownames_to_column("site_name") %>%
+  rename("nRMSE" = "nRMSE_60sites")
+
+# Export both sets of results.
+#saveRDS(Ricker_sim_60sites, "data_working/Sim_Ricker_60sites_101322.rds")
+saveRDS(nRMSE_60sitesdf, "data_working/nRMSE_60sites_101422.rds")
+
+dat_rmse_rfilter2 <- nRMSE_60sitesdf %>%
+  filter(nRMSE < 0.5) #???
+
+#### rmax Figures ####
+
+# Next, append the positive rmax values to the Rhat filter to remove
+# appropriate sites.
+dat_out_rmean_Rhat <- inner_join(dat_diag_rfilter1, dat_out_rmean_pos) 
+# 159 sites remaining
+
+# Then, remove any sites based on RMSE values.
+#dat_out_rmean_Rhat_rmse <- left_join(dat_rmse_rfilter2, dat_out_rmean_Rhat)
+
+# Finally, calculate coefficient of variation in discharge at every site,
+# as well as mean daily light availability, and add to the dataset for plotting
+# purposes.
+dat_in_cvq_L <- dat_in_df %>%
+  group_by(site_name) %>%
+  summarize(cvQ = (sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE)),
+            meanL = mean(PAR_surface, na.rm = TRUE)) %>%
+  ungroup()
+
+# And, append this to the larger dataset.
+dat_out_yas <- left_join(dat_out_rmean_Rhat, dat_in_cvq_L)
+
+# Also would like to add site characteristics to this dataset for plotting.
+dat_site_info <- site_info %>%
+  mutate(Order = factor(NHD_STREAMORDE)) %>%
+  select(SiteID, Lat_WGS84, Lon_WGS84, Order, NHD_AREASQKM, LU_category)
+
+# And append.
+dat_out_full <- left_join(dat_out_yas, dat_site_info,
+                          by = c("site_name" = "SiteID"))
+
+# Distribution of rmax values:
+(fig1 <- ggplot(dat_out_full, aes(x = r_mean)) +
+  geom_histogram(bins = 60, alpha = 0.8, 
+                 fill = "#9E8ABC", color = "#9E8ABC") +
+  labs(x = expression(Maximum~Growth~Rate~(r[max])),
+       y = "Count") +
+  theme_bw())
+
+# CV of Discharge vs. rmax:
+(fig2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_mean)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#A494CC") +
+    labs(x = expression(CV[Q]),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+(fig2.2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_mean)) +
+    geom_point(alpha = 0.8, size = 3) +
+    labs(x = expression(CV[Q]),
+         y = expression(r[max])) +
+    theme_bw() +
+    theme(text = element_text(family = "serif", size = 40)))
+
+# Mean Daily Light Availability vs. rmax:
+(fig3 <- ggplot(dat_out_full, aes(x = meanL, y = r_mean)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#A399CE") +
+    labs(x = expression(Mean~Daily~PAR),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# Stream Order vs. rmax: Removing singular site w/o order info for now.
+(fig4 <- ggplot(dat_out_full %>%
+                  filter(!is.na(Order)), aes(x = Order, y = r_mean)) +
+    geom_boxplot(alpha = 0.6, color = "#8B90A5", fill = "#8B90A5") +
+    labs(x = expression(Stream~Order),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# Latitude vs. rmax:
+(fig5 <- ggplot(dat_out_full, aes(x = Lat_WGS84, y = r_mean)) +
+    geom_point(alpha = 0.6, size = 3, color = "#8B8D8A") +
+    labs(x = expression(Latitude),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# Longitude vs. rmax:
+(fig6 <- ggplot(dat_out_full, aes(x = Lon_WGS84, y = r_mean)) +
+    geom_point(alpha = 0.6, size = 3, color = "#A18F7E") +
+    labs(x = expression(Longitude),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# Catchment size vs. rmax: note, missing Miss. R.
+(fig7 <- ggplot(dat_out_full, aes(x = NHD_AREASQKM, y = r_mean)) +
+    geom_point(alpha = 0.6, size = 3, color = "#A6A284") +
+    labs(x = expression(Watershed~Area~(km^2)),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# Landu use vs. rmax:
+(fig8 <- ggplot(dat_out_full, aes(x = LU_category, y = r_mean)) +
+    geom_boxplot(alpha = 0.6, color = "#A5BA92", fill = "#A5BA92") +
+    labs(x = expression(Land~Use),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# Combine figures above.
+(fig_r <- fig1 + fig2 + fig3 + fig4 +
+    fig5 + fig6 + fig7 + fig8 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 2))
+
+# ggsave(fig_r,
+#        filename = "figures/teton_fall22/rmax_8panel.jpg",
+#        width = 40,
+#        height = 20,
+#        units = "cm") # n = 159
+
+# Raw GPP and Q for Potomac River site to add alongside CVq figure for job
+# application materials:
+
+# Pull out only data of interest
+potomac <- dat_in$nwis_01608500
+
+# And filter for year of interest.
+potomac12 <- potomac %>%
+  filter(date > "2011-12-31") %>%
+  filter(date < "2013-01-01")
+
+# And plot using similar format as found in Step 1.
+(fig_gpp <- ggplot(potomac12, aes(date, GPP)) +
+  geom_point(color="#6CA184", size=3) +
+  geom_errorbar(aes(ymin = GPP.lower, ymax = GPP.upper), 
+                width=0.2, color="#6CA184") +
+  labs(y=expression(atop('GPP', '(g'*~O[2]~m^-2~d^-1*')'))) +
+  annotate("rect", xmin = as.Date("2012-02-01"), xmax = as.Date("2012-04-01"),
+           ymin = -2, ymax = 12.5, 
+           color = "#233D3F", fill = NA, size = 2) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(), axis.text.x = element_blank(),
+        text = element_text(family = "serif", size = 40)))
+
+(fig_q <- ggplot(potomac12, aes(date, Q)) +
+  geom_line(color="#3793EC", size=2) +
+  labs(y=expression('Q ('*m^3~s^-1*')'),
+       x = "Date") +
+  scale_x_date(date_labels = "%b") +
+  theme_bw() +
+  theme(legend.position = "none",
+        text = element_text(family = "serif", size = 40)))
+
+# Combine figures above.
+(fig_potomac <- fig_gpp / fig_q)
+
+# Compile full figure
+(figure_app <- ((fig_gpp / fig_q) | fig2.2) +
+  plot_annotation(tag_levels = 'A') +
+  plot_layout(widths = c(4,3)))
+
+# ggsave(figure_app,
+#        filename = "figures/teton_fall22/gpp_q_r_cvQ.jpg",
+#        width = 55,
+#        height = 25,
+#        units = "cm")
+
+#### Value filter for c ####
+
+# Negative c values are not biologically reasonable, so I've 
+# removed them.
+
+# First, calculate mean c values at all the sites that remain
+# Using filtered rmax dataset above.
+my_159_site_list <- dat_out_full$site_name
+
+dat_out_cmean <- dat_out_df %>%
+  filter(site_name %in% my_159_site_list) %>%
+  group_by(site_name) %>%
+  summarize(c_mean = mean(c)) %>%
+  ungroup()
+
+# And remove negative values.
+dat_out_cmean_pos <- dat_out_cmean %>%
+  filter(c_mean > 0) # Removes 0 sites. Yay!
+
+#### Rhat filter for c ####
+
+# Before proceeding with the analyses, I will be filtering out sites at which
+# the model did not converge well for the c parameter.
+# Sites with Rhat > 1.05 will not pass muster.
+
+dat_diag_cfilter1 <- dat_diag %>%
+  filter(site_name %in% my_159_site_list) %>%
+  filter(parameter == "c") %>%
+  filter(Rhat < 1.05) # An additional 18 sites drop off.
+
+#### Correllations between s and c values ####
+
+# As an additional model diagnostic, I will evaluate the correlations between
+# the s and c values for each iteration at each site and plot them.
+
+#### c Figures ####
+
+# Next, append the positive c values to the Rhat filter to remove
+# appropriate sites.
+dat_out_cmean_Rhat <- inner_join(dat_diag_cfilter1, dat_out_cmean_pos) 
+# 141 sites remaining
+
+# Then, remove any sites based on s vs. c values.
+
+
+# Now, convert normalized c values typical discharge values.
+dat_maxQ <- dat_in_df %>%
+  group_by(site_name) %>%
+  summarize(maxQ = max(Q, na.rm = TRUE)) %>%
+  ungroup()
+
+dat_together <- left_join(dat_out_cmean_Rhat, dat_maxQ)
+
+dat_together$Qc <- dat_together$c_mean*dat_together$maxQ
+
+# And add in 2yr flood to determine Qc:Q2yrf ratio value.
+
+dat_all_together <- left_join(dat_together, dat_2yr)
+
+dat_all_together$Qc_Q2yr <- dat_all_together$Qc/dat_all_together$RI_2yr_Q_cms
+
+# Finally, use dat_in_cvq_L dataset created above for light and CVq.
+# And, append this to the larger dataset.
+dat_out_yas2 <- left_join(dat_all_together, dat_in_cvq_L)
+
+# Also use dat_site_info dataset created above for site characteristics.
+# And append.
+dat_out_full_141 <- left_join(dat_out_yas2, dat_site_info,
+                          by = c("site_name" = "SiteID"))
+
+# Distribution of Qc/Q2 values:
+(fig1qcq2 <- ggplot(dat_out_full_141, aes(x = Qc_Q2yr)) +
+    geom_histogram(bins = 60, alpha = 0.8, 
+                   fill = "#7E8C69", color = "#7E8C69") +
+    labs(x = expression(Q[c]:Q[2~yr]),
+         y = "Count") +
+    theme_bw())
+
+# CV of Discharge vs. c:
+(fig2qcq2 <- ggplot(dat_out_full_141, aes(x = cvQ, y = Qc_Q2yr)) +
+    geom_hline(yintercept = 1) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#BA9A5D") +
+    labs(x = expression(CV[Q]),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+# Mean Daily Light Availability vs. c:
+(fig3qcq2 <- ggplot(dat_out_full_141, aes(x = meanL, y = Qc_Q2yr)) +
+    geom_hline(yintercept = 1) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#E6A45A") +
+    labs(x = expression(Mean~Daily~PAR),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+# Stream Order vs. rmax: Removing singular site w/o order info for now.
+(fig4qcq2 <- ggplot(dat_out_full_141 %>%
+                  filter(!is.na(Order)), aes(x = Order, y = Qc_Q2yr)) +
+    geom_hline(yintercept = 1) +
+    geom_boxplot(alpha = 0.6, color = "#E59F72", fill = "#E59F72") +
+    labs(x = expression(Stream~Order),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+# Latitude vs. rmax:
+(fig5qcq2 <- ggplot(dat_out_full_141, aes(x = Lat_WGS84, y = Qc_Q2yr)) +
+    geom_hline(yintercept = 1) +
+    geom_point(alpha = 0.6, size = 3, color = "#E4957C") +
+    labs(x = expression(Latitude),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+# Longitude vs. rmax:
+(fig6qcq2 <- ggplot(dat_out_full_141, aes(x = Lon_WGS84, y = Qc_Q2yr)) +
+    geom_hline(yintercept = 1) +
+    geom_point(alpha = 0.6, size = 3, color = "#E38678") +
+    labs(x = expression(Longitude),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+# Catchment size vs. rmax: note, missing Miss. R.
+(fig7qcq2 <- ggplot(dat_out_full_141, aes(x = NHD_AREASQKM, y = Qc_Q2yr)) +
+    geom_hline(yintercept = 1) +
+    geom_point(alpha = 0.6, size = 3, color = "#B06962") +
+    labs(x = expression(Watershed~Area~(km^2)),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+# Land-use vs. rmax:
+(fig8qcq2 <- ggplot(dat_out_full_141, aes(x = LU_category, y = Qc_Q2yr)) +
+    geom_hline(yintercept = 1) +
+    geom_boxplot(alpha = 0.6, color = "#6D4847", fill = "#6D4847") +
+    labs(x = expression(Land~Use),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+# Combine figures above.
+(fig_qcq2 <- fig1qcq2 + fig2qcq2 + fig3qcq2 + fig4qcq2 +
+    fig5qcq2 + fig6qcq2 + fig7qcq2 + fig8qcq2 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 2))
+
+# ggsave(fig_qcq2,
+#        filename = "figures/teton_fall22/QcQ2_8panel.jpg",
+#        width = 40,
+#        height = 20,
+#        units = "cm") # n = 141
+
+# End of script.
