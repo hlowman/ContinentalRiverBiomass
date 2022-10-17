@@ -195,7 +195,8 @@ dat_out_rmean_Rhat <- inner_join(dat_diag_rfilter1, dat_out_rmean_pos)
 dat_in_cvq_L <- dat_in_df %>%
   group_by(site_name) %>%
   summarize(cvQ = (sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE)),
-            meanL = mean(PAR_surface, na.rm = TRUE)) %>%
+            meanL = mean(PAR_surface, na.rm = TRUE),
+            meanGPP = mean(GPP, na.rm = TRUE)) %>%
   ungroup()
 
 # And, append this to the larger dataset.
@@ -204,7 +205,7 @@ dat_out_yas <- left_join(dat_out_rmean_Rhat, dat_in_cvq_L)
 # Also would like to add site characteristics to this dataset for plotting.
 dat_site_info <- site_info %>%
   mutate(Order = factor(NHD_STREAMORDE)) %>%
-  select(SiteID, Lat_WGS84, Lon_WGS84, Order, NHD_AREASQKM, LU_category)
+  dplyr::select(SiteID, Lat_WGS84, Lon_WGS84, Order, NHD_AREASQKM, LU_category)
 
 # And append.
 dat_out_full <- left_join(dat_out_yas, dat_site_info,
@@ -335,6 +336,36 @@ potomac12 <- potomac %>%
 #        filename = "figures/teton_fall22/gpp_q_r_cvQ.jpg",
 #        width = 55,
 #        height = 25,
+#        units = "cm")
+
+# Plot light availability vs. CVq colored by rmax and mean GPP.
+# To compare with Bernhardt et al., 2022 dark & stormy, bright & stable fig.
+(fig_schema1 <-ggplot(dat_out_full, aes(x = log10(meanL), 
+                                       y = -log10(cvQ),
+                                       color = r_mean)) +
+    geom_point(size = 3) +
+    scale_color_viridis() + 
+    labs(x = expression(log(Mean~Daily~PAR)),
+         y = expression(-log(CV[Q])),
+         color = expression(r[max])) +
+    theme_bw())
+
+(fig_schema2 <-ggplot(dat_out_full, aes(x = log10(meanL), 
+                                        y = -log10(cvQ),
+                                        color = meanGPP)) +
+    geom_point(size = 3) +
+    scale_color_viridis(option = "magma") + 
+    labs(x = expression(log(Mean~Daily~PAR)),
+         y = expression(-log(CV[Q])),
+         color = expression(GPP)) +
+    theme_bw())
+
+(fig_schema <- fig_schema1 + fig_schema2)
+
+# ggsave(fig_schema,
+#        filename = "figures/teton_fall22/Light_CVq_r_GPP.jpg",
+#        width = 25,
+#        height = 10,
 #        units = "cm")
 
 #### Value filter for c ####
