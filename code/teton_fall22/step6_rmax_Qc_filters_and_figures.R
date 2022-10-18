@@ -403,6 +403,67 @@ dat_diag_cfilter1 <- dat_diag %>%
 # As an additional model diagnostic, I will evaluate the correlations between
 # the s and c values for each iteration at each site and plot them.
 
+# First, I need to filter the original dataset with all iterations by
+# the df created above.
+my_141_site_list <- dat_diag_cfilter1$site_name
+
+data_out_141 <- dat_out_df %>%
+  filter(site_name %in% my_141_site_list)
+
+dat_out_141 <- split(data_out_141, data_out_141$site_name) # remade as list
+
+# Exporting a plot of s vs. c for all iterations for all sites to
+# include in the shiny app.
+
+plotting_sc <- function(x) {
+  
+  names <- unique(x$site_name)
+  
+  for (i in names){
+    
+    # create a dataframe at each site
+    df <- x %>%
+      filter(site_name == i)
+    
+    # fit a linear model for all iterations
+    fit <- lm(c ~ s, data = df)
+    
+    # create a plot with r and k for all iterations
+    p <- ggplot(df, aes(x = s, y = c)) +
+      geom_point(alpha = 0.8) +
+      geom_smooth(method = lm, color = "#E4B3E2") +
+      labs(x = "Sensitivity of Persistence Curve (s)",
+           y = "Critical Disturbance Threshold (c)",
+           title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                         " p =",signif(summary(fit)$coef[2,4], 5))) +
+      theme_bw() +
+      theme(text = element_text(size=20))
+    
+    # display plots
+    print(p) 
+    
+    # save and export plots
+    file.name <- paste0("figures/teton_fall22/site_sc_plots/",
+                        df$site_name[1],"sc.jpg",sep = "") # create file name
+    
+    # set specifications for size and resolution of your figure
+    ggsave(p,
+           filename = file.name,
+           width = 8,
+           height = 8)
+    
+  } # close out for loop
+  
+} # close out function
+
+# test to be sure the function works at a single site
+plotting_sc(data_out_141 %>% filter(site_name == "nwis_01124000"))
+
+# And now apply this to the entire dataset.
+plotting_sc(data_out_141)
+
+# Roughly, 11 sites had R^2 > 0.5. Lots appear to have log scale relationships.
+
 #### c Figures ####
 
 # Next, append the positive c values to the Rhat filter to remove
