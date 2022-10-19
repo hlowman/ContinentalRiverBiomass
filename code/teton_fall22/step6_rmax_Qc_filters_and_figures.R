@@ -75,7 +75,7 @@ dat_diag_rfilter1 <- dat_diag %>%
 
 #### normRMSE filter ####
 
-# Next, I will be filtering out sites that do not do a good job of predicting
+# Next, I will be examining sites that do not do a good job of predicting
 # GPP using the original data.
 
 # Using code from Joanna's scripts "Predicted_ProductivityModel_Ricker.R"
@@ -140,7 +140,7 @@ Ricker_sim_fxn <- function(y, x){
   rmsemat <- matrix(NA, length(df$GPP), 1)
   
   # simulate pred_GPP holding a parameter set for a given iteration constant
-  # and then predict forward for the time period of interest (i.e., length(df$GPP))
+  # and then predict forward for a site's timeseries (i.e., length(df$GPP))
   for(i in 1:length(pars$r)){
     simmat[,i] <- PM_Ricker(pars$r[i], pars$lambda[i], pars$s[i], pars$c[i], pars$sig_p[i], pars$sig_p[i], df)
     rmsemat[i] <- sqrt(sum((simmat[,i] - df$GPP)^2)/length(df$GPP))
@@ -152,10 +152,33 @@ Ricker_sim_fxn <- function(y, x){
 }
 
 # And finally, apply the function to my data.
-Ricker_sim_60sites <- mapply(Ricker_sim_fxn, dat_out, dat_in)
+# Please note, this takes HOURS to run, so start this early in the day, and
+# come back to it.
+Ricker_sim_182sites <- mapply(Ricker_sim_fxn, dat_out, dat_in)
 
-#predGPP <- Ricker_sim_2sites[[1]]
-#rmse <- Ricker_sim_2sites[[2]]
+# For some reason, it's yielding two values, so let's see what's happening here.
+Ricker_sim_1site <- Ricker_sim_fxn(dat_out$nwis_01124000, dat_in$nwis_01124000)
+# Ok, so it's yielding pred_GPP in the first part and rmse in the second.
+
+# Now, making a longer list to see how it spits out multiple sites to decipher
+# my larger output structure.
+dat_in2 <- dat_in[1:2]
+dat_out2 <- dat_out[1:2]
+
+Ricker_sim_2site <- mapply(Ricker_sim_fxn,dat_out2, dat_in2)
+# Viewing this yields nothing, because it's a matrix >_<
+
+# So, for reference:
+predGPP <- Ricker_sim_1site[[1]]
+rmse <- Ricker_sim_1site[[2]]
+
+# But when this is made larger, the portions of the matrix can be accessed by
+# indexing by odd and event indices.
+# ODD = predGPP
+# EVEN = rmse
+# So, making a list of even numbers to pull out rmse values.
+my_values <- seq(from = 2, to = 364, by = 2)
+rmse_182sites <- Ricker_sim_182sites[my_values]
 
 # Adding the nRMSE calculation into the function above didn't play nicely with
 # the list that existed, so calculating outside instead.
@@ -166,18 +189,17 @@ nRMSE_fxn <- function(df, df_orig){
   
 }
 
-nRMSE_60sites <- mapply(nRMSE_fxn, Ricker_sim_60sites, dat_in)
+nRMSE_182sites <- mapply(nRMSE_fxn, rmse_182sites, dat_in)
 
-nRMSE_60sitesdf <- as.data.frame(nRMSE_60sites) %>%
-  rownames_to_column("site_name") %>%
-  rename("nRMSE" = "nRMSE_60sites")
+nRMSE_182sitesdf <- as.data.frame(nRMSE_182sites) %>%
+  mutate("site_name" = names(dat_in)) %>%
+  rename("nRMSE" = "nRMSE_182sites")
 
 # Export both sets of results.
-#saveRDS(Ricker_sim_60sites, "data_working/Sim_Ricker_60sites_101322.rds")
-saveRDS(nRMSE_60sitesdf, "data_working/nRMSE_60sites_101422.rds")
-
-dat_rmse_rfilter2 <- nRMSE_60sitesdf %>%
-  filter(nRMSE < 0.5) #???
+# trying to export this first file caused the server to freeze, so only
+# exported the nRMSE file for now.
+#saveRDS(Ricker_sim_182sites, "data_working/Sim_Ricker_182sites_101922.rds")
+saveRDS(nRMSE_182sitesdf, "data_working/nRMSE_182sites_101922.rds")
 
 #### rmax Figures ####
 
@@ -186,8 +208,8 @@ dat_rmse_rfilter2 <- nRMSE_60sitesdf %>%
 dat_out_rmean_Rhat <- inner_join(dat_diag_rfilter1, dat_out_rmean_pos) 
 # 159 sites remaining
 
-# Then, remove any sites based on RMSE values.
-#dat_out_rmean_Rhat_rmse <- left_join(dat_rmse_rfilter2, dat_out_rmean_Rhat)
+# Not removing any sites based on RMSE values for the time being.
+# REVISIT THIS following co-authors meeting in Nov.
 
 # Finally, calculate coefficient of variation in discharge at every site,
 # as well as mean daily light availability, and add to the dataset for plotting
@@ -471,8 +493,8 @@ plotting_sc(data_out_141)
 dat_out_cmean_Rhat <- inner_join(dat_diag_cfilter1, dat_out_cmean_pos) 
 # 141 sites remaining
 
-# Then, remove any sites based on s vs. c values.
-
+# Not removing any sites based on s vs. c plots for the time being.
+# REVISIT THIS following co-authors meeting in Nov.
 
 # Now, convert normalized c values typical discharge values.
 dat_maxQ <- dat_in_df %>%
@@ -577,5 +599,77 @@ dat_out_full_141 <- left_join(dat_out_yas2, dat_site_info,
 #        width = 40,
 #        height = 20,
 #        units = "cm") # n = 141
+
+#### GPP figures ####
+
+# As of 10/19/22, calculating/exporting RMSE values for the entire dataset
+# was proving very computationally expensive. So, for the time being, just
+# creating one plot of predicted GPP for inclusion in the coauthors'
+# Rmarkdown summary file.
+
+# Going to proceed with site nwis_01649500, NE Anacostia River, because
+# it has good data availability and roughly median rmax.
+# Re-simulating, because it's simpler than hunting down the right index
+# in the matrix above.
+Ricker_sim1site <- Ricker_sim_fxn(dat_out$nwis_01649500, dat_in$nwis_01649500)
+
+# And for each day, I would like to calculate
+# - mean GPP
+# - 97.5% and 2.5% percentiles
+
+# Going to pull out just the predicted GPP values.
+data_1site_gpp <- Ricker_sim1site[[1]]
+
+# Calculate median and confidence intervals
+median_gpp1 <- apply(data_1site_gpp, 1, median)
+lowerci_gpp1 <- apply(data_1site_gpp, 1, function(x) quantile(x, probs = 0.025, na.rm = TRUE))
+upperci_gpp1 <- apply(data_1site_gpp, 1, function(x) quantile(x, probs = 0.975, na.rm = TRUE))
+
+# Pull out original GPP values used
+orig_gpp <- dat_in$nwis_01649500$GPP
+
+# Pull out original dates used
+date <- dat_in$nwis_01649500$date
+
+# Bind into a single dataframe
+df_1site_pred <- as.data.frame(cbind(median_gpp1, lowerci_gpp1, upperci_gpp1))
+
+df_pred1 <- df_1site_pred %>%
+  mutate(date = ymd(date),
+         orig_gpp = orig_gpp)
+
+# And finally, calculation the normalized RMSE.
+rmse1 <- Ricker_sim1site[[2]]
+
+nRMSE_1site <- nRMSE_fxn(rmse1, dat_in$nwis_01649500)
+
+# And plot
+(gpp_plot1 <- ggplot(df_pred1 %>%
+                       filter(date > "2010-12-31") %>%
+                       filter(date < "2012-01-01"), aes(date, orig_gpp)) +
+    geom_point(size = 2, color = "chartreuse4") +
+    geom_line(aes(date, median_gpp1), color = "darkolivegreen2", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "NE Anacostia River (MD)") +
+    geom_ribbon(aes(ymin = lowerci_gpp1,
+                    ymax = upperci_gpp1),
+                fill = "darkolivegreen2",
+                alpha = 0.3) +
+    annotate(geom = "text", x = date("2011-11-01"), y = 10,
+             label = paste("nRMSE = ",round(nRMSE_1site, digits = 2)),
+             size = 8) + 
+    theme(legend.position = "none",
+          panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20))) # 2011
+
+# ggsave(gpp_plot1,
+#        filename = "figures/teton_fall22/GPP_predGPP_nwis01649500.jpg",
+#        width = 35,
+#        height = 15,
+#        units = "cm")
 
 # End of script.
