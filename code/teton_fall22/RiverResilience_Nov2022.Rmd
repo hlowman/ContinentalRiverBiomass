@@ -71,7 +71,7 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "summary_data_tabl
 
 ##### Revised Results
 
-Figures of all available covariates (discharge, temperature, light) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and site covariates.
+Figures of all available covariates (discharge, temperature, light) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and site covariates as well as predicted gross primary productivity (GPP) using model estimated parameters.
 
 Prior to plotting, all sites whose maximum growth rate parameter had an *Rhat value greater than 1.05 have been removed* (n = 159 sites remaining).
 
@@ -81,9 +81,18 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "rmax_8panel.jpg")
 
 ```
 
+Typically, the model performs well when predicting declines in GPP (due to its design), but it underpredicts the rate at which these systems recover following disturbance.
+
+```{r pred1, fig.align = "center", fig.cap = "Figure 4. XXX", out.width = "100%", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_fall22", "GPP_predGPP_nwis01649500.jpg"))
+
+```
+
+
 Prior to plotting, all sites whose critical disturbance threshold had an *Rhat value greater than 1.05 have been removed* (n = 141 sites remaining).
 
-```{r results2, fig.align = "center", fig.cap = "Figure 5. Plots of the ratio of the critical discharge (Qc) to the two-year flood (Q2yr) as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge, (C) daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use.", out.width = "100%", echo = FALSE}
+```{r results2, fig.align = "center", fig.cap = "Figure 6. Plots of the ratio of the critical discharge (Qc) to the two-year flood (Q2yr) as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge, (C) daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use.", out.width = "100%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "QcQ2_8panel.jpg"))
 
