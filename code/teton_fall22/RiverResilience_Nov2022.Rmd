@@ -1,5 +1,5 @@
 ---
-title: "Productivity Modeling - Proposed Manuscript Results"
+title: "Productivity Modeling - Revised Results"
 author: "Heili Lowman, Joanna Blaszczak"
 date: "10/12/2022"
 output: html_document
@@ -13,19 +13,23 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Purpose Statement
 
-**We are interested in learning about streams' responses to disturbance (i.e., storm events). Using a state-space time series approach, we are fitting a logistic population growth model to gross primary production estimates to gain information about growth parameters (e.g., maximum growth rate, critical disturbance thresholds) that describe algal population dynamics and compare results across stream sites.**
+**We are interested in learning about streams' responses to disturbance (*i.e.*, storm events). Using a state-space time series approach, we are fitting a logistic population growth model to gross primary production estimates to gain information about growth parameters (*i.e.*, maximum growth rate, critical disturbance thresholds) that describe algal population dynamics and compare results across stream sites.**
 
 ------------------------------------------------------------------------
 
-##### Revised Hypotheses
+##### Updated Hypotheses
 
-**How does the maximum growth rate (r) and carrying capacity (K) vary in streams and rivers across the country as a function of stream order, disturbance, and light availability?**
+***Q~1~:*** **How does maximum growth rate (r~max~) vary in streams and rivers across the country as a function of flow disturbance and light availability?**
 
-*H~1~*: As **stream order** increases, the maximum growth rate will decrease (due to size, water depth, light attenuation and sediment load in water) and the carrying capacity will increase (due to size and space availability).
+*H~1A~*: The maximum growth rate will be greatest in streams with fewer **flow disturbance** events that scour existing biomass, since gross primary production (GPP) tends to be highest in streams with more predictable flow [(Bernhardt et al., 2022)](https://www.pnas.org/doi/10.1073/pnas.2121976119).
 
-*H~2~*: The maximum growth rate will be greatest in streams with regular **disturbance** events that scour existing biomass. Carrying capacity will be altered if the regular **disturbances** are of large enough scale to alter the physical structure of the stream (e.g., could decrease due to infill with sediment or increase due to increase in surface area).
+*H~1B~*: As **light availability** increases, the maximum growth rate will increase, since GPP tends to be highest in well-lit streams [(Bernhardt et al., 2022)](https://www.pnas.org/doi/10.1073/pnas.2121976119). Photoinhibition will likely not be a concern except in intermittent/ephemeral and low order streams.
 
-*H~3~*: As **light availability** increases, the maximum growth rate will increase (photoinhibition will likely not be a concern except in intermittent/ephemeral and low order streams) and the carrying capacity will also increase (up until a certain point, where the demand for light is fulfilled and no space remains).
+***Q~2~:*** **How does the critical discharge threshold at which biomass is removed (c) vary in streams and rivers across the country as a function of flow disturbance and dominant watershed land use?**
+
+*H~2A~*: The critical discharge threshold will be greatest in streams with fewer **flow disturbance** events that scour existing biomass, since these sites will have likely higher maximum growth rates (*see H~1A~*) and higher GPP overall.
+
+*H~2B~*: As **land use** changes relative to undeveloped watersheds, the critical discharge threshold will change according to how the dominant land use in a watershed changes flow regimes. In predominantly agricultural watersheds, critical discharge thresholds will be greater, because flow will be less flashy and more predictable [(Poff et al., 2006)](https://www.sciencedirect.com/science/article/abs/pii/S0169555X06002546). In predominantly urban watersheds, critical discharge thresholds will be lower, because flow will be flashier and less predictable [(Blaszczak et al., 2019)](https://doi-org.unr.idm.oclc.org/10.1002/lno.11081).
 
 ------------------------------------------------------------------------
 
@@ -35,13 +39,13 @@ A conceptual diagram of the model structure used may be found in Figure 1.
 
 Since our last meeting, we experimented with structuring the model in a hierarchical format so as to share information across sites. However, this approach ended up being too computationally intensive, so we have reverted to modeling each site individually.
 
-```{r model structure, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Figure 1. The state-space population model being used to estimate parameters of maximum growth rate (r) and carrying capacity (K) across individual stream sites. The observation model uses daily estimates of gross primary production (g) and daily light (L) to estimate daily biomass (B). The daily persistence term (P) is a function of daily discharge (Q) which is used to estimate the sensitivity of the persistence transition from presence to removal of biomass (s) and the critical discharge threshold at which benthic biomass is removed (c). Both the observation and persistence models then inform the process model, which is a density-dependent growth function for daily biomass (B) in a given stream. The estimated terms of P and B are input into the process model to extract values for the maximum growth rate (r) and lambda, which is equal to the maximum growth rate divided by the carrying capacity (K)."}
+```{r fig1, fig.align = "left", out.width = "100%", echo = FALSE, fig.cap = "Figure 1. The state-space population model being used to estimate parameters of maximum growth rate (r~max~) across individual stream sites. The observation model uses daily estimates of gross primary production (g~t~) and daily light (L~t~) to estimate daily biomass (b~t~). The daily persistence term (P~t~) is a function of daily discharge (Q~t~) which is used to estimate the sensitivity of the persistence transition from presence to removal of biomass (s) and the critical discharge threshold at which benthic biomass is removed (c). Both the observation and persistence models then inform the process model, which is a density-dependent growth function for daily biomass (b~t~) in a given stream. The estimated terms of P~t~ and b~t~ are input into the process model to extract values for the maximum growth rate (r~max~) and lambda(λ), which is equal to the negative maximum growth rate divided by the carrying capacity (K)."}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "model_structure.jpg"))
 
 ```
 
-```{r P curves, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Figure 3. Persistence curves for a site that performs well with the model structure described above (South Branch Potomac River) and a site that performs poorly (Reedy Creek). The critical discharge at which biomass is disturbed (c) is denoted by the dotted vertical line. The sensitivity of the persistence transition from presence to removal of biomass (s) is equal to the slope of the green persistence curve as it transitions from complete persistence (P = 1) to removal (P = 0) of biomass."}
+```{r fig2, fig.align = "left", out.width = "100%", echo = FALSE, fig.cap = "Figure 3. Persistence curves for a site that performs well with the model structure described above (South Branch Potomac River) and a site that performs poorly (Reedy Creek). The critical discharge at which biomass is disturbed (c) is denoted by the dotted vertical line. The sensitivity of the persistence transition from presence to removal of biomass (s) is equal to the slope of the green persistence curve as it transitions from complete persistence (P = 1) to removal (P = 0) of biomass."}
 
 knitr::include_graphics(here::here("figures", "presentations", "p_curves.png"))
 
@@ -53,15 +57,15 @@ knitr::include_graphics(here::here("figures", "presentations", "p_curves.png"))
 
 Data have been assembled using the datasets available in [Appling et al., 2018](https://www.sciencebase.gov/catalog/item/59bff507e4b091459a5e0982), [Blaszczak et al., 2021](https://www.sciencebase.gov/catalog/item/606f60afd34ef99870188ee5), [Bernhardt et al., 2022](https://github.com/streampulse/metabolism_synthesis), and [Savoy and Harvey, 2021](https://www.sciencebase.gov/catalog/item/5f974adfd34e198cb77db168).
 
-We have revised the following rules to filter the available data:
+We have filtered the available data according to the following rules:
 
--   Filter for high-quality sites based on model diagnostics (e.g., K600 sigma Rhat \< 1.05, GPP \< 0 or ER \> 0 for more than 15% of estimates).
--   Filter for sites that have a maximum time gap of **14** days and a minimum of **90** days per year of GPP data.
+-   Filter for high-quality sites based on model diagnostics (e.g., K~600~ sigma $\hat{R}$ \< 1.05, GPP \< 0 or ER \> 0 for more than 15% of estimates).
+-   Filter for sites that have a maximum time gap of **14** days and a minimum of **90** days per year of daily GPP estimates.
 -   Any GPP estimates below zero were assigned a value between 0.05 and 0.13.
 
 From the initial 356 river sites in the Appling dataset, our filtered dataset consists of **182 sites** and **691 site-years** of data (Table 1).
 
-```{r summary stream stats, fig.align = "center", fig.cap = "Table 1. Summary statistics for all 182 stream sites included in the dataset.", out.width = "75%", echo = FALSE}
+```{r fig3, fig.align = "center", echo = FALSE, out.width = "75%", fig.cap = "Table 1. Summary statistics for all 182 stream sites included in the dataset."}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "summary_data_table_101222.png"))
 
@@ -69,13 +73,13 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "summary_data_tabl
 
 ------------------------------------------------------------------------
 
-##### Revised Results
+##### Results
 
 Figures of all available covariates (discharge, temperature, light) as well as the full set of our model diagnostics are available to view on a separate R Shiny application located [here](https://hlowman.shinyapps.io/shiny/). Below are a few overview figures examining initial relationships among model parameter values and site covariates as well as predicted gross primary productivity (GPP) using model estimated parameters.
 
-Prior to plotting, all sites whose maximum growth rate parameter had an *Rhat value greater than 1.05 have been removed* (n = 159 sites remaining).
+Prior to plotting, all sites whose maximum growth rate parameter (r~max~) estimates were negative (i.e., not biologically feasible) or r~max~ had an $\hat{R}$ value greater than 1.05 have been removed (n = 159 sites remaining).
 
-```{r results1, fig.align = "center", fig.cap = "Figure 4. Plots of mean maximum growth rates as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge, (C) daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use.", out.width = "100%", echo = FALSE}
+```{r fig4, fig.align = "left", fig.cap = "Figure 4. Plots of mean maximum growth rates as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge (CV~Q~), (C) daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use.", out.width = "100%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "rmax_8panel.jpg"))
 
@@ -89,10 +93,9 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "GPP_predGPP_nwis0
 
 ```
 
+Prior to plotting, all sites whose critical disturbance threshold (c) estimates were negative (i.e., not hydrologically feasible) or c had an $\hat{R}$ value greater than 1.05 have been removed (n = 141 sites remaining).
 
-Prior to plotting, all sites whose critical disturbance threshold had an *Rhat value greater than 1.05 have been removed* (n = 141 sites remaining).
-
-```{r results2, fig.align = "center", fig.cap = "Figure 6. Plots of the ratio of the critical discharge (Qc) to the two-year flood (Q2yr) as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge, (C) daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use.", out.width = "100%", echo = FALSE}
+```{r fig5, fig.align = "left", fig.cap = "Figure 5. Plots of the ratio of the critical discharge (Q~c~) to the two-year flood (Q~2yr~) as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge (CV~Q~), (C)daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use. Note, the horizontal black line indicates when the Q~c~:Q~2yr~ ratio value is one; values below this line indicate the critical discharge threshold at a given site falls below the 2 year flood discharge value.", out.width = "100%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "QcQ2_8panel.jpg"))
 
@@ -100,9 +103,9 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "QcQ2_8panel.jpg")
 
 *Next Steps:* Following this meeting, we intend to pursue two main activities:
 
-(1) Finish a full draft of the manuscript. Please see the working Google document [here](https://docs.google.com/document/d/1nEprXJPd_erMg4H_T6A78iqWB-HS8ICVqk4aCBRiiNg/edit?usp=sharing).
+(1) Finalize model diagnostics to determine the list of sites included in the results/discussion.
 
-(2) Finalize model diagnostics to determine the list of sites included in the results/discussion.
+(2) Finish a first draft of the manuscript by the end of the calendar year. Please see the working Google document [here](https://docs.google.com/document/d/1nEprXJPd_erMg4H_T6A78iqWB-HS8ICVqk4aCBRiiNg/edit?usp=sharing).
 
 ------------------------------------------------------------------------
 
