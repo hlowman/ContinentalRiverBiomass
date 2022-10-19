@@ -87,7 +87,7 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "rmax_8panel.jpg")
 
 Typically, the model performs well when predicting declines in GPP (due to its design), but it underpredicts the rate at which these systems recover following disturbance.
 
-```{r pred1, fig.align = "center", fig.cap = "Figure 4. XXX", out.width = "100%", echo = FALSE}
+```{r pred1, fig.align = "left", fig.cap = "Figure 5. A comparison of gross primary productivity (GPP) estimates used during the initial model fit (dark green points) versus re-predicted GPP values using our model parameter estimates (light green line with 2.5% and 97.5% confidence intervals shaded). Note, this represents only one site (N.E. Anacostia River in Riverdale, MD) for one year (2011).", out.width = "100%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "GPP_predGPP_nwis01649500.jpg"))
 
@@ -95,7 +95,7 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "GPP_predGPP_nwis0
 
 Prior to plotting, all sites whose critical disturbance threshold (c) estimates were negative (i.e., not hydrologically feasible) or c had an $\hat{R}$ value greater than 1.05 have been removed (n = 141 sites remaining).
 
-```{r fig5, fig.align = "left", fig.cap = "Figure 5. Plots of the ratio of the critical discharge (Q~c~) to the two-year flood (Q~2yr~) as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge (CV~Q~), (C)daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use. Note, the horizontal black line indicates when the Q~c~:Q~2yr~ ratio value is one; values below this line indicate the critical discharge threshold at a given site falls below the 2 year flood discharge value.", out.width = "100%", echo = FALSE}
+```{r fig6, fig.align = "left", fig.cap = "Figure 6. Plots of the ratio of the critical discharge (Q~c~) to the two-year flood (Q~2yr~) as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge (CV~Q~), (C)daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use. Note, the horizontal black line indicates when the Q~c~:Q~2yr~ ratio value is one; values below this line indicate the critical discharge threshold at a given site falls below the 2 year flood discharge value.", out.width = "100%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "QcQ2_8panel.jpg"))
 
