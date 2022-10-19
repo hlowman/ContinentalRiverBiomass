@@ -15,16 +15,20 @@ library(here)
 # All data will be pulled from this project.
 
 # Dataset of available sites/years.
-dat <- readRDS("teton_207rivers_sitesyrsgpp.rds") %>%
-  select(site_name, yearf)
+dat <- readRDS("df_182rivers_sitesyrsgpp.rds") 
+
+sy_dat <- dat %>%
+  select(site_name, year)
 
 # Dataset of site names.
-names_dat <- readRDS("teton_207rivers_sitenames.rds") %>%
+names_dat <- dat %>%
+  select(site_name, long_name) %>%
+  distinct() %>% # removes duplicates
   rename("NWIS ID" = "site_name",
          "Long Site Name" = "long_name")
 
 # Model diagnostics dataset
-model_dat <- readRDS("teton_207rivers_model_diagnostics_bothmodels_021322.rds")
+model_dat <- readRDS("teton_182rivers_model_diags_101522.rds")
 
 #### UI ####
 
@@ -34,12 +38,11 @@ ui <- fluidPage(
   
   # Set of 3 tabs
   tabsetPanel(type = "tabs",
-              #position = c("fixed=top"),
               
-              # Tab 1: Covariate Figures
+              ##### Tab 1: Covariate Figures #####
               tabPanel(h4("Covariate Figures"),
                        br(),
-                       p("This part of the application allows you to sort through the available stream sites and display the original covariate data used to fit the Ricker model."),
+                       p("This part of the application allows you to sort through the available stream sites (n = 182) and display the original covariate data used to fit the model."),
                        br(),
                        p("You may use the drop down menu to select your site of interest, and the corresponding covariate figures should populate below."),
                        br(),
@@ -47,27 +50,25 @@ ui <- fluidPage(
                               
                               column(width = 3,
                                      selectInput("select_site", label = h3("Select stream site:"), # site dropdown
-                                     choices = unique(dat$site_name)))),
+                                     choices = unique(sy_dat$site_name)))),
                               
-                              # column(width = 3,
-                              #        htmlOutput("secondSelection"))), # year dropdown
-                       hr(),
+                              hr(),
                        column(width = 12,
                        imageOutput("covplot"))),
               
-              # Tab 2: Site Listing
+              ##### Tab 2: Site Listing #####
               tabPanel(h4("Site Names and NWIS IDs"),
                        br(),
-                       p("This part of the application provides a table to convert between NWIS identification numbers and names of stream sites."),
+                       p("This part of the application provides a table to convert between NWIS identification numbers and long names of stream sites."),
                        fluidRow(
                          column(width=12,
                                 dataTableOutput('names'))
                        )),
               
-              # Tab 3: Table Display of Model Output
+              ##### Tab 3: Table Display of Model Output #####
               tabPanel(h4("Summarized Model Results & Diagnostics"),
                        br(),
-                       p("This part of the application allows you to view the model results of fitting the Ricker model to the dataset. Note, both the models including and excluding the persistence term (P) are displayed below."),
+                       p("This part of the application allows you to view the model results of fitting the model to the dataset."),
                        br(),
                        p("You may toggle through the column headers to sort in an ascending/descending manner, or you may used the 'Search' bar to search for a particular site."),
                        br(),
@@ -78,10 +79,10 @@ ui <- fluidPage(
                        )
                        ),
               
-              # Tab 4: Covariate Figures
-              tabPanel(h4("Parameter Figures for All Iterations"),
+              ##### Tab 4: S vs. C Figures #####
+              tabPanel(h4("S vs. C Figures for All Iterations"),
                        br(),
-                       p("This part of the application allows you to sort through the available stream sites and display the r and k values for every iteration of the model run. Figures have been colored according to the model structure presented."),
+                       p("This part of the application allows you to sort through the available stream sites and display the sensitivy of the persitence curve (s) and critical disturbance threshold (c) values for every iteration of the model run."),
                        br(),
                        p("You may use the drop down menu to select your site of interest, and the corresponding figures should populate below."),
                        br(),
@@ -89,10 +90,10 @@ ui <- fluidPage(
                               
                               column(width = 3,
                                      selectInput("select_site2", label = h3("Select stream site:"), # site dropdown
-                                                 choices = unique(dat$site_name)))),
+                                                 choices = unique(sy_dat$site_name)))),
                        hr(),
                        column(width = 12,
-                              imageOutput("rkplot")))
+                              imageOutput("scplot")))
               
               )
 )
@@ -102,21 +103,9 @@ ui <- fluidPage(
 # Server:
 server <- function(input, output){
   
-  # Create dependent dropdown menu:
+  ##### Tab 1 #####
   
-  # output$secondSelection <- renderUI({
-  #   
-  #   selected_site <- input$select_site # assign chosen site to "selected_site"
-  #   
-  #   dat_new <- dat %>% # take original dataset
-  #     filter(site_name %in% selected_site) %>% # filter by chosen site
-  #     mutate(yearf_new = yearf) # new subset of years
-  #   
-  #   selectInput(inputId ="select_year", 
-  #               label = h3("Select year:"), # site dropdown
-  #               choices = unique(dat_new$yearf_new))})
-  
-  # Spit out the appropriate figure
+  # Spit out the appropriate figure - tab 1
   
   output$covplot <- renderImage({
     
@@ -132,21 +121,27 @@ server <- function(input, output){
     
   }, deleteFile = FALSE)
   
+  ##### Tab 2 #####
+  
   # Display site names
   
   output$names <- renderDataTable(names_dat)
+  
+  ##### Tab 3 #####
   
   # Display model diagnostics
   
   output$table <- renderDataTable(model_dat)
   
-  # Spit out the appropriate figure
+  ##### Tab 4 #####
   
-  output$rkplot <- renderImage({
+  # Spit out the appropriate figure - tab 4
+  
+  output$scplot <- renderImage({
     
-    filename <- normalizePath(file.path("site_rk_plots",
+    filename <- normalizePath(file.path("site_sc_plots",
                                         paste(input$select_site2, 
-                                              'rk.jpg',
+                                              'sc.jpg',
                                               sep = "")))
     
     # Return a list containing the filename and alt text
@@ -166,8 +161,10 @@ shinyApp(ui = ui, server = server)
 # http://shinyapps.dreamrs.fr/shinyWidgets/
 # https://shiny.rstudio.com/gallery/#user-showcase
 
+#### Deployment ####
+
 # To deploy, use the following code:
-# deployApp(here("code/teton_34sites/shiny"))
+# deployApp(here("code/shiny"))
 # ... so that I don't deploy the whole project.
 
 # End of script.
