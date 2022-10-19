@@ -147,6 +147,13 @@ length(unique(dat_fall22_df$site_name)) #182
 saveRDS(dat_fall22, "data_working/list_182sites_Qmaxnorm_allSL.rds")
 saveRDS(dat_fall22_df, "data_working/df_182sites_Qmaxnorm_allSL.rds")
 
+# Exporting additional df for use in the updated shiny app.
+dat_fall22_syr <- dat_fall22_df %>%
+  group_by(site_name, long_name, year) %>%
+  summarize(mean_GPP = mean(GPP)) %>%
+  ungroup()
+saveRDS(dat_fall22_syr, "code/shiny/df_182rivers_sitesyrsgpp.rds")
+
 # Also breaking the list up into 3 parts for parallel jobs.
 dat_list_pt1 <- dat_fall22[1:60]
 dat_list_pt2 <- dat_fall22[61:120]
