@@ -23,7 +23,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 *H~1A~*: The maximum growth rate will be greatest in streams with fewer **flow disturbance** events that scour existing biomass, since gross primary production (GPP) tends to be highest in streams with more predictable flow [(Bernhardt et al., 2022)](https://www.pnas.org/doi/10.1073/pnas.2121976119).
 
-*H~1B~*: As **light availability** increases, the maximum growth rate will increase, since GPP tends to be highest in well-lit streams [(Bernhardt et al., 2022)](https://www.pnas.org/doi/10.1073/pnas.2121976119). Photoinhibition will likely not be a concern except in intermittent/ephemeral and low order streams.
+*H~1B~*: As **light availability** increases, the maximum growth rate will increase, since GPP tends to be highest in well-lit streams [(Bernhardt et al., 2022)](https://www.pnas.org/doi/10.1073/pnas.2121976119).
 
 ***Q~2~:*** **How does the critical discharge threshold at which biomass is removed (c) vary in streams and rivers across the country as a function of flow disturbance and dominant watershed land use?**
 
@@ -45,12 +45,6 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "model_structure.j
 
 ```
 
-```{r fig2, fig.align = "left", out.width = "100%", echo = FALSE, fig.cap = "Figure 3. Persistence curves for a site that performs well with the model structure described above (South Branch Potomac River) and a site that performs poorly (Reedy Creek). The critical discharge at which biomass is disturbed (c) is denoted by the dotted vertical line. The sensitivity of the persistence transition from presence to removal of biomass (s) is equal to the slope of the green persistence curve as it transitions from complete persistence (P = 1) to removal (P = 0) of biomass."}
-
-knitr::include_graphics(here::here("figures", "presentations", "p_curves.png"))
-
-```
-
 ------------------------------------------------------------------------
 
 ##### Data Acquisition
@@ -65,7 +59,7 @@ We have filtered the available data according to the following rules:
 
 From the initial 356 river sites in the Appling dataset, our filtered dataset consists of **182 sites** and **691 site-years** of data (Table 1).
 
-```{r fig3, fig.align = "center", echo = FALSE, out.width = "75%", fig.cap = "Table 1. Summary statistics for all 182 stream sites included in the dataset."}
+```{r tab1, fig.align = "center", echo = FALSE, out.width = "75%", fig.cap = "Table 1. Summary statistics for all 182 stream sites included in the dataset."}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "summary_data_table_101222.png"))
 
@@ -79,15 +73,17 @@ Figures of all available covariates (discharge, temperature, light) as well as t
 
 Prior to plotting, all sites whose maximum growth rate parameter (r~max~) estimates were negative (i.e., not biologically feasible) or r~max~ had an $\hat{R}$ value greater than 1.05 have been removed (n = 159 sites remaining).
 
-```{r fig4, fig.align = "left", fig.cap = "Figure 4. Plots of mean maximum growth rates as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge (CV~Q~), (C) daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use.", out.width = "100%", echo = FALSE}
+**Main Takeaway #1:** Maximum growth rate (r~max~) values tend to be greater in less frequently disturbed streams (i.e., with lower coefficient of variation in discharge values, Fig. 2C).
 
-knitr::include_graphics(here::here("figures", "teton_fall22", "rmax_8panel.jpg"))
+```{r fig2, fig.align = "left", fig.cap = "Figure 2. Plots of median maximum growth rates as (A) an overall distribution across all sites and versus (B) mean daily gross primary production (GPP), (C) the coefficient of variation in discharge (CV~Q~), (D) daily mean light availability, (E) cumulative summer light availability, (F) mean daily summer water temperature, (G) stream width, (H) catchment size, (I) relative influence of dams (0 value indicating certain influence of a given structure), (J) road density in the catchment (km/km^2), and (K) percent impervious land cover in the catchment.", out.width = "100%", echo = FALSE}
+
+knitr::include_graphics(here::here("figures", "teton_fall22", "rmax_12panel.jpg"))
 
 ```
 
 Typically, the model performs well when predicting declines in GPP (due to its design), but it underpredicts the rate at which these systems recover following disturbance.
 
-```{r pred1, fig.align = "left", fig.cap = "Figure 5. A comparison of gross primary productivity (GPP) estimates used during the initial model fit (dark green points) versus re-predicted GPP values using our model parameter estimates (light green line with 2.5% and 97.5% confidence intervals shaded). Note, this represents only one site (N.E. Anacostia River in Riverdale, MD) for one year (2011).", out.width = "100%", echo = FALSE}
+```{r fig3, fig.align = "left", fig.cap = "Figure 3. A comparison of gross primary productivity (GPP) estimates used during the initial model fit (dark green points) versus re-predicted GPP values using our model parameter estimates (light green line with 2.5% and 97.5% confidence intervals shaded). Note, this represents only one site (N.E. Anacostia River in Riverdale, MD) for one year (2011).", out.width = "100%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "GPP_predGPP_nwis01649500.jpg"))
 
@@ -95,7 +91,9 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "GPP_predGPP_nwis0
 
 Prior to plotting, all sites whose critical disturbance threshold (c) estimates were negative (i.e., not hydrologically feasible) or c had an $\hat{R}$ value greater than 1.05 have been removed (n = 141 sites remaining).
 
-```{r fig6, fig.align = "left", fig.cap = "Figure 6. Plots of the ratio of the critical discharge (Q~c~) to the two-year flood (Q~2yr~) as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge (CV~Q~), (C)daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use. Note, the horizontal black line indicates when the Q~c~:Q~2yr~ ratio value is one; values below this line indicate the critical discharge threshold at a given site falls below the 2 year flood discharge value.", out.width = "100%", echo = FALSE}
+**Main Takeaway #2:** In most streams, the discharge threshold at which biomass is disturbed occurs far more frequently than the two-year flood.
+
+```{r fig4, fig.align = "left", fig.cap = "Figure 4. Plots of the ratio of the critical discharge (Q~c~) to the two-year flood (Q~2yr~) as (A) an overall distribution across all sites and versus (B) the coefficient of variation in discharge (CV~Q~), (C)daily mean light availability, (D) stream order, (E) site latitude, (F) site longitude, (G) watershed size, and (H) primary land use. Note, the horizontal black line indicates when the Q~c~:Q~2yr~ ratio value is one; values below this line indicate the critical discharge threshold at a given site falls below the 2 year flood discharge value.", out.width = "100%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "QcQ2_8panel.jpg"))
 
@@ -113,10 +111,22 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "QcQ2_8panel.jpg")
 
 (1) Do you have any suggestions regarding model diagnostic best practices?
 
-(2) Do you feel there are particular figures that should/shouldn't be included in the main text?
+(2) How should we caveat sites that are on the same river? If they are assigned different USGS site IDs, is that sufficient to say they are encountering different enough environmental conditions?
 
-(3) Is there anything else you feel I should consider examining moving forward?
+(3) Do you feel there are particular figures that should/shouldn't be included in the main text?
 
-###### End of RMarkdown document.
+(4) Do you feel a multiple linear regression using parameter values (r, c) and the covariates provided above is the best approach for a post-hoc analysis? Would creating a structural equation model be a better approach? 
+
+(5) Is there anything else you feel I should consider examining moving forward?
 
 ------------------------------------------------------------------------
+
+##### *Supplementary Figures*
+
+```{r suppfig1, fig.align = "left", out.width = "100%", echo = FALSE, fig.cap = "Supplementary Figure 1. Persistence curves for a site that performs well with the model structure described above (South Branch Potomac River) and a site that performs poorly (Reedy Creek). The critical discharge at which biomass is disturbed (c) is denoted by the dotted vertical line. The sensitivity of the persistence transition from presence to removal of biomass (s) is equal to the slope of the green persistence curve as it transitions from complete persistence (P = 1) to removal (P = 0) of biomass."}
+
+knitr::include_graphics(here::here("figures", "presentations", "p_curves.png"))
+
+```
+
+###### End of RMarkdown document.
