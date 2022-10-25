@@ -54,14 +54,20 @@ dat_out_df <- map_df(dat_out, ~as.data.frame(.x), .id="site_name")
 # removed them.
 
 # First, calculate mean rmax values at all the sites.
-dat_out_rmean <- dat_out_df %>%
+# dat_out_rmean <- dat_out_df %>%
+#   group_by(site_name) %>%
+#   summarize(r_mean = mean(r)) %>%
+#   ungroup()
+
+# Instead of calculating the mean, I'll be using median rmax values.
+dat_out_rmed <- dat_out_df %>%
   group_by(site_name) %>%
-  summarize(r_mean = mean(r)) %>%
+  summarize(r_med = median(r)) %>%
   ungroup()
 
 # And remove negative values.
-dat_out_rmean_pos <- dat_out_rmean %>%
-  filter(r_mean > 0) # Removes 12 sites.
+dat_out_rmed_pos <- dat_out_rmed %>%
+  filter(r_med > 0) # Removes 12 sites.
 
 #### Rhat filter for rmax ####
 
@@ -74,6 +80,8 @@ dat_diag_rfilter1 <- dat_diag %>%
   filter(Rhat < 1.05) # 12 sites drop off
 
 #### normRMSE filter ####
+
+# NOTE - NOT USING nRMSE FILTER FOR NOV MEETING - TOO COMPUTATIONALLY INTENSIVE
 
 # Next, I will be examining sites that do not do a good job of predicting
 # GPP using the original data.
@@ -205,7 +213,7 @@ saveRDS(nRMSE_182sitesdf, "data_working/nRMSE_182sites_101922.rds")
 
 # Next, append the positive rmax values to the Rhat filter to remove
 # appropriate sites.
-dat_out_rmean_Rhat <- inner_join(dat_diag_rfilter1, dat_out_rmean_pos) 
+dat_out_rmed_Rhat <- inner_join(dat_diag_rfilter1, dat_out_rmed_pos) 
 # 159 sites remaining
 
 # Not removing any sites based on RMSE values for the time being.
@@ -221,35 +229,79 @@ dat_in_cvq_L <- dat_in_df %>%
             meanGPP = mean(GPP, na.rm = TRUE)) %>%
   ungroup()
 
+# Need to also calculate summer light and temperature means
+dat_in_summer <- dat_in_df %>%
+  filter(DOY > 164) %>% # summer solstice-ish
+  filter(DOY < 259) %>% # autumn equinox-ish
+  group_by(site_name) %>%
+  summarize(summerL = sum(PAR_surface, na.rm = TRUE), # cumulative summer light
+            summerT = mean(temp, na.rm = TRUE)) %>% # mean summer temperature
+  ungroup()
+
 # And, append this to the larger dataset.
-dat_out_yas <- left_join(dat_out_rmean_Rhat, dat_in_cvq_L)
+dat_out_yas <- left_join(dat_out_rmed_Rhat, dat_in_cvq_L)
+dat_out_queen <- left_join(dat_out_yas, dat_in_summer)
 
 # Also would like to add site characteristics to this dataset for plotting.
+# from hypoxia dataset:
 dat_site_info <- site_info %>%
   mutate(Order = factor(NHD_STREAMORDE)) %>%
-  dplyr::select(SiteID, Lat_WGS84, Lon_WGS84, Order, NHD_AREASQKM, LU_category)
+  dplyr::select(SiteID, Lat_WGS84, Lon_WGS84, Order, NHD_AREASQKM, LU_category,
+                NHD_RdDensCat, NHD_RdDensWs, NHD_PctImp2011Cat, NHD_PctImp2011Ws)
+# from Appling dataset:
+dat_site <- site %>%
+  mutate(Canal = factor(struct.canal_flag),
+         Dam = factor(struct.dam_flag)) %>%
+  dplyr::select(site_name, dvqcoefs.a, dvqcoefs.b, Canal, Dam)
+
+# Also, need to calculate stream width.
+# Pull out coefficients.
+coeff_ab <- dat_site %>%
+  select(site_name, dvqcoefs.a, dvqcoefs.b)
+# Pull out daily discharge data for input dataset.
+q_daily <- dat_in_df %>%
+  select(site_name, Q)
+# Calculate stream width every day based on: width = a*(Q^b)
+q_coeffs <- full_join(q_daily, coeff_ab)
+q_coeffs$width <- q_coeffs$dvqcoefs.a*(q_coeffs$Q^q_coeffs$dvqcoefs.b)
+# And summarize by site (use median).
+med_width <- q_coeffs %>%
+  group_by(site_name) %>%
+  summarize(width_med = median(width)) %>%
+  ungroup() %>% # oh so this has 602 sites to reflect the orig site info dataset so,
+  drop_na(width_med) # dropping NAs (two sites have no data?)
 
 # And append.
-dat_out_full <- left_join(dat_out_yas, dat_site_info,
+dat_out_join1 <- left_join(dat_out_queen, dat_site_info,
                           by = c("site_name" = "SiteID"))
+dat_out_join2 <- left_join(dat_out_join1, dat_site)
+dat_out_full <- left_join(dat_out_join2, med_width)
 
 # Distribution of rmax values:
-(fig1 <- ggplot(dat_out_full, aes(x = r_mean)) +
+(fig1 <- ggplot(dat_out_full, aes(x = r_med)) +
   geom_histogram(bins = 60, alpha = 0.8, 
                  fill = "#9E8ABC", color = "#9E8ABC") +
   labs(x = expression(Maximum~Growth~Rate~(r[max])),
        y = "Count") +
   theme_bw())
 
+# Mean daily GPP vs. rmax:
+(fig1.1 <- ggplot(dat_out_full, aes(x = meanGPP, y = r_med)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "black") +
+    labs(y = expression(Maximum~Growth~Rate~(r[max])),
+         x = expression(Mean~Daily~GPP)) +
+    theme_bw())
+
 # CV of Discharge vs. rmax:
-(fig2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_mean)) +
+(fig2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#A494CC") +
     labs(x = expression(CV[Q]),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
-(fig2.2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_mean)) +
+(fig2.2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_med)) +
     geom_point(alpha = 0.8, size = 3) +
     labs(x = expression(CV[Q]),
          y = expression(r[max])) +
@@ -257,60 +309,137 @@ dat_out_full <- left_join(dat_out_yas, dat_site_info,
     theme(text = element_text(family = "serif", size = 40)))
 
 # Mean Daily Light Availability vs. rmax:
-(fig3 <- ggplot(dat_out_full, aes(x = meanL, y = r_mean)) +
+(fig3 <- ggplot(dat_out_full, aes(x = meanL, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#A399CE") +
     labs(x = expression(Mean~Daily~PAR),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
+(fig3.1 <- ggplot(dat_out_full, aes(x = summerL, y = r_med)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#A399CE") +
+    labs(x = expression(Cumulative~Summer~PAR),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+(fig3.2 <- ggplot(dat_out_full, aes(x = summerT, y = r_med)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#A399CE") +
+    labs(x = expression(Mean~Summer~Temperature~(Celsius)),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
 # Stream Order vs. rmax: Removing singular site w/o order info for now.
 (fig4 <- ggplot(dat_out_full %>%
-                  filter(!is.na(Order)), aes(x = Order, y = r_mean)) +
+                  filter(!is.na(Order)), aes(x = Order, y = r_med)) +
     geom_boxplot(alpha = 0.6, color = "#8B90A5", fill = "#8B90A5") +
     labs(x = expression(Stream~Order),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
-# Latitude vs. rmax:
-(fig5 <- ggplot(dat_out_full, aes(x = Lat_WGS84, y = r_mean)) +
-    geom_point(alpha = 0.6, size = 3, color = "#8B8D8A") +
-    labs(x = expression(Latitude),
+# Stream Width vs. rmax: 
+(fig4.1 <- ggplot(dat_out_full, aes(x = width_med, y = r_med)) +
+    geom_point(alpha = 0.6, size = 3, color = "#A18F7E") +
+    labs(x = expression(Stream~Width),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
+
+# Also did a quick gut check of order vs. width
+plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
+
+# First outlier for the first order streams is Quinnipiac River, CT, which
+# appears to drain straight from Hanover Pond, hence why it's so bit.
+# The second outlier is Alcovy River, GA, which does NOT look like a first
+# order stream; it drains a few other streams but *also* has some sort of
+# retention pond upstream, which may also have reset the order classification.
+
+# Latitude vs. rmax:
+# (fig5 <- ggplot(dat_out_full, aes(x = Lat_WGS84, y = r_mean)) +
+#     geom_point(alpha = 0.6, size = 3, color = "#8B8D8A") +
+#     labs(x = expression(Latitude),
+#          y = expression(Maximum~Growth~Rate~(r[max]))) +
+#     theme_bw())
 
 # Longitude vs. rmax:
-(fig6 <- ggplot(dat_out_full, aes(x = Lon_WGS84, y = r_mean)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A18F7E") +
-    labs(x = expression(Longitude),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
-    theme_bw())
+# (fig6 <- ggplot(dat_out_full, aes(x = Lon_WGS84, y = r_mean)) +
+#     geom_point(alpha = 0.6, size = 3, color = "#A18F7E") +
+#     labs(x = expression(Longitude),
+#          y = expression(Maximum~Growth~Rate~(r[max]))) +
+#     theme_bw())
 
 # Catchment size vs. rmax: note, missing Miss. R.
-(fig7 <- ggplot(dat_out_full, aes(x = NHD_AREASQKM, y = r_mean)) +
+(fig7 <- ggplot(dat_out_full, aes(x = NHD_AREASQKM, y = r_med)) +
     geom_point(alpha = 0.6, size = 3, color = "#A6A284") +
     labs(x = expression(Watershed~Area~(km^2)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
-# Landu use vs. rmax:
-(fig8 <- ggplot(dat_out_full, aes(x = LU_category, y = r_mean)) +
-    geom_boxplot(alpha = 0.6, color = "#A5BA92", fill = "#A5BA92") +
-    labs(x = expression(Land~Use),
+# Land use vs. rmax:
+# (fig8 <- ggplot(dat_out_full, aes(x = LU_category, y = r_mean)) +
+#     geom_boxplot(alpha = 0.6, color = "#A5BA92", fill = "#A5BA92") +
+#     labs(x = expression(Land~Use),
+#          y = expression(Maximum~Growth~Rate~(r[max]))) +
+#     theme_bw())
+
+(fig9 <- ggplot(dat_out_full, aes(x = NHD_RdDensCat, y = r_med)) +
+    geom_point(alpha = 0.6, size = 3, color = "#A5BA92") +
+    labs(x = expression(Road~Density~by~Catchment),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+(fig10 <- ggplot(dat_out_full, aes(x = NHD_RdDensWs, y = r_med)) +
+    geom_point(alpha = 0.6, size = 3, color = "#A5BA92") +
+    labs(x = expression(Road~Density~by~Watershed),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+(fig11 <- ggplot(dat_out_full, aes(x = NHD_PctImp2011Cat, y = r_med)) +
+    geom_point(alpha = 0.6, size = 3, color = "#A5BA92") +
+    labs(x = expression(Percent~Impervious~by~Catchment),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+(fig12 <- ggplot(dat_out_full, aes(x = NHD_PctImp2011Ws, y = r_med)) +
+    geom_point(alpha = 0.6, size = 3, color = "#A5BA92") +
+    labs(x = expression(Percent~Impervious~by~Watershed),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# quick combination of land use figures
+(fig_lu <- (fig9 + fig10) / (fig11 + fig12))
+
+# Effect of Canals
+# "95 indicates the least probable interference from a structure of a given type"
+(fig13 <- ggplot(dat_out_full, aes(x = Canal, y = r_med)) +
+    geom_boxplot(alpha = 0.6, 
+                 fill = "#8B8D8A", color = "#8B8D8A") +
+    labs(x = expression(Likelihood~of~Influence~by~Canals),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# Effect of Dams
+# "95 indicates the least probable interference from a structure of a given type"
+(fig14 <- ggplot(dat_out_full, aes(x = Dam, y = r_med)) +
+    geom_boxplot(alpha = 0.6, 
+                 fill = "#8B8D8A", color = "#8B8D8A") +
+    labs(x = expression(Likelihood~of~Influence~by~Dams),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
 # Combine figures above.
-(fig_r <- fig1 + fig2 + fig3 + fig4 +
-    fig5 + fig6 + fig7 + fig8 +
+(fig_r_med <- fig1 + fig1.1 + fig2 +
+    fig3 + fig3.1 + fig3.2 +
+    fig4.1 + fig7 + fig14 +
+    fig9 + fig11 +
     plot_annotation(tag_levels = 'A') +
-    plot_layout(nrow = 2))
+    plot_layout(nrow = 4))
 
-# ggsave(fig_r,
-#        filename = "figures/teton_fall22/rmax_8panel.jpg",
-#        width = 40,
-#        height = 20,
-#        units = "cm") # n = 159
+ggsave(fig_r_med,
+       filename = "figures/teton_fall22/rmax_12panel.jpg",
+       width = 40,
+       height = 40,
+       units = "cm") # n = 159
 
 # Raw GPP and Q for Potomac River site to add alongside CVq figure for job
 # application materials:
