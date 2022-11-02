@@ -53,6 +53,7 @@ nutCds <- full_join(nutCds2, ammoCds)
 # Use the NEW water quality function to test pull a single type of data 
 # at a single site.
 # More info here: https://cran.r-project.org/web/packages/dataRetrieval/vignettes/qwdata_changes.html
+# Info about deprecated functions here: https://waterdata.usgs.gov/blog/dataretrieval/
 siteNo <- "02203900"
 pCode <- "00662"
 start.date <- "2007-01-01"
