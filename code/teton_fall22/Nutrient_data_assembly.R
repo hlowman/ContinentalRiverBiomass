@@ -9,7 +9,7 @@
 
 # Load packages
 lapply(c("tidyverse", "lubridate", "here",
-         "dataRetrieval"), require, character.only=T)
+         "dataRetrieval", "viridis"), require, character.only=T)
 
 # Load in original list of data fed into the model.
 dat_in <- readRDS("data_working/list_182sites_Qmaxnorm_allSL.rds")
@@ -110,5 +110,39 @@ p <- summNuts %>%
   filter(CharacteristicName == "Phosphorus")
 
 hist(p$mean_value) # same.
+
+#### Quick Figures ####
+
+# Need to make columns of the analytes.
+# But first, need to select analytes/columns of interest
+summ_No3_filter <- summNuts %>%
+  filter(ResultMeasure.MeasureUnitCode == "mg/l asNO3") %>%
+  select(MonitoringLocationIdentifier, mean_value) %>%
+  rename("NO3_mg_L" = "mean_value")
+
+summ_oP_filter <- summNuts %>%
+  filter(ResultMeasure.MeasureUnitCode == "mg/l as P") %>%
+  filter(CharacteristicName == "Orthophosphate") %>%
+  select(MonitoringLocationIdentifier, mean_value) %>%
+  rename("oP_mg_L_P" = "mean_value")
+
+# And then join back together.
+summ_No3_oP <- full_join(summ_No3_filter, summ_oP_filter, by = c("MonitoringLocationIdentifier"))
+
+(fig1 <- ggplot(summ_No3_oP, aes(x = log10(NO3_mg_L), y = log10(oP_mg_L_P))) +
+  geom_point(size = 3, alpha = 0.8, aes(color = NO3_mg_L)) +
+  scale_color_viridis() +
+  labs(x = "Log of Nitrate (mg/L as NO3)",
+       y = "Log of orthoPhosphate (mg/L as P)",
+       color = "[NO3] (mg/L)",
+       title = "USGS Water Quality Data (n = 114 sites)") +
+  theme_bw())
+
+# Export figure.
+# ggsave(fig1,
+#        filename = "figures/teton_fall22/nuts_exploration_fig.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
 
 # End of script.
