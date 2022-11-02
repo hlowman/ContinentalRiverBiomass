@@ -97,7 +97,9 @@ summNuts <- wqpNuts %>%
   group_by(MonitoringLocationIdentifier, 
            CharacteristicName,
            ResultMeasure.MeasureUnitCode) %>%
-  summarize(mean_value = mean(ResultMeasureValue, na.rm=TRUE)) %>%
+  summarize(mean_value = mean(ResultMeasureValue, na.rm=TRUE),
+            measure_count = sum(!is.na(ResultMeasureValue))) %>% # bc otherwise
+  # n() function counts NAs, which we don't want
   ungroup()
 
 # Examine data
@@ -145,4 +147,76 @@ summ_No3_oP <- full_join(summ_No3_filter, summ_oP_filter, by = c("MonitoringLoca
 #        height = 10,
 #        units = "cm")
 
+# Another figure to look at frequency of certain measurements by site.
+(fig2 <- ggplot(summNuts, aes(x = CharacteristicName, y = measure_count)) +
+    geom_boxplot(aes(color = CharacteristicName)) +
+    scale_color_viridis(discrete = TRUE) +
+    labs(x = "Analytes",
+         y = "Count of Measurements") +
+    theme_bw() +
+    theme(legend.position = "none") +
+    coord_flip())
+
+# Export figure.
+# ggsave(fig2,
+#        filename = "figures/teton_fall22/nuts_availability_fig.jpg",
+#        width = 20,
+#        height = 10,
+#        units = "cm")
+
+# Looks like phosphorus and nitrate may be most abundant, but Joanna suggested
+# using orthophosphate so going to move ahead with those two measures.
+
+#### Orthophosphate ####
+
+# Need to examine what units are present for P.
+orthoP <- wqpNuts %>%
+  filter(CharacteristicName == "Orthophosphate")
+
+unique(orthoP$ResultMeasure.MeasureUnitCode)  # only one code - "mg/l as P"
+
+# Note for future me - "Phosphorus" has ~4 codes, so that would make conversion
+# a little more tricky.
+
+# Just for another quick gut check
+length(unique(orthoP$MonitoringLocationIdentifier)) # 112 sites with oP data
+
+# Note, will need to remove measurements with NA as unit.
+
+# FINAL UNITS: mg/L as PO4-P
+
+#### Nitrate ####
+nitrate <- wqpNuts %>%
+  filter(CharacteristicName == "Nitrate")
+  
+unique(nitrate$ResultMeasure.MeasureUnitCode) # two codes - "mg/l asNO3", 
+# and "mg/l as N", so will need to do some conversions
+  
+# Also need to remove measurements with NA as unit.
+
+# Just for another quick gut check
+length(unique(nitrate$MonitoringLocationIdentifier)) # 105 sites with NO3 data
+
+# Need to convert mg/L as N to mg/L as NO3.
+# 1 mg/L No3-N = 4.43 mg/L NO3
+# 0.226 mg/L NO3-N = 1 mg/L NO3
+wqpNuts <- wqpNuts %>%
+  mutate(ResultMeasureValue_conv = case_when(CharacteristicName == "Nitrate" &
+                                               ResultMeasure.MeasureUnitCode == "mg/l asNO3" ~ ResultMeasureValue*0.226,
+                                             TRUE ~ ResultMeasureValue))
+
+# FINAL UNITS: mg/L as NO3-N
+
+#### Summary by site ####
+
+# Summarize Orthophosphate and Nitrate data by site.
+wqp_oP_NO3 <- wqpNuts %>%
+  filter(CharacteristicName %in% c("Orthophosphate", "Nitrate")) %>%
+  group_by(MonitoringLocationIdentifier, CharacteristicName) %>%
+  summarize(mean_mg_L = mean(ResultMeasureValue_conv, na.rm = TRUE)) %>%
+  ungroup()
+
+# And export for use in other script.
+saveRDS(wqp_oP_NO3, "data_working/USGS_WQP_nuts_aggsite_110222.rds")
+  
 # End of script.
