@@ -83,9 +83,9 @@ Prior to plotting, all sites whose maximum growth rate parameter (r~max~) estima
 
 **Main Takeaway #1:** Maximum growth rate (r~max~) values tend to be greater in less frequently disturbed streams (i.e., with lower coefficient of variation in discharge values, Fig. 2C).
 
-```{r fig3, fig.align = "left", fig.cap = "Figure 3. Plots of median maximum growth rates as (A) an overall distribution across all sites and versus (B) mean daily gross primary production (GPP), (C) the coefficient of variation in discharge (CV~Q~), (D) daily mean light availability, (E) cumulative summer light availability, (F) mean daily summer water temperature, (G) stream width, (H) catchment size, (I) relative influence of dams (0 value indicating certain influence of a given structure), (J) road density in the catchment (km/km^2), and (K) percent impervious land cover in the catchment.", out.width = "100%", echo = FALSE}
+```{r fig3, fig.align = "left", fig.cap = "Figure 3. Plots of median maximum growth rates versus (A) mean daily gross primary production (GPP), (B) the coefficient of variation in discharge (CV~Q~), (C) daily mean light availability, (D) cumulative summer light availability, (E) mean daily summer water temperature, (F) stream width, (G) catchment size, (H) relative influence of dams (0 value indicating certain influence of a given structure), (I) road density in the catchment (km/km^2), (J) percent impervious land cover in the catchment, (K) mean nitrate concentrations (mg/L NO~3~-N), and (L) mean orthophosphate concentrations (mg/L PO~4~-P).", out.width = "100%", echo = FALSE}
 
-knitr::include_graphics(here::here("figures", "teton_fall22", "rmax_12panel.jpg"))
+knitr::include_graphics(here::here("figures", "teton_fall22", "rmax_12panel_nov.jpg"))
 
 ```
 
@@ -134,6 +134,12 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "QcQ2_8panel.jpg")
 ```{r suppfig1, fig.align = "left", out.width = "100%", echo = FALSE, fig.cap = "Supplementary Figure 1. Persistence curves for a site that performs well with the model structure described above (South Branch Potomac River) and a site that performs poorly (Reedy Creek). The critical discharge at which biomass is disturbed (c) is denoted by the dotted vertical line. The sensitivity of the persistence transition from presence to removal of biomass (s) is equal to the slope of the green persistence curve as it transitions from complete persistence (P = 1) to removal (P = 0) of biomass."}
 
 knitr::include_graphics(here::here("figures", "presentations", "p_curves.png"))
+
+```
+
+```{r suppfig2, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Supplementary Figure 2. Estimates of the critical discharge at which biomass is disturbed (c) based on model fits at six sites using discharge normalized to either the ten-year flood at a given site based on the past 50 years of USGS records (Q~10~) or the maximum discharge in a given record (Q~max~)."}
+
+knitr::include_graphics(here::here("figures", "teton_summer22", "c_q10_vs_qmaxnorm_fig.png"))
 
 ```
 
