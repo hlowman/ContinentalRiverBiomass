@@ -623,16 +623,16 @@ plotting_sc <- function(x) {
       filter(site_name == i)
     
     # fit a linear model for all iterations
-    fit <- lm(c ~ s, data = df)
+    #fit <- lm(c ~ s, data = df)
     
     # create a plot with r and k for all iterations
     p <- ggplot(df, aes(x = s, y = c)) +
       geom_point(alpha = 0.8) +
-      geom_smooth(method = lm, color = "#E4B3E2") +
+      #geom_smooth(method = lm, color = "#E4B3E2") +
       labs(x = "Sensitivity of Persistence Curve (s)",
-           y = "Critical Disturbance Threshold (c)",
-           title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
-                         " p =",signif(summary(fit)$coef[2,4], 5))) +
+           y = "Critical Disturbance Threshold (c)") +
+           #title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+           #               " p =",signif(summary(fit)$coef[2,4], 5))) +
       theme_bw() +
       theme(text = element_text(size=20))
     
@@ -660,6 +660,7 @@ plotting_sc(data_out_141 %>% filter(site_name == "nwis_01124000"))
 plotting_sc(data_out_141)
 
 # Roughly, 11 sites had R^2 > 0.5. Lots appear to have log scale relationships.
+# Removed lm and model fit print out bc it appeared a bit messy on th app.
 
 #### c Figures ####
 
