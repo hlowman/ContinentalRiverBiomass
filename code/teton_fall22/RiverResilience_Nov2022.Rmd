@@ -1,7 +1,7 @@
 ---
 title: "Productivity Modeling - Revised Results"
 author: "Heili Lowman, Joanna Blaszczak"
-date: "10/12/2022"
+date: "11/07/2022"
 output: html_document
 ---
 
@@ -37,11 +37,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Since our last meeting, we experimented with structuring the model in a hierarchical format so as to share information across sites. However, this approach ended up being too computationally intensive (i.e., would have taken >1 month to run), so we have reverted to modeling each site individually using the original model formula (Figure 1).
 
-```{r fig1, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Figure 1. The state-space population model being used to estimate parameters of maximum growth rate (r~max~) across individual stream sites. The observation model uses daily estimates of gross primary production (g~t~) and daily light (L~t~) to estimate daily biomass (b~t~). The daily persistence term (P~t~) is a function of daily discharge (Q~t~) which is used to estimate the sensitivity of the persistence transition from presence to removal of biomass (s) and the critical discharge threshold at which benthic biomass is removed (c). Both the observation and persistence models then inform the process model, which is a density-dependent growth function for daily biomass (b~t~) in a given stream. The estimated terms of P~t~ and b~t~ are input into the process model to extract values for the maximum growth rate (r~max~) and lambda(λ), which is equal to the negative maximum growth rate divided by the carrying capacity (K)."}
+```{r fig1, fig.align = "center", out.width = "75%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_fall22", "model_structure.jpg"))
 
 ```
+Figure 1. The state-space population model being used to estimate parameters of maximum growth rate (r~max~) across individual stream sites. The observation model uses daily estimates of gross primary production (g~t~) and daily light (L~t~) to estimate daily biomass (b~t~). The daily persistence term (P~t~) is a function of daily discharge (Q~t~) which is used to estimate the sensitivity of the persistence transition from presence to removal of biomass (s) and the critical discharge threshold at which benthic biomass is removed (c). Both the observation and persistence models then inform the process model, which is a density-dependent growth function for daily biomass (b~t~) in a given stream. The estimated terms of P~t~ and b~t~ are input into the process model to extract values for the maximum growth rate (r~max~) and lambda(λ), which is equal to the negative maximum growth rate divided by the carrying capacity (K).
 
 ------------------------------------------------------------------------
 
@@ -129,11 +130,13 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "SEMb.jpg"))
 
 ```
 
-```{r suppfig2, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Supplementary Figure 2. Persistence curves for a site that performs well with the model structure described above (South Branch Potomac River) and a site that performs poorly (Reedy Creek). The critical discharge at which biomass is disturbed (c) is denoted by the dotted vertical line. The sensitivity of the persistence transition from presence to removal of biomass (s) is equal to the slope of the green persistence curve as it transitions from complete persistence (P = 1) to removal (P = 0) of biomass."}
+```{r suppfig2, fig.align = "center", out.width = "75%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "presentations", "p_curves.png"))
 
 ```
+
+Supplementary Figure 2. Persistence curves for a site that performs well with the model structure described above (South Branch Potomac River) and a site that performs poorly (Reedy Creek). The critical discharge at which biomass is disturbed (c) is denoted by the dotted vertical line. The sensitivity of the persistence transition from presence to removal of biomass (s) is equal to the slope of the green persistence curve as it transitions from complete persistence (P = 1) to removal (P = 0) of biomass.
 
 ```{r suppfig3, fig.align = "left", fig.cap = "Supplementary Figure 3. Plots of median maximum growth rates (r~max~) versus (A) daily mean light availability, (B) mean daily summer water temperature, (C) watershed area, (D) stream order, (E) stream width, (F) latitude, (G) relative influence of dams, (H) mean nitrate concentrations, and (I) mean orthophosphate concentrations. Note, in panel G, a value of 0 indicates the certain influence of a dam while a value of 95 indicates a low or unlikely influence of a dam. Also, panels C, E, H, and I present the x-axis on a log scale.", out.width = "100%", echo = FALSE}
 
@@ -141,11 +144,13 @@ knitr::include_graphics(here::here("figures", "teton_fall22", "rmax_9panel_nov.j
 
 ```
 
-```{r suppfig4, fig.align = "center", out.width = "75%", echo = FALSE, fig.cap = "Supplementary Figure 4. Estimates of the critical discharge at which biomass is disturbed (c) based on model fits at six sites using discharge normalized to either the ten-year flood at a given site based on the past 50 years of USGS records (Q~10~) or the maximum discharge in a given record (Q~max~)."}
+```{r suppfig4, fig.align = "center", out.width = "75%", echo = FALSE}
 
 knitr::include_graphics(here::here("figures", "teton_summer22", "c_q10_vs_qmaxnorm_fig.png"))
 
 ```
+
+Supplementary Figure 4. Estimates of the critical discharge at which biomass is disturbed (c) based on model fits at six sites using discharge normalized to either the ten-year flood at a given site based on the past 50 years of USGS records (Q~10~) or the maximum discharge in a given record (Q~max~).
 
 ```{r suppfig5, fig.align = "left", fig.cap = "Supplementary Figure 5. Plots of the ratio of the median critical discharge (Q~c~) to the two-year flood (Q~2yr~) versus (A) stream order, (B) stream width, and (C) relative influence of dams. Note, in panel C, a value of 0 indicates the certain influence of a dam while a value of 95 indicates a low or unlikely influence of a dam. Also, panel B presents the x-axis on a log scale.", out.width = "100%", echo = FALSE}
 
