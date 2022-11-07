@@ -59,7 +59,7 @@ ui <- fluidPage(
               ##### Tab 2: Site Listing #####
               tabPanel(h4("Site Names and NWIS IDs"),
                        br(),
-                       p("This part of the application provides a table to convert between NWIS identification numbers and long names of stream sites."),
+                       p("This part of the application provides a cross-walk table to convert between NWIS identification numbers and long names of stream sites."),
                        fluidRow(
                          column(width=12,
                                 dataTableOutput('names'))
