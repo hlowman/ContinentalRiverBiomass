@@ -306,7 +306,7 @@ dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
                color = "#A698D3") +
     scale_x_log10() +
     labs(y = expression(Maximum~Growth~Rate~(r[max])),
-         x = expression(Mean~Daily~GPP)) +
+         x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
     theme_bw())
 
 # CV of Discharge vs. rmax:
@@ -328,14 +328,14 @@ dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
 (fig3 <- ggplot(dat_out_full, aes(x = meanL, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#9E8ABC") +
-    labs(x = expression(Mean~Daily~PAR),
+    labs(x = expression(Mean~Daily~PAR~(mol~m^-2~d^-1)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
 (fig3.1 <- ggplot(dat_out_full, aes(x = summerL, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#8F8D88") +
-    labs(x = expression(Cumulative~Summer~PAR),
+    labs(x = expression(Cumulative~Summer~PAR~(mol~m^-2~d^-1)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
@@ -402,7 +402,7 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 
 (fig9 <- ggplot(dat_out_full, aes(x = NHD_RdDensCat, y = r_med)) +
     geom_point(alpha = 0.6, size = 3, color = "#A6987F") +
-    labs(x = expression(Road~Density~by~Catchment),
+    labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
@@ -785,14 +785,14 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
                color = "#D2A059") +
     scale_x_log10() +
     labs(y = expression(Q[c]:Q[2~yr]),
-         x = expression(Mean~Daily~GPP)) +
+         x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
     theme_bw())
 
 # More Land Use vs. c:
 (fig10qcq2 <- ggplot(dat_out_full_141, aes(x = NHD_RdDensCat, y = Qc_Q2yr)) +
     geom_hline(yintercept = 1) +
     geom_point(alpha = 0.6, size = 3, color = "#CB776D") +
-    labs(x = expression(Road~Density~by~Catchment),
+    labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
@@ -920,8 +920,8 @@ nRMSE_1site <- nRMSE_fxn(rmse1, dat_in$nwis_01649500)
 
 # ggsave(gpp_plot1,
 #        filename = "figures/teton_fall22/GPP_predGPP_nwis01649500.jpg",
-#        width = 35,
-#        height = 15,
+#        width = 40,
+#        height = 10,
 #        units = "cm")
 
 # End of script.
