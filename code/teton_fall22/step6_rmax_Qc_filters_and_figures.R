@@ -356,7 +356,10 @@ dat_out_full <- dat_out_full %>%
 
 (fig3.2 <- ggplot(dat_out_full, aes(x = summerT, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#A393CA") +
+               color = "#9E8ABC") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#9E8ABC",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Mean~Summer~Temperature~(Celsius)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
@@ -391,7 +394,10 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 
 # Latitude vs. rmax:
 (fig5 <- ggplot(dat_out_full, aes(x = Lat_WGS84, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#938E86") +
+    geom_point(alpha = 0.6, size = 3, color = "#8F8D88") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#8F8D88",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Latitude),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
@@ -458,7 +464,7 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 # "95 indicates the least probable interference from a structure of a given type"
 (fig13 <- ggplot(dat_out_full, aes(x = Canal, y = r_med)) +
     geom_boxplot(alpha = 0.6, 
-                 fill = "#8B8D8A", color = "#8B8D8A") +
+                 fill = "#A6987F", color = "#A6987F") +
     labs(x = expression(Likelihood~of~Influence~by~Canals),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
@@ -467,14 +473,14 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 # "95 indicates the least probable interference from a structure of a given type"
 (fig14 <- ggplot(dat_out_full, aes(x = Dam, y = r_med)) +
     geom_boxplot(alpha = 0.6, 
-                 fill = "#A7907B", color = "#A7907B") +
+                 fill = "#A5BA92", color = "#A5BA92") +
     labs(x = expression(Likelihood~of~Influence~by~Dams),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
 # Nutrients - note, both x axes are LOG SCALED
 (fig15 <- ggplot(dat_out_full, aes(x = Nitrate, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A6A486") +
+    geom_point(alpha = 0.6, size = 3, color = "#A698D3") +
     geom_linerange(alpha = 0.8, 
                    color = "#A698D3",
                    aes(ymin = minCI, ymax = `97.5%`)) +
@@ -484,9 +490,9 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
     theme_bw())
 
 (fig16 <- ggplot(dat_out_full, aes(x = Orthophosphate, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A5BA92") +
+    geom_point(alpha = 0.6, size = 3, color = "#9092AD") +
     geom_linerange(alpha = 0.8, 
-                   color = "#A698D3",
+                   color = "#9092AD",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Mean~OrthoPhosphate~(mg/L~PO[4]-P)),
@@ -507,17 +513,16 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 #        height = 30,
 #        units = "cm") # n = 159
 
-(fig_r_supp <- fig3 + fig3.2 + fig7 +
-    fig4 + fig4.1 + fig5 +
-    fig14 + fig15 + fig16 +
+(fig_r_supp <- fig3.2 + fig15 + fig16 +
+    fig5 + fig13 + fig14 +
     plot_annotation(tag_levels = 'A') +
-    plot_layout(nrow = 3))
+    plot_layout(nrow = 2))
 
 # And export for use in the Rmarkdown file.
 # ggsave(fig_r_supp,
-#        filename = "figures/teton_fall22/rmax_9panel_nov.jpg",
+#        filename = "figures/teton_fall22/rmax_6panel_111622.jpg",
 #        width = 30,
-#        height = 30,
+#        height = 20,
 #        units = "cm") # n = 159
 
 # Raw GPP and Q for Potomac River site to add alongside CVq figure for job
