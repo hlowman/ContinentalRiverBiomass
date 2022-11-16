@@ -292,6 +292,12 @@ dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
 
 #### rmax Figures ####
 
+# Adding column where the minimum confidence interval of rmax
+# truncates at zero.
+dat_out_full <- dat_out_full %>%
+  mutate(minCI = case_when(`2.5%` < 0 ~ 0,
+                           `2.5%` >= 0 ~ `2.5%`))
+
 # Distribution of rmax values:
 (fig1 <- ggplot(dat_out_full, aes(x = r_med)) +
   geom_histogram(bins = 60, alpha = 0.8, 
@@ -303,7 +309,10 @@ dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
 # Mean daily GPP vs. rmax: X axis LOG SCALED
 (fig1.1 <- ggplot(dat_out_full, aes(x = meanGPP, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#A698D3") +
+               color = "#A393CA") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#A393CA",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(y = expression(Maximum~Growth~Rate~(r[max])),
          x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
@@ -312,7 +321,10 @@ dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
 # CV of Discharge vs. rmax:
 (fig2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#9092AD") +
+               color = "#9494B4") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#9494B4",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(CV[Q]),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
@@ -334,7 +346,10 @@ dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
 
 (fig3.1 <- ggplot(dat_out_full, aes(x = summerL, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#8F8D88") +
+               color = "#A99CD9") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#A99CD9",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Cumulative~Summer~PAR~(mol~m^-2~d^-1)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
@@ -349,14 +364,17 @@ dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
 # Stream Order vs. rmax: Removing singular site w/o order info for now.
 (fig4 <- ggplot(dat_out_full %>%
                   filter(!is.na(Order)), aes(x = Order, y = r_med)) +
-    geom_boxplot(alpha = 0.6, color = "#9494B4", fill = "#9494B4") +
+    geom_boxplot(alpha = 0.6, color = "#A7907B", fill = "#A7907B") +
     labs(x = expression(Stream~Order),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
 # Stream Width vs. rmax: note, x axis LOG SCALED
 (fig4.1 <- ggplot(dat_out_full, aes(x = width_med, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#808C91") +
+    geom_point(alpha = 0.6, size = 3, color = "#A6A486") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#A6A486",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() + 
     labs(x = expression(Stream~Width~(m)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
@@ -387,7 +405,10 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 
 # Catchment size vs. rmax: note, missing Miss. R. and x axis LOG SCALED
 (fig7 <- ggplot(dat_out_full, aes(x = NHD_AREASQKM, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A99CD9") +
+    geom_point(alpha = 0.6, size = 3, color = "#A5BA92") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#A5BA92",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Watershed~Area~(km^2)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
@@ -401,7 +422,10 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 #     theme_bw())
 
 (fig9 <- ggplot(dat_out_full, aes(x = NHD_RdDensCat, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A6987F") +
+    geom_point(alpha = 0.6, size = 3, color = "#808C91") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#808C91",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
@@ -413,7 +437,10 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
     theme_bw())
 
 (fig11 <- ggplot(dat_out_full, aes(x = NHD_PctImp2011Cat, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A5BA92") +
+    geom_point(alpha = 0.6, size = 3, color = "#938E86") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#938E86",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Percent~Impervious~by~Catchment),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
@@ -448,6 +475,9 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 # Nutrients - note, both x axes are LOG SCALED
 (fig15 <- ggplot(dat_out_full, aes(x = Nitrate, y = r_med)) +
     geom_point(alpha = 0.6, size = 3, color = "#A6A486") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#A698D3",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
@@ -455,22 +485,26 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 
 (fig16 <- ggplot(dat_out_full, aes(x = Orthophosphate, y = r_med)) +
     geom_point(alpha = 0.6, size = 3, color = "#A5BA92") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#A698D3",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Mean~OrthoPhosphate~(mg/L~PO[4]-P)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
 # Combine figures above.
-(fig_r_med <- fig1 + fig1.1 + fig2 +
-    fig3.1 + fig9 + fig11 +
+(fig_r_med <- fig1 + fig1.1 + fig3.1 +
+    fig2 + fig9 + fig11 +
+    fig4 + fig4.1 + fig7 +
     plot_annotation(tag_levels = 'A') +
-    plot_layout(nrow = 2))
+    plot_layout(nrow = 3))
 
 # And export for use in the Rmarkdown file.
 # ggsave(fig_r_med,
-#        filename = "figures/teton_fall22/rmax_6panel_nov.jpg",
+#        filename = "figures/teton_fall22/rmax_9panel_111622.jpg",
 #        width = 30,
-#        height = 20,
+#        height = 30,
 #        units = "cm") # n = 159
 
 (fig_r_supp <- fig3 + fig3.2 + fig7 +
