@@ -786,8 +786,8 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 # Stream Order vs. c: Removing singular site w/o order info for now.
 (fig4qcq2 <- ggplot(dat_out_full_141 %>%
                   filter(!is.na(Order)), aes(x = Order, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
     geom_boxplot(alpha = 0.6, color = "#E38377", fill = "#E38377") +
+    geom_hline(yintercept = 1, linetype = "dashed") +
     labs(x = expression(Stream~Order),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
