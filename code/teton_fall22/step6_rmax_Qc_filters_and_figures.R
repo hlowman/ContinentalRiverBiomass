@@ -806,8 +806,11 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 
 # Latitude vs. c:
 (fig5qcq2 <- ggplot(dat_out_full_141, aes(x = Lat_WGS84, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
-    geom_point(alpha = 0.6, size = 3, color = "#E4957C") +
+    geom_point(alpha = 0.6, size = 3, color = "#7E8C69") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#7E8C69",
+                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+    geom_hline(yintercept = 1, linetype = "dashed") +
     labs(x = expression(Latitude),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
@@ -894,10 +897,20 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 # Effect of Dams
 # "95 indicates the least probable interference from a structure of a given type"
 (fig14qcq2 <- ggplot(dat_out_full_141, aes(x = Dam, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
+    geom_boxplot(alpha = 0.6, 
+                 fill = "#6D4847", color = "#6D4847") +
+    geom_hline(yintercept = 1, linetype = "dashed") +
+    labs(x = expression(Likelihood~of~Influence~by~Dams),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+# Effect of Canals
+# "95 indicates the least probable interference from a structure of a given type"
+(fig15qcq2 <- ggplot(dat_out_full_141, aes(x = Canal, y = Qc_Q2yr)) +
     geom_boxplot(alpha = 0.6, 
                  fill = "#E59D7F", color = "#E59D7F") +
-    labs(x = expression(Likelihood~of~Influence~by~Dams),
+    geom_hline(yintercept = 1, linetype = "dashed") +
+    labs(x = expression(Likelihood~of~Influence~by~Canals),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
@@ -915,12 +928,12 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 #        height = 30,
 #        units = "cm") # n = 141
 
-(fig_qcq2_supp <- fig4qcq2 + fig4.1qcq2 + fig14qcq2 +
+(fig_qcq2_supp <- fig5qcq2 + fig15qcq2 + fig14qcq2 +
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 1))
 
 # ggsave(fig_qcq2_supp,
-#        filename = "figures/teton_fall22/QcQ2_3panel_nov.jpg",
+#        filename = "figures/teton_fall22/QcQ2_3panel_111722.jpg",
 #        width = 30,
 #        height = 10,
 #        units = "cm") # n = 141
