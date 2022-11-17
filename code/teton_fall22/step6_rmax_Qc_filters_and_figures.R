@@ -719,13 +719,18 @@ dat_maxQ <- dat_in_df %>%
 
 dat_together <- left_join(dat_out_cmed_Rhat, dat_maxQ)
 
+# convert both c and confidence interval values.
 dat_together$Qc <- dat_together$c_med*dat_together$maxQ
+dat_together$Qc2.5 <- dat_together$`2.5%`*dat_together$maxQ
+dat_together$Qc97.5 <- dat_together$`97.5%`*dat_together$maxQ
 
 # And add in 2yr flood to determine Qc:Q2yrf ratio value.
 
 dat_all_together <- left_join(dat_together, dat_2yr)
 
 dat_all_together$Qc_Q2yr <- dat_all_together$Qc/dat_all_together$RI_2yr_Q_cms
+dat_all_together$Qc_Q2yr2.5 <- dat_all_together$Qc2.5/dat_all_together$RI_2yr_Q_cms
+dat_all_together$Qc_Q2yr97.5 <- dat_all_together$Qc97.5/dat_all_together$RI_2yr_Q_cms
 
 # Finally, use dat_in_cvq_L dataset created above for light and CVq.
 # And, append this to the larger dataset.
@@ -740,19 +745,31 @@ dat_out_full_141_2 <- left_join(dat_out_full_141_1, dat_site)
 dat_out_full_141_3 <- left_join(dat_out_full_141_2, med_width)
 dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 
+# Distribution of c values:
+(fig0c <- ggplot(dat_out_full_141, aes(x = c_med)) +
+    geom_histogram(bins = 60, alpha = 0.8, 
+                   fill = "#7E8C69", color = "#7E8C69") +
+    labs(x = "Critical Disturbance Threshold (c)",
+         y = "Count") +
+    theme_bw())
+
 # Distribution of Qc/Q2 values:
 (fig1qcq2 <- ggplot(dat_out_full_141, aes(x = Qc_Q2yr)) +
     geom_histogram(bins = 60, alpha = 0.8, 
-                   fill = "#7E8C69", color = "#7E8C69") +
+                   fill = "#B2995F", color = "#B2995F") +
+    geom_vline(xintercept = 1, linetype = "dashed") +
     labs(x = expression(Q[c]:Q[2~yr]),
          y = "Count") +
     theme_bw())
 
 # CV of Discharge vs. c: note, x axis on LOG SCALE
 (fig2qcq2 <- ggplot(dat_out_full_141, aes(x = cvQ, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#E5A06E") +
+               color = "#E6A169") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#E6A169",
+                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+    geom_hline(yintercept = 1, linetype = "dashed") +
     labs(x = expression(CV[Q]),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
@@ -770,15 +787,18 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 (fig4qcq2 <- ggplot(dat_out_full_141 %>%
                   filter(!is.na(Order)), aes(x = Order, y = Qc_Q2yr)) +
     geom_hline(yintercept = 1) +
-    geom_boxplot(alpha = 0.6, color = "#7E8C69", fill = "#7E8C69") +
+    geom_boxplot(alpha = 0.6, color = "#E38377", fill = "#E38377") +
     labs(x = expression(Stream~Order),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
 # Stream Width vs. c: note, x axis LOG SCALED
 (fig4.1qcq2 <- ggplot(dat_out_full_141, aes(x = width_med, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
-    geom_point(alpha = 0.6, size = 3, color = "#E7A655") +
+    geom_point(alpha = 0.6, size = 3, color = "#A8655F") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#A8655F",
+                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+    geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() + 
     labs(x = expression(Stream~Width~(m)),
          y = expression(Q[c]:Q[2~yr])) +
@@ -803,8 +823,11 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 # Catchment size vs. c: note, missing Miss. R.
 # x-axis also LOG SCALED
 (fig7qcq2 <- ggplot(dat_out_full_141, aes(x = NHD_AREASQKM, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
-    geom_point(alpha = 0.6, size = 3, color = "#E4927B") +
+    geom_point(alpha = 0.6, size = 3, color = "#6D4847") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#6D4847",
+                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+    geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() +
     labs(x = expression(Watershed~Area~(km^2)),
          y = expression(Q[c]:Q[2~yr])) +
@@ -820,9 +843,12 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 
 # Mean daily GPP vs. c: X axis LOG SCALED
 (fig9qcq2 <- ggplot(dat_out_full_141, aes(x = meanGPP, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#D2A059") +
+               color = "#E7A655") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#E7A655",
+                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+    geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() +
     labs(y = expression(Q[c]:Q[2~yr]),
          x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
@@ -830,8 +856,11 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 
 # More Land Use vs. c:
 (fig10qcq2 <- ggplot(dat_out_full_141, aes(x = NHD_RdDensCat, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
-    geom_point(alpha = 0.6, size = 3, color = "#CB776D") +
+    geom_point(alpha = 0.6, size = 3, color = "#E59D7F") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#E59D7F",
+                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+    geom_hline(yintercept = 1, linetype = "dashed") +
     labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
@@ -845,8 +874,11 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 
 (fig12qcq2 <- ggplot(dat_out_full_141, 
                      aes(x = NHD_PctImp2011Cat, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
-    geom_point(alpha = 0.6, size = 3, color = "#6D4847") +
+    geom_point(alpha = 0.6, size = 3, color = "#E3907B") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#E3907B",
+                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+    geom_hline(yintercept = 1, linetype = "dashed") +
     labs(x = expression(Percent~Impervious~by~Catchment),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
@@ -870,16 +902,17 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
     theme_bw())
 
 # Combine figures above.
-(fig_qcq2 <- fig1qcq2 + fig9qcq2 + fig2qcq2 + 
-    fig7qcq2 + fig10qcq2 + fig12qcq2 +
+(fig_qcq2 <- fig0c + fig1qcq2 + fig9qcq2 + 
+    fig2qcq2 + fig10qcq2 + fig12qcq2 +
+    fig4qcq2 + fig4.1qcq2 + fig7qcq2 +
     plot_annotation(tag_levels = 'A') +
-    plot_layout(nrow = 2))
+    plot_layout(nrow = 3))
 
 # And export for use in RMarkdown.
 # ggsave(fig_qcq2,
-#        filename = "figures/teton_fall22/QcQ2_6panel_nov.jpg",
+#        filename = "figures/teton_fall22/QcQ2_9panel_111722.jpg",
 #        width = 30,
-#        height = 20,
+#        height = 30,
 #        units = "cm") # n = 141
 
 (fig_qcq2_supp <- fig4qcq2 + fig4.1qcq2 + fig14qcq2 +
