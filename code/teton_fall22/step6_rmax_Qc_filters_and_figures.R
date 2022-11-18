@@ -21,7 +21,7 @@ lapply(c("tidyverse", "lubridate", "data.table",
          "rstan","bayesplot","shinystan", "here",
          "GGally", "glmmTMB", "MuMIn", "effects",
          "DHARMa", "lme4", "multcomp", "patchwork",
-         "calecopal", "viridis"), require, character.only=T)
+         "calecopal", "viridis", "plotly"), require, character.only=T)
 
 # Load necessary datasets.
 # Load site-level info (hypoxia and Appling datasets).
@@ -81,136 +81,6 @@ dat_out_rmed_pos <- dat_out_rmed %>%
 dat_diag_rfilter1 <- dat_diag %>%
   filter(parameter == "r") %>%
   filter(Rhat < 1.05) # 12 sites drop off
-
-#### normRMSE filter ####
-
-# NOTE - NOT USING nRMSE FILTER FOR NOV MEETING - TOO COMPUTATIONALLY INTENSIVE
-
-# Next, I will be examining sites that do not do a good job of predicting
-# GPP using the original data.
-
-# Using code from Joanna's scripts "Predicted_ProductivityModel_Ricker.R"
-# and "Biomass2_WSpredictions.R".
-
-# First, need to create the function for predicting GPP.
-PM_Ricker <- function(r, lambda, s, c, sig_p, sig_o, df) {
-  
-  ## Data
-  Ndays <- length(df$GPP)
-  GPP <- df$GPP
-  GPP_sd <- df$GPP_sd
-  light <- df$light_rel
-  tQ <- df$Q_rel # discharge standardized to max value
-  new_e <- df$new_e
-  
-  ## Vectors for model output of P, B, pred_GPP
-  P <- numeric(Ndays)
-  P[1] <- 1
-  for(i in 2:length(tQ)){
-    P[i] = exp(-exp(s*100*(tQ[i] - c)))
-  }
-  
-  B <- numeric(Ndays)
-  B[1] <- log(GPP[1]/light[1])
-  pred_GPP <- numeric(Ndays)
-  pred_GPP[1] <- light[1]*exp(B[1])
-  
-  ## Process Model
-  for(j in 2:Ndays){
-    # adding in section for my re-initialization functionality
-    if (new_e[j]==1) {
-      
-      B[j] ~ MCMCglmm::rtnorm(1, mean = log(GPP[j]/light[j])) }
-    
-    else {
-      
-      B[j] <- MCMCglmm::rtnorm(1, mean = (B[j-1] + r + lambda*exp(B[j-1]))*P[j],
-                               sd = sig_p, upper = 5) }
-    
-  }
-  
-  for(i in 2:Ndays){
-    pred_GPP[i] <- MCMCglmm::rtnorm(1, mean = light[i]*exp(B[i]), 
-                                    sd = sig_o, lower = 0.01)
-  }
-  
-  return(pred_GPP)
-}
-
-# Next, need to write the function with which to perform the simulation.
-Ricker_sim_fxn <- function(y, x){
-  # identify data
-  output <- y # Teton/stan output
-  df <- x # original data input
-  
-  # extracted parameters from STAN output already
-  pars <- output
-  
-  # create empty matrix with days of GPP x length of iterations to receive values
-  simmat <- matrix(NA, length(df$GPP), length(unlist(pars$sig_p)))
-  rmsemat <- matrix(NA, length(df$GPP), 1)
-  
-  # simulate pred_GPP holding a parameter set for a given iteration constant
-  # and then predict forward for a site's timeseries (i.e., length(df$GPP))
-  for(i in 1:length(pars$r)){
-    simmat[,i] <- PM_Ricker(pars$r[i], pars$lambda[i], pars$s[i], pars$c[i], pars$sig_p[i], pars$sig_p[i], df)
-    rmsemat[i] <- sqrt(sum((simmat[,i] - df$GPP)^2)/length(df$GPP))
-  }
-  
-  l <- list(simmat, rmsemat)
-  return(l)
-  
-}
-
-# And finally, apply the function to my data.
-# Please note, this takes HOURS to run, so start this early in the day, and
-# come back to it.
-Ricker_sim_182sites <- mapply(Ricker_sim_fxn, dat_out, dat_in)
-
-# For some reason, it's yielding two values, so let's see what's happening here.
-Ricker_sim_1site <- Ricker_sim_fxn(dat_out$nwis_01124000, dat_in$nwis_01124000)
-# Ok, so it's yielding pred_GPP in the first part and rmse in the second.
-
-# Now, making a longer list to see how it spits out multiple sites to decipher
-# my larger output structure.
-dat_in2 <- dat_in[1:2]
-dat_out2 <- dat_out[1:2]
-
-Ricker_sim_2site <- mapply(Ricker_sim_fxn,dat_out2, dat_in2)
-# Viewing this yields nothing, because it's a matrix >_<
-
-# So, for reference:
-predGPP <- Ricker_sim_1site[[1]]
-rmse <- Ricker_sim_1site[[2]]
-
-# But when this is made larger, the portions of the matrix can be accessed by
-# indexing by odd and event indices.
-# ODD = predGPP
-# EVEN = rmse
-# So, making a list of even numbers to pull out rmse values.
-my_values <- seq(from = 2, to = 364, by = 2)
-rmse_182sites <- Ricker_sim_182sites[my_values]
-
-# Adding the nRMSE calculation into the function above didn't play nicely with
-# the list that existed, so calculating outside instead.
-nRMSE_fxn <- function(df, df_orig){
-  
-  # Calculate the mean RMSE value for each site.
-  nRMSE <- mean(df)/(max(df_orig$GPP) - min(df_orig$GPP))
-  
-}
-
-nRMSE_182sites <- mapply(nRMSE_fxn, rmse_182sites, dat_in)
-
-nRMSE_182sitesdf <- as.data.frame(nRMSE_182sites) %>%
-  mutate("site_name" = names(dat_in)) %>%
-  rename("nRMSE" = "nRMSE_182sites")
-
-# Export both sets of results.
-# trying to export this first file caused the server to freeze, so only
-# exported the nRMSE file for now.
-#saveRDS(Ricker_sim_182sites, "data_working/Sim_Ricker_182sites_101922.rds")
-saveRDS(nRMSE_182sitesdf, "data_working/nRMSE_182sites_101922.rds")
 
 #### Additional data calculations ####
 
@@ -938,7 +808,214 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 #        height = 10,
 #        units = "cm") # n = 141
 
-#### GPP figures ####
+#### GPP and NRMSE figures ####
+
+# NOTE - NOT USING nRMSE FILTER FOR FILTERING DATA
+
+# However, I will be creating a figure to demonstrate the universality
+# of this modeling approach.
+
+# First, per Phil's suggestion, I will find sites that represent different
+# axes of small/large (stream order) and calm/disturbed (CVQ).
+
+(viz_fig <- ggplot(dat_out_full_141, aes(x = Order, y = cvQ)) +
+  geom_point(aes(color = c_med, text = site_name)) +
+  labs(x = "Stream Order",
+       y = "Coefficient of Variation in Discharge") +
+  theme_bw())
+
+(viz_plotly <- ggplotly(viz_fig))
+
+(viz_fig2 <- ggplot(dat_out_full, aes(x = Order, y = cvQ)) +
+    geom_point(aes(color = r_med, text = site_name)) +
+    labs(x = "Stream Order",
+         y = "Coefficient of Variation in Discharge") +
+    theme_bw())
+
+(viz_plotly2 <- ggplotly(viz_fig2))
+
+(viz_fig3 <- ggplot(dat_out_full_141, aes(x = Order, y = cvQ)) +
+    geom_jitter(alpha = 0.8, aes(color = meanGPP, text = site_name)) +
+    labs(x = "Stream Order",
+         y = "Coefficient of Variation in Discharge") +
+    scale_color_viridis() +
+    theme_bw())
+
+(viz_plotly3 <- ggplotly(viz_fig3))
+
+(viz_fig4 <- ggplot(dat_out_full_141, aes(x = Order, y = cvQ)) +
+    geom_jitter(alpha = 0.8, aes(color = meanL, text = site_name)) +
+    labs(x = "Stream Order",
+         y = "Coefficient of Variation in Discharge") +
+    scale_color_viridis() +
+    theme_bw())
+
+(viz_plotly4 <- ggplotly(viz_fig4))
+
+# Create some categories to choose from with axes spanning small/large,
+# calm/stormy, and light/dark.
+
+small <- c("1", "2", "3", "4")
+big <- c("5", "6", "7", "8")
+
+dat_out_full_141 <- dat_out_full_141 %>%
+  mutate(my_groups = factor(case_when(Order %in% small & cvQ < 1 & meanL > 200 ~ "Small_Calm_Light",
+                               Order %in% small & cvQ < 1 & meanL < 200 ~ "Small_Calm_Dark",
+                               Order %in% small & cvQ > 1 & meanL > 200 ~ "Small_Stormy_Light",
+                               Order %in% small & cvQ > 1 & meanL < 200 ~ "Small_Stormy_Dark",
+                               Order %in% big & cvQ < 1 & meanL > 200 ~ "Large_Calm_Light",
+                               Order %in% big & cvQ < 1 & meanL < 200 ~ "Large_Calm_Dark",
+                               Order %in% big & cvQ > 1 & meanL > 200 ~ "Large_Stormy_Light",
+                               Order %in% big & cvQ > 1 & meanL < 200 ~ "Large_Stormy_Dark"),
+                            levels = c("Small_Calm_Light",
+                                       "Small_Calm_Dark",
+                                       "Small_Stormy_Light",
+                                       "Small_Stormy_Dark",
+                                       "Large_Calm_Light",
+                                       "Large_Calm_Dark",
+                                       "Large_Stormy_Light",
+                                       "Large_Stormy_Dark")))
+
+(viz_fig5 <- ggplot(dat_out_full_141 %>% drop_na(Order), aes(x = Order, y = cvQ)) +
+    geom_jitter(alpha = 0.8, size = 3, 
+                aes(color = my_groups, text = site_name)) +
+    labs(x = "Stream Order",
+         y = "Coefficient of Variation in Discharge",
+         color = "Groups") +
+    theme_bw()) ## ooh, this looks good.
+
+# ggsave(viz_fig5,
+#        filename = "figures/teton_fall22/Sites_8Groups_111822.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm") # n = 141
+
+(viz_plotly4 <- ggplotly(viz_fig4))
+
+# Using code from Joanna's scripts "Predicted_ProductivityModel_Ricker.R"
+# and "Biomass2_WSpredictions.R".
+
+# First, need to create the function for predicting GPP.
+PM_Ricker <- function(r, lambda, s, c, sig_p, sig_o, df) {
+  
+  ## Data
+  Ndays <- length(df$GPP)
+  GPP <- df$GPP
+  GPP_sd <- df$GPP_sd
+  light <- df$light_rel
+  tQ <- df$Q_rel # discharge standardized to max value
+  new_e <- df$new_e
+  
+  ## Vectors for model output of P, B, pred_GPP
+  P <- numeric(Ndays)
+  P[1] <- 1
+  for(i in 2:length(tQ)){
+    P[i] = exp(-exp(s*100*(tQ[i] - c)))
+  }
+  
+  B <- numeric(Ndays)
+  B[1] <- log(GPP[1]/light[1])
+  pred_GPP <- numeric(Ndays)
+  pred_GPP[1] <- light[1]*exp(B[1])
+  
+  ## Process Model
+  for(j in 2:Ndays){
+    # adding in section for my re-initialization functionality
+    if (new_e[j]==1) {
+      
+      B[j] ~ MCMCglmm::rtnorm(1, mean = log(GPP[j]/light[j])) }
+    
+    else {
+      
+      B[j] <- MCMCglmm::rtnorm(1, mean = (B[j-1] + r + lambda*exp(B[j-1]))*P[j],
+                               sd = sig_p, upper = 5) }
+    
+  }
+  
+  for(i in 2:Ndays){
+    pred_GPP[i] <- MCMCglmm::rtnorm(1, mean = light[i]*exp(B[i]), 
+                                    sd = sig_o, lower = 0.01)
+  }
+  
+  return(pred_GPP)
+}
+
+# Next, need to write the function with which to perform the simulation.
+Ricker_sim_fxn <- function(y, x){
+  # identify data
+  output <- y # Teton/stan output
+  df <- x # original data input
+  
+  # extracted parameters from STAN output already
+  pars <- output
+  
+  # create empty matrix with days of GPP x length of iterations to receive values
+  simmat <- matrix(NA, length(df$GPP), length(unlist(pars$sig_p)))
+  rmsemat <- matrix(NA, length(df$GPP), 1)
+  
+  # simulate pred_GPP holding a parameter set for a given iteration constant
+  # and then predict forward for a site's timeseries (i.e., length(df$GPP))
+  for(i in 1:length(pars$r)){
+    simmat[,i] <- PM_Ricker(pars$r[i], pars$lambda[i], pars$s[i], pars$c[i], pars$sig_p[i], pars$sig_p[i], df)
+    rmsemat[i] <- sqrt(sum((simmat[,i] - df$GPP)^2)/length(df$GPP))
+  }
+  
+  l <- list(simmat, rmsemat)
+  return(l)
+  
+}
+
+# And finally, apply the function to my data.
+# Please note, this takes HOURS to run, so start this early in the day, and
+# come back to it.
+Ricker_sim_182sites <- mapply(Ricker_sim_fxn, dat_out, dat_in)
+
+# For some reason, it's yielding two values, so let's see what's happening here.
+Ricker_sim_1site <- Ricker_sim_fxn(dat_out$nwis_01124000, dat_in$nwis_01124000)
+# Ok, so it's yielding pred_GPP in the first part and rmse in the second.
+
+# Now, making a longer list to see how it spits out multiple sites to decipher
+# my larger output structure.
+dat_in2 <- dat_in[1:2]
+dat_out2 <- dat_out[1:2]
+
+Ricker_sim_2site <- mapply(Ricker_sim_fxn,dat_out2, dat_in2)
+# Viewing this yields nothing, because it's a matrix >_<
+
+# So, for reference:
+predGPP <- Ricker_sim_1site[[1]]
+rmse <- Ricker_sim_1site[[2]]
+
+# But when this is made larger, the portions of the matrix can be accessed by
+# indexing by odd and event indices.
+# ODD = predGPP
+# EVEN = rmse
+# So, making a list of even numbers to pull out rmse values.
+my_values <- seq(from = 2, to = 364, by = 2)
+rmse_182sites <- Ricker_sim_182sites[my_values]
+
+# Adding the nRMSE calculation into the function above didn't play nicely with
+# the list that existed, so calculating outside instead.
+nRMSE_fxn <- function(df, df_orig){
+  
+  # Calculate the mean RMSE value for each site.
+  nRMSE <- mean(df)/(max(df_orig$GPP) - min(df_orig$GPP))
+  
+}
+
+nRMSE_182sites <- mapply(nRMSE_fxn, rmse_182sites, dat_in)
+
+nRMSE_182sitesdf <- as.data.frame(nRMSE_182sites) %>%
+  mutate("site_name" = names(dat_in)) %>%
+  rename("nRMSE" = "nRMSE_182sites")
+
+# Export both sets of results.
+# trying to export this first file caused the server to freeze, so only
+# exported the nRMSE file for now.
+#saveRDS(Ricker_sim_182sites, "data_working/Sim_Ricker_182sites_101922.rds")
+saveRDS(nRMSE_182sitesdf, "data_working/nRMSE_182sites_101922.rds")
+
+
 
 # As of 10/19/22, calculating/exporting RMSE values for the entire dataset
 # was proving very computationally intensive. So, for the time being, just
