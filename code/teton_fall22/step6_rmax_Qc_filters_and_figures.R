@@ -890,7 +890,7 @@ dat_out_full_141 <- dat_out_full_141 %>%
 #        height = 10,
 #        units = "cm") # n = 141
 
-(viz_plotly4 <- ggplotly(viz_fig4))
+(viz_plotly5 <- ggplotly(viz_fig5))
 
 # Using code from Joanna's scripts "Predicted_ProductivityModel_Ricker.R"
 # and "Biomass2_WSpredictions.R".
@@ -966,33 +966,34 @@ Ricker_sim_fxn <- function(y, x){
 }
 
 # And finally, apply the function to my data.
+# Applying function to full 182 site dataset:
 # Please note, this takes HOURS to run, so start this early in the day, and
 # come back to it.
-Ricker_sim_182sites <- mapply(Ricker_sim_fxn, dat_out, dat_in)
+# Ricker_sim_182sites <- mapply(Ricker_sim_fxn, dat_out, dat_in)
 
 # For some reason, it's yielding two values, so let's see what's happening here.
-Ricker_sim_1site <- Ricker_sim_fxn(dat_out$nwis_01124000, dat_in$nwis_01124000)
+# Ricker_sim_1site <- Ricker_sim_fxn(dat_out$nwis_01124000, dat_in$nwis_01124000)
 # Ok, so it's yielding pred_GPP in the first part and rmse in the second.
 
 # Now, making a longer list to see how it spits out multiple sites to decipher
 # my larger output structure.
-dat_in2 <- dat_in[1:2]
-dat_out2 <- dat_out[1:2]
+#dat_in2 <- dat_in[1:2]
+#dat_out2 <- dat_out[1:2]
 
-Ricker_sim_2site <- mapply(Ricker_sim_fxn,dat_out2, dat_in2)
+#Ricker_sim_2site <- mapply(Ricker_sim_fxn,dat_out2, dat_in2)
 # Viewing this yields nothing, because it's a matrix >_<
 
 # So, for reference:
-predGPP <- Ricker_sim_1site[[1]]
-rmse <- Ricker_sim_1site[[2]]
+#predGPP <- Ricker_sim_1site[[1]]
+#rmse <- Ricker_sim_1site[[2]]
 
 # But when this is made larger, the portions of the matrix can be accessed by
-# indexing by odd and event indices.
+# indexing by odd and even indices.
 # ODD = predGPP
 # EVEN = rmse
 # So, making a list of even numbers to pull out rmse values.
-my_values <- seq(from = 2, to = 364, by = 2)
-rmse_182sites <- Ricker_sim_182sites[my_values]
+#my_values <- seq(from = 2, to = 364, by = 2)
+#rmse_182sites <- Ricker_sim_182sites[my_values]
 
 # Adding the nRMSE calculation into the function above didn't play nicely with
 # the list that existed, so calculating outside instead.
@@ -1003,19 +1004,17 @@ nRMSE_fxn <- function(df, df_orig){
   
 }
 
-nRMSE_182sites <- mapply(nRMSE_fxn, rmse_182sites, dat_in)
+#nRMSE_182sites <- mapply(nRMSE_fxn, rmse_182sites, dat_in)
 
-nRMSE_182sitesdf <- as.data.frame(nRMSE_182sites) %>%
-  mutate("site_name" = names(dat_in)) %>%
-  rename("nRMSE" = "nRMSE_182sites")
+# nRMSE_182sitesdf <- as.data.frame(nRMSE_182sites) %>%
+#   mutate("site_name" = names(dat_in)) %>%
+#   rename("nRMSE" = "nRMSE_182sites")
 
 # Export both sets of results.
 # trying to export this first file caused the server to freeze, so only
 # exported the nRMSE file for now.
 #saveRDS(Ricker_sim_182sites, "data_working/Sim_Ricker_182sites_101922.rds")
-saveRDS(nRMSE_182sitesdf, "data_working/nRMSE_182sites_101922.rds")
-
-
+#saveRDS(nRMSE_182sitesdf, "data_working/nRMSE_182sites_101922.rds")
 
 # As of 10/19/22, calculating/exporting RMSE values for the entire dataset
 # was proving very computationally intensive. So, for the time being, just
@@ -1086,5 +1085,88 @@ nRMSE_1site <- nRMSE_fxn(rmse1, dat_in$nwis_01649500)
 #        width = 40,
 #        height = 10,
 #        units = "cm")
+
+# As of 11/21/22, calculating/exporting RMSE values for 8 sites.
+
+my8sites <- c("nwis_0166818623", "nwis_02217643",
+              "nwis_06893350", "nwis_07075250",
+              "nwis_05082500", "nwis_13013650",
+              "nwis_04176500", "nwis_08374550")
+
+# Trimming input and output datasets for the sites of interest.
+dat_out8df <- dat_out_df %>%
+  filter(site_name %in% my8sites)
+
+dat_out8 <- split(dat_out8df, dat_out8df$site_name)
+
+dat_in8df <- dat_in_df %>%
+  filter(site_name %in% my8sites)
+
+dat_in8 <- split(dat_in8df, dat_in8df$site_name)
+
+# Re-simulating, because it's simpler than hunting down the right index
+# in the matrix above. Started ~1:16, Ended ~1:33
+Ricker_sim8sites <- mapply(Ricker_sim_fxn, dat_out8, dat_in8)
+
+# And for each day, I would like to calculate
+# - median GPP
+# - 97.5% and 2.5% percentiles
+
+# Going to pull out just the predicted GPP values.
+# So, making a list of odd numbers to pull out predGPP values (see above for reasoning).
+my_values <- seq(from = 1, to = 16, by = 2)
+data_8site_gpp <- Ricker_sim8sites[my_values]
+
+# Calculate median and confidence intervals
+quantile25 <- function(x){quantile(x, probs = 0.025, na.rm = TRUE)}
+quantile975 <- function(x){quantile(x, probs = 0.975, na.rm = TRUE)}
+
+pred_gpp8 <- lapply(data_8site_gpp, 
+                      function(x) cbind(apply(x, 1, median),
+                                        apply(x, 1, quantile25),
+                                        apply(x, 1, quantile975)))
+
+# Pull out original GPP values used
+orig_gpp_date8 <- lapply(dat_in8, function(x) x %>% select(date, GPP))
+
+# Add names to confidence interval lists
+my_names <- c("nwis_0166818623", "nwis_02217643", "nwis_04176500", "nwis_05082500", "nwis_06893350", "nwis_07075250", "nwis_08374550", "nwis_13013650")
+
+names(pred_gpp8) <- my_names
+pred_gpp8 <- lapply(pred_gpp8, function(x) as.data.frame(x) %>% 
+                      rename("Median" = "V1",
+                      "q2.5" = "V2",
+                      "q97.5" = "V3")) # OMG YAY!!!!
+
+# Bind into a single dataframe
+keys <- unique(c(names(orig_gpp_date8), names(pred_gpp8)))
+df_pred8 <- setNames(Map(cbind, orig_gpp_date8[keys], pred_gpp8[keys]), keys)
+
+# And finally, calculate the normalized RMSE.
+my_values2 <- seq(from = 2, to = 16, by = 2)
+rmse8 <- Ricker_sim8sites[my_values2]
+
+nRMSE_8site <- mapply(nRMSE_fxn, rmse8, dat_in8)
+
+# And plot
+(gpp_plot8.1 <- ggplot(df_pred8$nwis_0166818623, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Mill Creek (VA)") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2016-06-01"), y = 10,
+             label = paste("nRMSE = ",round(nRMSE_8site[1], 
+                                            digits = 2)), size = 8) + 
+    theme(legend.position = "none",
+          panel.background = element_rect(color = "black", fill=NA, size=1),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
 
 # End of script.
