@@ -1149,24 +1149,202 @@ rmse8 <- Ricker_sim8sites[my_values2]
 nRMSE_8site <- mapply(nRMSE_fxn, rmse8, dat_in8)
 
 # And plot
+# Mill Creek, VA
 (gpp_plot8.1 <- ggplot(df_pred8$nwis_0166818623, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median), 
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Mill Creek (VA)") +
+         title = "Small Order - Steady Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5),
                 fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2016-06-01"), y = 10,
+    annotate(geom = "text", x = date("2016-06-01"), y = 12.5,
              label = paste("nRMSE = ",round(nRMSE_8site[1], 
                                             digits = 2)), size = 8) + 
+    theme_bw() +
     theme(legend.position = "none",
-          panel.background = element_rect(color = "black", fill=NA, size=1),
+          title = element_text(size = 20),
           axis.title.x = element_text(size=20), 
           axis.text.x = element_text(size=20),
           axis.text.y = element_text(size=20),
           axis.title.y = element_text(size=20)))
+
+# Parks Creek, GA
+(gpp_plot8.2 <- ggplot(df_pred8$nwis_02217643, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Small Order - Steady Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2016-11-01"), y = 6.5,
+             label = paste("nRMSE = ",round(nRMSE_8site[2], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# Tomahawk Creek, KS
+(gpp_plot8.3 <- ggplot(df_pred8$nwis_06893350, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Small Order - Turbulent Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2012-01-01"), y = 4.5,
+             label = paste("nRMSE = ",round(nRMSE_8site[5], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# S. Fork Little Red River, AR
+(gpp_plot8.4 <- ggplot(df_pred8$nwis_07075250, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Small Order - Turbulent Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2013-11-01"), y = 11.5,
+             label = paste("nRMSE = ",round(nRMSE_8site[6], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# Red River, ND
+(gpp_plot8.5 <- ggplot(df_pred8$nwis_05082500, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Large Order - Calm Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2016-10-15"), y = 9,
+             label = paste("nRMSE = ",round(nRMSE_8site[4], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# Snake River, WY
+(gpp_plot8.6 <- ggplot(df_pred8$nwis_13013650, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Large Order - Calm Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2015-01-01"), y = 30,
+             label = paste("nRMSE = ",round(nRMSE_8site[8], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# Raisin River, MI 
+(gpp_plot8.7 <- ggplot(df_pred8$nwis_04176500, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Large Order - Turbulent Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2014-03-01"), y = 45,
+             label = paste("nRMSE = ",round(nRMSE_8site[3], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# Rio Grande, TX
+(gpp_plot8.8 <- ggplot(df_pred8$nwis_08374550, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Large Order - Turbulent Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2013-12-01"), y = 7,
+             label = paste("nRMSE = ",round(nRMSE_8site[7], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# Combine and export.
+(fig_nRMSE <- gpp_plot8.1 + gpp_plot8.2 + 
+    gpp_plot8.3 + gpp_plot8.4 +
+    gpp_plot8.5 + gpp_plot8.6 +
+    gpp_plot8.7 + gpp_plot8.8 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 4))
+
+ggsave(fig_nRMSE,
+       filename = "figures/teton_fall22/nRMSE_8panel_112222.jpg",
+       width = 40,
+       height = 50,
+       units = "cm") # n = 141
 
 # End of script.
