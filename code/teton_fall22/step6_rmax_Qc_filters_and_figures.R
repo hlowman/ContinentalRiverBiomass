@@ -89,8 +89,7 @@ dat_diag_rfilter1 <- dat_diag %>%
 dat_out_rmed_Rhat <- inner_join(dat_diag_rfilter1, dat_out_rmed_pos) 
 # 159 sites remaining
 
-# Not removing any sites based on RMSE values for the time being.
-# REVISIT THIS following co-authors meeting in Nov.
+# Not removing any sites based on RMSE values.
 
 # Finally, calculate coefficient of variation in discharge at every site,
 # as well as mean daily light availability, and add to the dataset for plotting
@@ -115,7 +114,7 @@ dat_in_summer <- dat_in_df %>%
 dat_out_yas <- left_join(dat_out_rmed_Rhat, dat_in_cvq_L)
 dat_out_queen <- left_join(dat_out_yas, dat_in_summer)
 
-# Also would like to add site characteristics to this dataset for plotting.
+# Also would like to add site characteristics to this dataset for plotting and linear modeling purposes.
 # from hypoxia dataset:
 dat_site_info <- site_info %>%
   mutate(Order = factor(NHD_STREAMORDE)) %>%
@@ -159,6 +158,9 @@ dat_out_join1 <- left_join(dat_out_queen, dat_site_info,
 dat_out_join2 <- left_join(dat_out_join1, dat_site)
 dat_out_join3 <- left_join(dat_out_join2, med_width)
 dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
+
+# Export for future use.
+saveRDS(dat_out_full, "data_working/rmax_filtered_159sites_113022.rds")
 
 #### rmax Figures ####
 
