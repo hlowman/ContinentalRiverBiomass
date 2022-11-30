@@ -107,6 +107,8 @@ dat_rmax_trim <- dat_rmax_trim %>%
 # canal - another metric of terr/aq development but felt duplicative
 # NO3/PO4 - 50% of sites have no data, so these will be examined separately
 
+##### Stream Size #####
+
 # Build initial set of models to investigate size covariates.
 
 str(dat_rmax_trim) # keeping order, canal, and dam data as categorical
@@ -164,6 +166,8 @@ aic2 <- AIC(lm2_rmax) # -320.39
 aic3 <- AIC(lm3_rmax) # -316.98
 
 # Moving forward with width as the indicator of stream size.
+
+##### GPP #####
 
 # Build second set of models to investigate influence of GPP (with/without).
 
@@ -250,11 +254,13 @@ aic5 <- AIC(lm5_rmax) # 13.87 Oh dear!
 # Export table of current results.
 write_csv(lm3_rmax_tidy, "data_working/lm_rmax.csv")
 
+##### Nutrients #####
+
 # And build separate model for nutrients.
 lmnuts_rmax <- lm(r_med ~ no3_log*po4_log, 
                   data = dat_rmax_trim)
 
-# Examin the outputs.
+# Examine the outputs.
 summary(lmnuts_rmax)
 
 # Examine the coefficients.
@@ -269,5 +275,42 @@ View(lmnuts_rmax_fit) # adj R2 = 0.09, sigma = 0.09, p = 0.01, nobs = 89
 
 # Examine model diagnostics.
 plot(lmnuts_rmax) # site 135 does *nearly* appear to be an outlier
+
+#### Model 2: rmax vs. cvQ residuals ####
+
+# Fit linear model between rmax median values and cvQ.
+fit1 <- lm(r_med ~ cvQ, data = dat_rmax_trim)
+
+dat_rmax_trim$residuals <- residuals(fit1)
+
+# Building final model with residuals instead of rmax values.
+
+lm1_resids <- lm(residuals ~ GPP_log + summerL + summerT +
+                 Lon_WGS84 + width_log + NHD_RdDensCat + Dam,
+               data = dat_rmax_trim)
+
+# Examine the outputs.
+
+summary(lm1_resids) # similar covariates emerge as important
+
+# Examine the coefficients.
+
+lm1_resids_tidy <- broom::tidy(lm1_resids) # with GPP, without cvQ, using residuals
+View(lm1_resids_tidy) # GPP, Lon, dam (80%) (p<0.05)
+
+# Examine model fit.
+
+lm1_resids_fit <- broom::glance(lm1_resids) # with GPP, without cvQ, using residuals
+View(lm1_resids_fit) #adj R2 = 0.34, sigma = 0.08, p < 0.0001, nobs = 151
+
+# Examine model diagnostics.
+plot(lm1_resids) # first pane still a bit curvy, same outliers as other lms (30, 91, 133)
+
+# Compare models.
+aic1r <- AIC(lm1_resids) # -304.46 Oh dear!
+
+# Not sure this adds information since the significant parameters stay the same.
+
+#### Model 3: Qc:Q2yr ####
 
 # End of script.
