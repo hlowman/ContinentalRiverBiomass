@@ -61,12 +61,12 @@ rmax_covs <- ggpairs(dat_rmax_trim %>% select(-site_name) %>%
 # (2) Road density and impervious cover appear tightly correlated (0.838), so
 # I should probably only include one of these in the final model build.
 
-# (3) Then, summer temperature and latitude appear tightly correlated (0.666).
+# (3) Then, summer temp and latitude appear tightly correlated (0.666).
 # They do provide somewhat different information, so I will include them as
 # an interaction term. (Thinking about latitude as a temp gradient while
 # longitude might be a kind of aridity gradient.)
 
-# (4) After that, nitrate and orthoP appear the most tightly correlated (0.548).
+# (4) After that, NO3 and PO4 appear the most tightly correlated (0.548).
 # Those aren't duplicates, so I will include them as an interaction term.
 
 # (5) Remaining Pearson's correlation values are below 0.5.
@@ -74,59 +74,181 @@ rmax_covs <- ggpairs(dat_rmax_trim %>% select(-site_name) %>%
 # Log transform necessary covariates.
 
 dat_rmax_trim <- dat_rmax_trim %>%
-  mutate(GPP_log = log10(meanGPP),
+  mutate(r_log = log10(r_med),
+         GPP_log = log10(meanGPP),
          area_log = log10(NHD_AREASQKM),
          width_log = log10(width_med),
          no3_log = log10(Nitrate),
          po4_log = log10(Orthophosphate))
 
-# Build initial, saturated model.
-# The nutrient data was causing nearly half of the observations (72)
-# to be dropped due to complete case analysis. So, these will
-# be examined in another separate model.
+# Notes on model structure:
+
+# I am going to include the following covariates as representatives of the
+# corresponding environmental factors:
+
+# cvQ - flow
+# GPP - biological productivity (function of flow & light)*
+# summer light - light at the stream surface during greatest canopy
+# summer temp - water temperature (decoupled from air temperature)
+# longitude - a rough location/aridity index?
+# order - stream size**
+# watershed area - stream size**
+# width - stream size**
+# road density - terrestrial development
+# dam - aquatic development
+
+# * Models will explore with and without GPP since GPP ~ f(flow, light).
+# ** Models will explore each of the size indicators separately.
+
+# The following covariates have been removed for the following reasons:
+
+# latitude - too closely correlated with summer temperature
+# % impervious land cover - too closely correlated with road density
+# canal - another metric of terr/aq development but felt duplicative
+# NO3/PO4 - 50% of sites have no data, so these will be examined separately
+
+# Build initial set of models to investigate size covariates.
 
 str(dat_rmax_trim) # keeping order, canal, and dam data as categorical
 
-lm1_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT*Lat_WGS84 +
-                 Lon_WGS84 + Order + area_log + NHD_RdDensCat + 
-                 Canal + Dam + width_log, data = dat_rmax_trim)
+lm1_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
+                 Lon_WGS84 + Order + NHD_RdDensCat + Dam, 
+               data = dat_rmax_trim)
+
+lm2_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
+                 Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
+               data = dat_rmax_trim)
+
+lm3_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
+                 Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
+               data = dat_rmax_trim)
 
 # Examine the outputs.
 
 summary(lm1_rmax)
+summary(lm2_rmax)
+summary(lm3_rmax)
 
 # Examine the coefficients.
 
-lm1_rmax_tidy <- broom::tidy(lm1_rmax)
-View(lm1_rmax_tidy) # GPP, order (4,5,6,9), longitude, and dam (80%)
-# appear to be significant factors
+lm1_rmax_tidy <- broom::tidy(lm1_rmax) # using order
+View(lm1_rmax_tidy) # GPP, Lon, Temp, cvQ, dam (80%), 6th order (p<0.05)
+
+lm2_rmax_tidy <- broom::tidy(lm2_rmax) # using area
+View(lm2_rmax_tidy) # GPP, Lon, Temp, dam (80%, 95%), cvQ (p<0.05)
+
+lm3_rmax_tidy <- broom::tidy(lm3_rmax) # using width
+View(lm3_rmax_tidy) # GPP, Lon, Temp, dam(80%), cvQ (p<0.05)
 
 # Examine model fit.
 
-lm1_rmax_fit <- broom::glance(lm1_rmax)
-View(lm1_rmax_fit) # nobs = 151
+lm1_rmax_fit <- broom::glance(lm1_rmax) # order
+View(lm1_rmax_fit) # adj R2 = 0.42, sigma = 0.08, p < 0.0001, nobs = 152
+
+lm2_rmax_fit <- broom::glance(lm2_rmax) # area
+View(lm2_rmax_fit) # adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+
+lm3_rmax_fit <- broom::glance(lm3_rmax) # width
+View(lm3_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
 
 # Examine model diagnostics.
 plot(lm1_rmax) # site 30 does appear to be an outlier here
+plot(lm2_rmax) # looks a bit better
+plot(lm3_rmax) # also fine
 
-# Build trimmed down model.
-# Removing Canal because I don't feel it needs to be in here.
-# Removing Lat because it was closely coupled with temperature.
-# Removing area_log because it's close to stream size in concept.
-# Also trying without order but keeping in width_log for stream size.
+# The first residuals plots all look a bit curvy, so may think about log-transforming r values.
 
-lm2_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-                 Lon_WGS84 + NHD_RdDensCat + Dam + Order, 
-               data = dat_rmax_trim)
+# Compare models.
+aic1 <- AIC(lm1_rmax) # -317.45
+aic2 <- AIC(lm2_rmax) # -320.39
+aic3 <- AIC(lm3_rmax) # -316.98
 
-lm3_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-                 Lon_WGS84 + NHD_RdDensCat + Dam + width_log, 
+# Moving forward with width as the indicator of stream size.
+
+# Build second set of models to investigate influence of GPP (with/without).
+
+# lm3_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
+#                  Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
+#                data = dat_rmax_trim)
+
+lm4_rmax <- lm(r_med ~ cvQ + summerL + summerT +
+                 Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
                data = dat_rmax_trim)
 
 # Examine the outputs.
 
-summary(lm2_rmax)
 summary(lm3_rmax)
+summary(lm4_rmax) # size jumps in importance.
+
+# Examine the coefficients.
+
+# with GPP, using width
+View(lm3_rmax_tidy) # GPP, Lon, Temp, dam(80%), cvQ (p<0.05)
+
+lm4_rmax_tidy <- broom::tidy(lm4_rmax) # without GPP, using width
+View(lm4_rmax_tidy) # Width, Temp, Lon (p<0.05)
+
+# Examine model fit.
+
+# with GPP, width
+View(lm3_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+
+lm4_rmax_fit <- broom::glance(lm4_rmax) # without GPP, width
+View(lm4_rmax_fit) #adj R2 = 0.15, sigma = 0.10, p = 0.0002, nobs = 151
+
+# Examine model diagnostics.
+plot(lm3_rmax) # fine
+plot(lm4_rmax) # also fine - less curvy on first residuals pane
+
+# Compare models.
+aic3 # -316.98
+aic4 <- AIC(lm4_rmax) # -262.86 EEK!
+
+# Moving forward with GPP included in the model.
+
+# Building one final model with rmax values on the log scale.
+
+# lm3_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
+#                  Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
+#                data = dat_rmax_trim)
+
+lm5_rmax <- lm(r_log ~ cvQ + GPP_log + summerL + summerT +
+                 Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
+               data = dat_rmax_trim)
+
+# Examine the outputs.
+
+summary(lm3_rmax)
+summary(lm5_rmax) # more covariates emerge as important
+
+# Examine the coefficients.
+
+# with GPP, using width
+View(lm3_rmax_tidy) # GPP, Lon, Temp, dam(80%), cvQ (p<0.05)
+
+lm5_rmax_tidy <- broom::tidy(lm5_rmax) # with GPP, using width, log(rmax)
+View(lm5_rmax_tidy) # GPP, Lon, cvQ, dam (80%), Rd Dens (p<0.05)
+
+# Examine model fit.
+
+# with GPP, width, rmax
+View(lm3_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+
+lm5_rmax_fit <- broom::glance(lm5_rmax) # with GPP, using width, log(rmax)
+View(lm5_rmax_fit) #adj R2 = 0.51, sigma = 0.24, p < 0.0001, nobs = 151
+
+# Examine model diagnostics.
+plot(lm3_rmax) # curvy first pane that I'm trying to address
+plot(lm5_rmax) # better residuals pane and slightly better QQ plot
+
+# Compare models.
+aic3 # -316.98
+aic5 <- AIC(lm5_rmax) # 13.87 Oh dear!
+
+# Moving forward with lm3_rmax.
+
+# Export table of current results.
+write_csv(lm3_rmax_tidy, "data_working/lm_rmax.csv")
 
 # And build separate model for nutrients.
 lmnuts_rmax <- lm(r_med ~ no3_log*po4_log, 
