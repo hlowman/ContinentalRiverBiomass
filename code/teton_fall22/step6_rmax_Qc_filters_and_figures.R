@@ -580,8 +580,7 @@ plotting_sc(data_out_141)
 dat_out_cmed_Rhat <- inner_join(dat_diag_cfilter1, dat_out_cmed_pos) 
 # 141 sites remaining
 
-# Not removing any sites based on s vs. c plots for the time being.
-# REVISIT THIS following co-authors meeting in Nov.
+# Not removing any sites based on s vs. c plots.
 
 # Now, convert normalized c values to typical discharge values.
 dat_maxQ <- dat_in_df %>%
@@ -616,6 +615,9 @@ dat_out_full_141_1 <- left_join(dat_out_yas2, dat_site_info,
 dat_out_full_141_2 <- left_join(dat_out_full_141_1, dat_site)
 dat_out_full_141_3 <- left_join(dat_out_full_141_2, med_width)
 dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
+
+# Export for future use.
+saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
 
 # Distribution of c values:
 (fig0c <- ggplot(dat_out_full_141, aes(x = c_med)) +

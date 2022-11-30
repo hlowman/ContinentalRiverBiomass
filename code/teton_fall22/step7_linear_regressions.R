@@ -32,6 +32,9 @@ lapply(c("tidyverse", "lubridate", "data.table",
 # First, the data for the rmax lm.
 dat_rmax <- readRDS("data_working/rmax_filtered_159sites_113022.rds")
 
+# Next, the data for the Qc:Q2yr lm.
+dat_Qc <- readRDS("data_working/QcQ2_filtered_141sites_113022.rds")
+
 #### Model 1: rmax ####
 
 # Trim imported data down to variables of interest (17 total covariates).
@@ -111,7 +114,7 @@ dat_rmax_trim <- dat_rmax_trim %>%
 
 # Build initial set of models to investigate size covariates.
 
-str(dat_rmax_trim) # keeping order, canal, and dam data as categorical
+str(dat_rmax_trim) # keeping order and dam data as categorical
 
 lm1_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
                  Lon_WGS84 + Order + NHD_RdDensCat + Dam, 
@@ -312,5 +315,167 @@ aic1r <- AIC(lm1_resids) # -304.46 Oh dear!
 # Not sure this adds information since the significant parameters stay the same.
 
 #### Model 3: Qc:Q2yr ####
+
+# Trim imported data down to variables of interest (17 total covariates).
+
+dat_Qc_trim <- dat_Qc %>%
+  select(site_name,
+         c_med, Qc_Q2yr, cvQ, meanGPP:NHD_AREASQKM, 
+         NHD_RdDensCat:NHD_PctImp2011Ws, 
+         Canal:width_med)
+
+# And visualize the relationships with Qc:Qy2r values.
+
+QcQ2_covs <- ggpairs(dat_Qc_trim %>% select(-site_name) %>%
+                       select(-NHD_RdDensWs, -NHD_PctImp2011Ws)) # trim for space
+
+# ggsave(QcQ2_covs,
+#        filename = "figures/teton_fall22/QcQ2_covariates.jpg",
+#        width = 50,
+#        height = 50,
+#        units = "cm")
+
+# Some notes regarding these covariates.
+
+# (1) Road density and impervious cover appear tightly correlated (0.824), so
+# I should probably only include one of these in the final model build again.
+
+# (2) Stream width and meanGPP also appear correlated (0.618), more strongly
+# than they did in the rmax covariate exploration.
+
+# (?) Remaining Pearson's correlation values are below 0.5.
+
+# Log transform necessary covariates.
+
+dat_Qc_trim <- dat_Qc_trim %>%
+  mutate(GPP_log = log10(meanGPP),
+         area_log = log10(NHD_AREASQKM),
+         width_log = log10(width_med))
+
+# Notes on model structure:
+
+# I am going to include the following covariates as representatives of the
+# corresponding environmental factors:
+
+# cvQ - flow
+# GPP - biological productivity (function of flow & light)*
+# latitude - a rough location/temperature index?
+# longitude - a rough location/aridity index?
+# order - stream size**
+# watershed area - stream size**
+# width - stream size**
+# road density - terrestrial development
+# dam - aquatic development
+
+# * Models will explore with and without GPP since GPP ~ f(flow, light).
+# ** Models will explore each of the size indicators separately.
+
+# The following covariates have been removed for the following reasons:
+
+# light - not a factor for flow disturbance thresholds
+# temperature - not a factor for flow disturbance thresholds
+# % impervious land cover - too closely correlated with road density
+# canal - another metric of terr/aq development but felt duplicative
+# NO3/PO4 - not a factor for flow disturbance thresholds
+
+##### Stream Size #####
+
+# Build initial set of models to investigate size covariates.
+
+str(dat_Qc_trim) # keeping order and dam data as categorical
+
+lm1_Qc <- lm(Qc_Q2yr ~ cvQ + GPP_log + Lat_WGS84 + Lon_WGS84 +
+               Order + NHD_RdDensCat + Dam, 
+               data = dat_Qc_trim)
+
+lm2_Qc <- lm(Qc_Q2yr ~ cvQ + GPP_log + Lat_WGS84 + Lon_WGS84 +
+               area_log + NHD_RdDensCat + Dam,  
+               data = dat_Qc_trim)
+
+lm3_Qc <- lm(Qc_Q2yr ~ cvQ + GPP_log + Lat_WGS84 + Lon_WGS84 +
+               width_log + NHD_RdDensCat + Dam, 
+               data = dat_Qc_trim)
+
+# Examine the outputs.
+
+summary(lm1_Qc)
+summary(lm2_Qc)
+summary(lm3_Qc)
+
+# Examine the coefficients.
+
+lm1_Qc_tidy <- broom::tidy(lm1_Qc) # using order
+View(lm1_Qc_tidy) # Lon (p<0.05)
+
+lm2_Qc_tidy <- broom::tidy(lm2_Qc) # using area
+View(lm2_Qc_tidy) # Lon (p<0.05)
+
+lm3_Qc_tidy <- broom::tidy(lm3_Qc) # using width
+View(lm3_Qc_tidy) # Lon (p<0.05)
+
+# Examine model fit.
+
+lm1_Qc_fit <- broom::glance(lm1_Qc) # order
+View(lm1_Qc_fit) # adj R2 = 0.03, sigma = 1.22, p = 0.23, nobs = 134
+
+lm2_Qc_fit <- broom::glance(lm2_Qc) # area
+View(lm2_Qc_fit) # adj R2 = 0.03, sigma = 1.22, p = 0.20, nobs = 134
+
+lm3_Qc_fit <- broom::glance(lm3_Qc) # width
+View(lm3_Qc_fit) #adj R2 = 0.03, sigma = 1.22, p = 0.17, nobs = 133
+
+# Examine model diagnostics.
+plot(lm1_Qc) # qqplot doesn't look good
+plot(lm2_Qc) # looks the same
+plot(lm3_Qc) # same outliers - 102, 122, 125
+
+# Compare models.
+aic1q <- AIC(lm1_Qc) # 450
+aic2q <- AIC(lm2_Qc) # 446
+aic3q <- AIC(lm3_Qc) # 443
+
+# Moving forward with width as the indicator of stream size again.
+
+# After examining the outliers of this model and finding they
+# are all in Texas/arid West, I am going to try adding light back
+# in the model.
+
+# Need to pull summerL from rmax dataset.
+dat_light <- dat_rmax_trim %>%
+  select(site_name, summerL)
+
+dat_Qc_trim_light <- left_join(dat_Qc_trim, dat_light)
+
+# Build new model including light.
+
+lm4_Qc <- lm(Qc_Q2yr ~ cvQ + GPP_log + Lat_WGS84 + Lon_WGS84 +
+             summerL + width_log + NHD_RdDensCat + Dam, 
+             data = dat_Qc_trim_light)
+
+# Examine the outputs.
+
+summary(lm4_Qc)
+
+# Examine the coefficients.
+
+lm4_Qc_tidy <- broom::tidy(lm4_Qc) # using width
+View(lm4_Qc_tidy) # Lon (p<0.05)
+
+# Examine model fit.
+
+lm4_Qc_fit <- broom::glance(lm4_Qc) # order
+View(lm4_Qc_fit) # adj R2 = 0.02, sigma = 1.23, p = 0.24, nobs = 133
+
+# Examine model diagnostics.
+plot(lm4_Qc) # diagnostic plots look the same, with the same outliers
+
+# Compare models.
+aic4q <- AIC(lm4_Qc) # 445 - so not really any better with light.
+
+# So, moving forward with lm3_Qc as model of choice, although it did a 
+# terrible job of explaining variance.
+
+# Export table of current results.
+write_csv(lm3_Qc_tidy, "data_working/lm_Qc.csv")
 
 # End of script.
