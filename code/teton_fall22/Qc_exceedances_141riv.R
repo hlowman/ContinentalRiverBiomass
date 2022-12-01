@@ -139,4 +139,7 @@ dat_exc_rmax <- inner_join(dat_exceed_sum, dat_rmax)
 #        height = 20,
 #        units = "cm") # n = 141
 
+# And export just the exceedance data for use in the linear models.
+saveRDS(dat_exceed_sum, "data_working/Qc_exceedances_141sites_120122.rds")
+
 # End of script.
