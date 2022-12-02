@@ -51,7 +51,7 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
 (fig2 <- ggplot(dat_may_rmax, aes(x = r_med, y = may_med)) +
     geom_point(alpha = 0.9, size = 3,
                color = "#CCDFC3") +
-    #scale_x_log10() +
+    scale_y_log10() +
     labs(y = expression(Maximum~Algal~Yield),
          x = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
@@ -61,6 +61,7 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
     geom_point(alpha = 0.9, size = 3,
                color = "#C7DBBC") +
     scale_x_log10() +
+    scale_y_log10() +
     labs(y = expression(Maximum~Algal~Yield),
          x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
     theme_bw())
@@ -69,6 +70,7 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
 (fig4 <- ggplot(dat_may_rmax, aes(x = cvQ, y = may_med)) +
     geom_point(alpha = 0.9, size = 3,
                color = "#C1D7B6") +
+    scale_y_log10() +
     labs(x = expression(CV[Q]),
          y = expression(Maximum~Algal~Yield)) +
     theme_bw())
@@ -77,6 +79,7 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
 (fig5 <- ggplot(dat_may_rmax, aes(x = summerL, y = may_med)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#B7CFAC") +
+    scale_y_log10() +
     labs(x = expression(Cumulative~Summer~PAR~(mol~m^-2~d^-1)),
          y = expression(Maximum~Algal~Yield)) +
     theme_bw())
@@ -85,6 +88,7 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
 (fig6 <- ggplot(dat_may_rmax, aes(x = width_med, y = may_med)) +
     geom_point(alpha = 0.8, size = 3, color = "#ABC1A0") +
     scale_x_log10() + 
+    scale_y_log10() +
     labs(x = expression(Stream~Width~(m)),
          y = expression(Maximum~Algal~Yield)) +
     theme_bw())
@@ -93,6 +97,7 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
 (fig7 <- ggplot(dat_may_rmax, aes(x = Lon_WGS84, y = may_med)) +
     geom_point(alpha = 0.8, size = 3, 
                color = "#9EB393") +
+    scale_y_log10() +
     labs(x = expression(Longitude),
          y = expression(Maximum~Algal~Yield)) +
     theme_bw())
@@ -101,6 +106,7 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
 (fig8 <- ggplot(dat_may_rmax, aes(x = NHD_RdDensCat, y = may_med)) +
     geom_point(alpha = 0.8, size = 3, 
                color = "#92A587") +
+    scale_y_log10() +
     labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
          y = expression(Maximum~Algal~Yield)) +
     theme_bw())
@@ -109,6 +115,7 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
 (fig9 <- ggplot(dat_may_rmax, aes(x = Nitrate, y = may_med)) +
     geom_point(alpha = 0.8, size = 3, color = "#7D8D70") +
     scale_x_log10() +
+    scale_y_log10() +
     labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
          y = expression(Maximum~Algal~Yield)) +
     theme_bw())
@@ -118,6 +125,7 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
     geom_point(alpha = 0.8, size = 3, 
                color = "#687659") +
     scale_x_log10() +
+    scale_y_log10() +
     labs(x = expression(Mean~OrthoPhosphate~(mg/L~PO[4]-P)),
          y = expression(Maximum~Algal~Yield)) +
     theme_bw())
@@ -141,7 +149,7 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
     theme_bw())
 
 # Combine figures above.
-(fig_may_med <- fig1 + fig2 + fig3 +
+(fig_may_med_log <- fig1 + fig2 + fig3 +
     fig4 + fig5 + fig6 +
     fig7 + fig8 + fig9 +
     fig10 + fig11 + fig12 +
@@ -149,11 +157,10 @@ dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
     plot_layout(nrow = 4))
 
 # And export for use in the Rmarkdown file.
-# ggsave(fig_may_med,
-#        filename = "figures/teton_fall22/maxalgyield_12panel_120122.jpg",
+# ggsave(fig_may_med_log,
+#        filename = "figures/teton_fall22/maxalgyield_12panel_120222.jpg",
 #        width = 30,
 #        height = 40,
 #        units = "cm") # n = 159
 
 # End of script.
-
