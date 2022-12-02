@@ -35,12 +35,15 @@ dat_rmax <- readRDS("data_working/rmax_filtered_159sites_113022.rds")
 # Next, the data for the Qc:Q2yr lm.
 dat_Qc <- readRDS("data_working/QcQ2_filtered_141sites_113022.rds")
 
+# Finally, the data for sites' Qc exceedances.
+dat_exc <- readRDS("data_working/Qc_exceedances_141sites_120122.rds")
+
 #### Model 1: rmax ####
 
 # Trim imported data down to variables of interest (17 total covariates).
 
 dat_rmax_trim <- dat_rmax %>%
-  select(site_name,
+  dplyr::select(site_name,
          r_med:NHD_AREASQKM, NHD_RdDensCat:NHD_PctImp2011Ws, 
          Canal:Orthophosphate)
 
@@ -213,6 +216,8 @@ aic4 <- AIC(lm4_rmax) # -262.86 EEK!
 
 # Moving forward with GPP included in the model.
 
+##### log(rmax) #####
+
 # Building one final model with rmax values on the log scale.
 
 # lm3_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
@@ -256,6 +261,52 @@ aic5 <- AIC(lm5_rmax) # 13.87 Oh dear!
 
 # Export table of current results.
 write_csv(lm3_rmax_tidy, "data_working/lm_rmax.csv")
+
+##### Qc exceedance #####
+
+# Build a model to investigate Qc exceedance instead of cvQ as a measured of
+# flow disturbance.
+
+dat_rmax_trim2 <- left_join(dat_rmax_trim, dat_exc)
+
+# lm3_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
+#                  Lon_WGS84 + width_log + NHD_RdDensCat + Dam,
+#                data = dat_rmax_trim)
+
+lm6_rmax <- lm(r_med ~ total_exc_events + GPP_log + summerL + summerT +
+                 Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
+               data = dat_rmax_trim2)
+
+# Examine the outputs.
+
+summary(lm3_rmax)
+summary(lm6_rmax) # flow & light jump in importance, dams no longer
+
+# Examine the coefficients.
+
+# lm3_rmax_tidy <- broom::tidy(lm3_rmax) # with GPP, using width
+View(lm3_rmax_tidy) # GPP, Lon, Temp, dam(80%), cvQ (p<0.05)
+
+lm6_rmax_tidy <- broom::tidy(lm6_rmax) # using exceedances instead of cvQ
+View(lm6_rmax_tidy) # GPP, exceedances, Lon (p<0.05)
+
+# Examine model fit.
+
+# lm3_rmax_fit <- broom::glance(lm3_rmax) # with GPP, width
+View(lm3_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+
+lm6_rmax_fit <- broom::glance(lm6_rmax) # using exceedances instead of cvQ
+View(lm6_rmax_fit) #adj R2 = 0.52, sigma = 0.08, p < 0.0001, nobs = 134
+
+# Examine model diagnostics.
+plot(lm3_rmax) # fine
+plot(lm6_rmax) # also fine
+
+# Compare models.
+aic3 <- AIC(lm3_rmax) # -316.98
+aic6 <- AIC(lm6_rmax) # -297.00 a.k.a. not quite as good
+
+# Moving forward with cvQ included in the model - truly independent covariate.
 
 ##### Nutrients #####
 
