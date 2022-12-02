@@ -275,11 +275,14 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
     theme_bw())
 
 # Longitude vs. rmax:
-# (fig6 <- ggplot(dat_out_full, aes(x = Lon_WGS84, y = r_mean)) +
-#     geom_point(alpha = 0.6, size = 3, color = "#A18F7E") +
-#     labs(x = expression(Longitude),
-#          y = expression(Maximum~Growth~Rate~(r[max]))) +
-#     theme_bw())
+(fig6 <- ggplot(dat_out_full, aes(x = Lon_WGS84, y = r_med)) +
+    geom_point(alpha = 0.6, size = 3, color = "#A18F7E") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#A18F7E",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
+    labs(x = expression(Longitude),
+         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
 
 # Catchment size vs. rmax: note, missing Miss. R. and x axis LOG SCALED
 (fig7 <- ggplot(dat_out_full, aes(x = NHD_AREASQKM, y = r_med)) +
@@ -693,8 +696,18 @@ saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
 (fig6qcq2 <- ggplot(dat_out_full_141, aes(x = Lon_WGS84, y = Qc_Q2yr)) +
     geom_hline(yintercept = 1) +
     geom_point(alpha = 0.6, size = 3, color = "#E38678") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#E38678",
+                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     labs(x = expression(Longitude),
          y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+# Additional exploratory plot:
+(figextra <- ggplot(dat_out_full_141, aes(x = Lon_WGS84, y = cvQ)) +
+    geom_point(alpha = 0.6, size = 3, color = "black") +
+    labs(x = expression(Longitude),
+         y = expression(CV[Q])) +
     theme_bw())
 
 # Catchment size vs. c: note, missing Miss. R.
