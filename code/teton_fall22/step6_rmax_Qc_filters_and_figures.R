@@ -186,7 +186,7 @@ dat_out_full <- dat_out_full %>%
                    color = "#2D4029",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
-    labs(y = expression(Maximum~Growth~Rate~(r[max])),
+    labs(y = expression(r[max]),
          x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
     theme_bw())
 
@@ -198,7 +198,7 @@ dat_out_full <- dat_out_full %>%
                    color = "#374C34",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(CV[Q]),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 (fig2.2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_med)) +
@@ -223,7 +223,7 @@ dat_out_full <- dat_out_full %>%
                    color = "#41583F",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Cumulative~Summer~PAR~(mol~m^-2~d^-1)),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 (fig3.2 <- ggplot(dat_out_full, aes(x = summerT, y = r_med)) +
@@ -233,7 +233,7 @@ dat_out_full <- dat_out_full %>%
                    color = "#4B6048",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Mean~Daily~Summer~Temperature~(Celsius)),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 # Stream Order vs. rmax: Removing singular site w/o order info for now.
@@ -242,7 +242,7 @@ dat_out_full <- dat_out_full %>%
     geom_boxplot(alpha = 0.8, color = "#2D4029", 
                  fill = "#2D4029") +
     labs(x = expression(Stream~Order),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 # Stream Width vs. rmax: note, x axis LOG SCALED
@@ -253,7 +253,7 @@ dat_out_full <- dat_out_full %>%
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() + 
     labs(x = expression(Stream~Width~(m)),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 # Also did a quick gut check of order vs. width
@@ -282,7 +282,7 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
                    color = "#556551",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Longitude),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 # Also did a quick gut check of longtide vs. cvQ
@@ -296,7 +296,7 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Watershed~Area~(km^2)),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 # Land use vs. rmax:
@@ -312,7 +312,7 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
                    color = "#6E7466",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 (fig10 <- ggplot(dat_out_full, aes(x = NHD_RdDensWs, y = r_med)) +
@@ -327,7 +327,7 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
                    color = "#41583F",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Impervious~Land~Cover~by~Catchment~(`%`)),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 (fig12 <- ggplot(dat_out_full, aes(x = NHD_PctImp2011Ws, y = r_med)) +
@@ -360,8 +360,8 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
                           aes(x = DamReOrder, y = r_med)) +
     geom_boxplot(alpha = 0.8, 
                  fill = "#8C9088", color = "#8C9088") +
-    labs(x = expression(Likelihood~of~Influence~by~Dams),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+    labs(x = expression(Likelihood~of~Influence~by~Dams~(`%`)),
+         y = expression(r[max])) +
     theme_bw())
 
 # Nutrients - note, both x axes are LOG SCALED
@@ -372,7 +372,7 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 (fig16 <- ggplot(dat_out_full, aes(x = Orthophosphate, y = r_med)) +
@@ -382,7 +382,7 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Mean~OrthoPhosphate~(mg/L~PO[4]-P)),
-         y = expression(Maximum~Growth~Rate~(r[max]))) +
+         y = expression(r[max])) +
     theme_bw())
 
 # Combine figures above.
