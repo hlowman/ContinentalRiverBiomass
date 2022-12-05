@@ -434,30 +434,30 @@ dat_rmax_trim$residuals <- residuals(fit1)
 # Building final model with residuals instead of rmax values.
 
 lm1_resids <- lm(residuals ~ GPP_log + summerL + summerT +
-                 Lon_WGS84 + width_log + NHD_RdDensCat + Dam,
+                 Lon_WGS84 + area_log + NHD_RdDensCat + Dam,
                data = dat_rmax_trim)
 
 # Examine the outputs.
 
-summary(lm1_resids) # similar covariates emerge as important
+summary(lm1_resids) # less covariates emerge as important
 
 # Examine the coefficients.
 
 lm1_resids_tidy <- broom::tidy(lm1_resids) # with GPP, without cvQ, using residuals
-View(lm1_resids_tidy) # GPP, Lon, dam (80%) (p<0.05)
+View(lm1_resids_tidy) # GPP, Lon (p<0.05)
 
 # Examine model fit.
 
 lm1_resids_fit <- broom::glance(lm1_resids) # with GPP, without cvQ, using residuals
-View(lm1_resids_fit) #adj R2 = 0.34, sigma = 0.08, p < 0.0001, nobs = 151
+View(lm1_resids_fit) #adj R2 = 0.33, sigma = 0.09, p < 0.0001, nobs = 152
 
 # Examine model diagnostics.
 plot(lm1_resids) # first pane still a bit curvy, same outliers as other lms (30, 91, 133)
 
 # Compare models.
-aic1r <- AIC(lm1_resids) # -304.46 Oh dear!
+aic1r <- AIC(lm1_resids) # -305.18 Oh dear!
 
-# Not sure this adds information since the significant parameters stay the same.
+# Not sure this adds information since the significant parameters decrease.
 
 #### Model 3: Qc:Q2yr ####
 
@@ -488,7 +488,7 @@ QcQ2_covs <- ggpairs(dat_Qc_trim %>% select(-site_name) %>%
 # (2) Stream width and meanGPP also appear correlated (0.618), more strongly
 # than they did in the rmax covariate exploration.
 
-# (?) Remaining Pearson's correlation values are below 0.5.
+# (3) Remaining Pearson's correlation values are below 0.5.
 
 # Log transform necessary covariates.
 
