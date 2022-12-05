@@ -173,7 +173,7 @@ dat_out_full <- dat_out_full %>%
 # Distribution of rmax values:
 (fig1 <- ggplot(dat_out_full, aes(x = r_med)) +
   geom_histogram(bins = 60, alpha = 0.8, 
-                 fill = "#9E8ABC", color = "#9E8ABC") +
+                 fill = "#23341E", color = "#23341E") +
   labs(x = expression(Maximum~Growth~Rate~(r[max])),
        y = "Count") +
   theme_bw())
@@ -181,9 +181,9 @@ dat_out_full <- dat_out_full %>%
 # Mean daily GPP vs. rmax: X axis LOG SCALED
 (fig1.1 <- ggplot(dat_out_full, aes(x = meanGPP, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#A393CA") +
+               color = "#2D4029") +
     geom_linerange(alpha = 0.8, 
-                   color = "#A393CA",
+                   color = "#2D4029",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(y = expression(Maximum~Growth~Rate~(r[max])),
@@ -193,9 +193,9 @@ dat_out_full <- dat_out_full %>%
 # CV of Discharge vs. rmax:
 (fig2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#9494B4") +
+               color = "#374C34") +
     geom_linerange(alpha = 0.8, 
-                   color = "#9494B4",
+                   color = "#374C34",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(CV[Q]),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
@@ -218,9 +218,9 @@ dat_out_full <- dat_out_full %>%
 
 (fig3.1 <- ggplot(dat_out_full, aes(x = summerL, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#A99CD9") +
+               color = "#41583F") +
     geom_linerange(alpha = 0.8, 
-                   color = "#A99CD9",
+                   color = "#41583F",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Cumulative~Summer~PAR~(mol~m^-2~d^-1)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
@@ -228,27 +228,28 @@ dat_out_full <- dat_out_full %>%
 
 (fig3.2 <- ggplot(dat_out_full, aes(x = summerT, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#9E8ABC") +
+               color = "#4B6048") +
     geom_linerange(alpha = 0.8, 
-                   color = "#9E8ABC",
+                   color = "#4B6048",
                    aes(ymin = minCI, ymax = `97.5%`)) +
-    labs(x = expression(Mean~Summer~Temperature~(Celsius)),
+    labs(x = expression(Mean~Daily~Summer~Temperature~(Celsius)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
 # Stream Order vs. rmax: Removing singular site w/o order info for now.
 (fig4 <- ggplot(dat_out_full %>%
                   filter(!is.na(Order)), aes(x = Order, y = r_med)) +
-    geom_boxplot(alpha = 0.6, color = "#A7907B", fill = "#A7907B") +
+    geom_boxplot(alpha = 0.8, color = "#2D4029", 
+                 fill = "#2D4029") +
     labs(x = expression(Stream~Order),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
 # Stream Width vs. rmax: note, x axis LOG SCALED
 (fig4.1 <- ggplot(dat_out_full, aes(x = width_med, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A6A486") +
+    geom_point(alpha = 0.8, size = 3, color = "#374C34") +
     geom_linerange(alpha = 0.8, 
-                   color = "#A6A486",
+                   color = "#374C34",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() + 
     labs(x = expression(Stream~Width~(m)),
@@ -266,9 +267,9 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 
 # Latitude vs. rmax:
 (fig5 <- ggplot(dat_out_full, aes(x = Lat_WGS84, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#8F8D88") +
+    geom_point(alpha = 0.8, size = 3, color = "#23341E") +
     geom_linerange(alpha = 0.8, 
-                   color = "#8F8D88",
+                   color = "#23341E",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Latitude),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
@@ -276,19 +277,22 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 
 # Longitude vs. rmax:
 (fig6 <- ggplot(dat_out_full, aes(x = Lon_WGS84, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A18F7E") +
+    geom_point(alpha = 0.8, size = 3, color = "#556551") +
     geom_linerange(alpha = 0.8, 
-                   color = "#A18F7E",
+                   color = "#556551",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Longitude),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
+# Also did a quick gut check of longtide vs. cvQ
+plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
+
 # Catchment size vs. rmax: note, missing Miss. R. and x axis LOG SCALED
 (fig7 <- ggplot(dat_out_full, aes(x = NHD_AREASQKM, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A5BA92") +
+    geom_point(alpha = 0.8, size = 3, color = "#5F6A59") +
     geom_linerange(alpha = 0.8, 
-                   color = "#A5BA92",
+                   color = "#5F6A59",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Watershed~Area~(km^2)),
@@ -303,9 +307,9 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 #     theme_bw())
 
 (fig9 <- ggplot(dat_out_full, aes(x = NHD_RdDensCat, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#808C91") +
+    geom_point(alpha = 0.8, size = 3, color = "#6E7466") +
     geom_linerange(alpha = 0.8, 
-                   color = "#808C91",
+                   color = "#6E7466",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
@@ -318,11 +322,11 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
     theme_bw())
 
 (fig11 <- ggplot(dat_out_full, aes(x = NHD_PctImp2011Cat, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#938E86") +
+    geom_point(alpha = 0.8, size = 3, color = "#41583F") +
     geom_linerange(alpha = 0.8, 
-                   color = "#938E86",
+                   color = "#41583F",
                    aes(ymin = minCI, ymax = `97.5%`)) +
-    labs(x = expression(Percent~Impervious~by~Catchment),
+    labs(x = expression(Impervious~Land~Cover~by~Catchment~(`%`)),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
@@ -346,18 +350,25 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 
 # Effect of Dams
 # "95 indicates the least probable interference from a structure of a given type"
-(fig14 <- ggplot(dat_out_full, aes(x = Dam, y = r_med)) +
-    geom_boxplot(alpha = 0.6, 
-                 fill = "#A5BA92", color = "#A5BA92") +
+(fig14 <- ggplot(dat_out_full %>%
+                   na.omit(Dam) %>%
+                   mutate(DamReOrder = factor(case_when(Dam == "0" ~ "100",
+                                                 Dam == "50" ~ "50",
+                                                 Dam == "80" ~ "20",
+                                                 Dam == "95" ~ "5"),
+                                              levels = c("5", "20", "50", "100"))), 
+                          aes(x = DamReOrder, y = r_med)) +
+    geom_boxplot(alpha = 0.8, 
+                 fill = "#8C9088", color = "#8C9088") +
     labs(x = expression(Likelihood~of~Influence~by~Dams),
          y = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
 # Nutrients - note, both x axes are LOG SCALED
 (fig15 <- ggplot(dat_out_full, aes(x = Nitrate, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A698D3") +
+    geom_point(alpha = 0.8, size = 3, color = "#4B6048") +
     geom_linerange(alpha = 0.8, 
-                   color = "#A698D3",
+                   color = "#4B6048",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
@@ -365,9 +376,9 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
     theme_bw())
 
 (fig16 <- ggplot(dat_out_full, aes(x = Orthophosphate, y = r_med)) +
-    geom_point(alpha = 0.6, size = 3, color = "#9092AD") +
+    geom_point(alpha = 0.8, size = 3, color = "#556551") +
     geom_linerange(alpha = 0.8, 
-                   color = "#9092AD",
+                   color = "#556551",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Mean~OrthoPhosphate~(mg/L~PO[4]-P)),
@@ -375,27 +386,27 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
     theme_bw())
 
 # Combine figures above.
-(fig_r_med <- fig1 + fig1.1 + fig3.1 +
-    fig2 + fig9 + fig11 +
-    fig4 + fig4.1 + fig7 +
+(fig_r_med <- fig1 + fig1.1 + fig2 +
+    fig3.1 + fig3.2 + fig6 +
+    fig7 + fig9 + fig14 +
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 3))
 
 # And export for use in the Rmarkdown file.
 # ggsave(fig_r_med,
-#        filename = "figures/teton_fall22/rmax_9panel_111622.jpg",
+#        filename = "figures/teton_fall22/rmax_9panel_120522.jpg",
 #        width = 30,
 #        height = 30,
 #        units = "cm") # n = 159
 
-(fig_r_supp <- fig3.2 + fig15 + fig16 +
-    fig5 + fig13 + fig14 +
+(fig_r_supp <- fig5 + fig4 + fig4.1 +
+    fig11 + fig15 + fig16 +
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 2))
 
 # And export for use in the Rmarkdown file.
 # ggsave(fig_r_supp,
-#        filename = "figures/teton_fall22/rmax_6panel_111622.jpg",
+#        filename = "figures/teton_fall22/rmax_6panel_120522.jpg",
 #        width = 30,
 #        height = 20,
 #        units = "cm") # n = 159
