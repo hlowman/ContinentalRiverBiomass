@@ -95,7 +95,8 @@ dat_rmax_trim <- dat_rmax_trim %>%
 # cvQ - flow
 # GPP - biological productivity (function of flow & light)*
 # summer light - light at the stream surface during greatest canopy
-# summer temp - water temperature (decoupled from air temperature)
+# summer temp - water temperature (decoupled from air temperature)**
+# latitude - air temperature/growing season**
 # longitude - a rough location/aridity index?
 # order - stream size**
 # watershed area - stream size**
@@ -104,20 +105,66 @@ dat_rmax_trim <- dat_rmax_trim %>%
 # dam - aquatic development
 
 # * Models will explore with and without GPP since GPP ~ f(flow, light).
-# ** Models will explore each of the size indicators separately.
+# ** Models will explore each of the temperature and size indicators separately.
 
 # The following covariates have been removed for the following reasons:
 
-# latitude - too closely correlated with summer temperature
 # % impervious land cover - too closely correlated with road density
 # canal - another metric of terr/aq development but felt duplicative
 # NO3/PO4 - 50% of sites have no data, so these will be examined separately
 
-##### Stream Size #####
+##### Temperature #####
 
-# Build initial set of models to investigate size covariates.
+# Build initial set of models to investigate temperature covariates.
+# Not including stream size effect for this step.
 
 str(dat_rmax_trim) # keeping order and dam data as categorical
+
+lm0_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + Lat_WGS84 +
+                 Lon_WGS84 + NHD_RdDensCat + Dam, 
+               data = dat_rmax_trim)
+
+lm0.1_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
+                 Lon_WGS84 + NHD_RdDensCat + Dam, 
+               data = dat_rmax_trim)
+
+# Examine the outputs.
+
+summary(lm0_rmax)
+summary(lm0.1_rmax)
+
+# Examine the coefficients.
+
+lm0_rmax_tidy <- broom::tidy(lm0_rmax) # using lat
+View(lm0_rmax_tidy) # GPP, Lon, dam (80%) (p<0.05)
+
+lm0.1_rmax_tidy <- broom::tidy(lm0.1_rmax) # using temp
+View(lm0.1_rmax_tidy) # GPP, Lon, temp, dam (80% & 95%), cvQ, (p<0.05)
+
+# Examine model fit.
+
+lm0_rmax_fit <- broom::glance(lm0_rmax) # lat
+View(lm0_rmax_fit) # adj R2 = 0.38, sigma = 0.08, p < 0.0001, nobs = 152
+
+lm0.1_rmax_fit <- broom::glance(lm0.1_rmax) # temp
+View(lm0.1_rmax_fit) # adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+
+# Examine model diagnostics.
+
+plot(lm0_rmax) # meh
+plot(lm0.1_rmax) # fairly curvy still
+
+# Compare models.
+
+aic0 <- AIC(lm0_rmax) # -314.43
+aic0.1 <- AIC(lm0.1_rmax) # -322.22
+
+# Moving forward with water temperature as the effect, because this
+# provides more in-stream information.
+
+##### Stream Size #####
+
+# Now, build models to examine stream size.
 
 lm1_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
                  Lon_WGS84 + Order + NHD_RdDensCat + Dam, 
@@ -161,106 +208,153 @@ View(lm3_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
 
 # Examine model diagnostics.
 plot(lm1_rmax) # site 30 does appear to be an outlier here
-plot(lm2_rmax) # looks a bit better
+plot(lm2_rmax) # looks the same
 plot(lm3_rmax) # also fine
 
 # The first residuals plots all look a bit curvy, so may think about log-transforming r values.
 
 # Compare models.
+
 aic1 <- AIC(lm1_rmax) # -317.45
 aic2 <- AIC(lm2_rmax) # -320.39
 aic3 <- AIC(lm3_rmax) # -316.98
 
-# Moving forward with width as the indicator of stream size.
+# Moving forward with watershed area as the indicator of stream size.
+# Since they're fairly similar results-wise, choose area, because it's
+# the most objectively measured. Order can be a bit subjective/misleading
+# and stream width was calculated, not measured directly.
 
 ##### GPP #####
 
 # Build second set of models to investigate influence of GPP (with/without).
 
-# lm3_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-#                  Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
+# lm2_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
+#                  Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
 #                data = dat_rmax_trim)
 
 lm4_rmax <- lm(r_med ~ cvQ + summerL + summerT +
-                 Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
+                 Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
                data = dat_rmax_trim)
 
 # Examine the outputs.
 
-summary(lm3_rmax)
-summary(lm4_rmax) # size jumps in importance.
+summary(lm2_rmax)
+summary(lm4_rmax)
 
 # Examine the coefficients.
 
 # with GPP, using width
-View(lm3_rmax_tidy) # GPP, Lon, Temp, dam(80%), cvQ (p<0.05)
+View(lm2_rmax_tidy) # GPP, Lon, Temp, dam (80%, 95%), cvQ (p<0.05)
 
-lm4_rmax_tidy <- broom::tidy(lm4_rmax) # without GPP, using width
-View(lm4_rmax_tidy) # Width, Temp, Lon (p<0.05)
+lm4_rmax_tidy <- broom::tidy(lm4_rmax) # without GPP, using area
+View(lm4_rmax_tidy) # Lon, Temp (p<0.05)
 
 # Examine model fit.
 
 # with GPP, width
-View(lm3_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+View(lm2_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
 
-lm4_rmax_fit <- broom::glance(lm4_rmax) # without GPP, width
-View(lm4_rmax_fit) #adj R2 = 0.15, sigma = 0.10, p = 0.0002, nobs = 151
+lm4_rmax_fit <- broom::glance(lm4_rmax) # without GPP, area
+View(lm4_rmax_fit) #adj R2 = 0.06, sigma = 0.10, p = 0.03, nobs = 152
 
 # Examine model diagnostics.
-plot(lm3_rmax) # fine
+plot(lm2_rmax) # fine
 plot(lm4_rmax) # also fine - less curvy on first residuals pane
 
 # Compare models.
-aic3 # -316.98
-aic4 <- AIC(lm4_rmax) # -262.86 EEK!
+aic2 # -320.39
+aic4 <- AIC(lm4_rmax) # -251.20 EEK!
 
 # Moving forward with GPP included in the model.
 
-##### log(rmax) #####
+##### log(cvQ) #####
 
-# Building one final model with rmax values on the log scale.
+# Building another model with cvQ values on the log scale.
 
-# lm3_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-#                  Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
+# lm2_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
+#                  Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
 #                data = dat_rmax_trim)
 
-lm5_rmax <- lm(r_log ~ cvQ + GPP_log + summerL + summerT +
-                 Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
-               data = dat_rmax_trim)
+lm5_rmax <- lm(r_med ~ cvQ_log + GPP_log + summerL + summerT +
+                 Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
+               data = dat_rmax_trim %>%
+                 mutate(cvQ_log = log10(cvQ)))
 
 # Examine the outputs.
 
-summary(lm3_rmax)
-summary(lm5_rmax) # more covariates emerge as important
+summary(lm2_rmax)
+summary(lm5_rmax) # same covariates emerge as important
 
 # Examine the coefficients.
 
-# with GPP, using width
-View(lm3_rmax_tidy) # GPP, Lon, Temp, dam(80%), cvQ (p<0.05)
+# with GPP, using area
+View(lm2_rmax_tidy) # GPP, Lon, Temp, dam (80%, 95%), cvQ (p<0.05)
 
-lm5_rmax_tidy <- broom::tidy(lm5_rmax) # with GPP, using width, log(rmax)
-View(lm5_rmax_tidy) # GPP, Lon, cvQ, dam (80%), Rd Dens (p<0.05)
+lm5_rmax_tidy <- broom::tidy(lm5_rmax) # with GPP, using area, log(cvQ)
+View(lm5_rmax_tidy) # GPP, Lon, Temp, cvQ, dam (80%, 95%) (p<0.05)
 
 # Examine model fit.
 
 # with GPP, width, rmax
-View(lm3_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+View(lm2_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
 
-lm5_rmax_fit <- broom::glance(lm5_rmax) # with GPP, using width, log(rmax)
-View(lm5_rmax_fit) #adj R2 = 0.51, sigma = 0.24, p < 0.0001, nobs = 151
+lm5_rmax_fit <- broom::glance(lm5_rmax) # with GPP, using area, log(cvQ)
+View(lm5_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
 
 # Examine model diagnostics.
-plot(lm3_rmax) # curvy first pane that I'm trying to address
-plot(lm5_rmax) # better residuals pane and slightly better QQ plot
+plot(lm2_rmax) # curvy first pane that I'm trying to address
+plot(lm5_rmax) # not really any better
 
 # Compare models.
-aic3 # -316.98
-aic5 <- AIC(lm5_rmax) # 13.87 Oh dear!
+aic2 # -320.39
+aic5 <- AIC(lm5_rmax) # 321.10 - will keep cvQ as is
 
-# Moving forward with lm3_rmax.
+##### log(light) #####
+
+# Building another model with cvQ values on the log scale.
+
+# lm2_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
+#                  Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
+#                data = dat_rmax_trim)
+
+lm6_rmax <- lm(r_med ~ cvQ + GPP_log + sL_log + summerT +
+                 Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
+               data = dat_rmax_trim %>%
+                 mutate(sL_log = log10(summerL)))
+
+# Examine the outputs.
+
+summary(lm2_rmax)
+summary(lm6_rmax) # same covariates emerge as important
+
+# Examine the coefficients.
+
+# with GPP, using area
+View(lm2_rmax_tidy) # GPP, Lon, Temp, dam (80%, 95%), cvQ (p<0.05)
+
+lm6_rmax_tidy <- broom::tidy(lm6_rmax) # with GPP, using area, log(light)
+View(lm6_rmax_tidy) # GPP, Lon, Temp, cvQ, dam (80%) (p<0.05)
+
+# Examine model fit.
+
+# with GPP, width, rmax
+View(lm2_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+
+lm6_rmax_fit <- broom::glance(lm6_rmax) # with GPP, using area, log(light)
+View(lm6_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+
+# Examine model diagnostics.
+plot(lm2_rmax) # curvy first pane that I'm trying to address
+plot(lm6_rmax) # not really any better
+
+# Compare models.
+aic2 # -320.39
+aic6 <- AIC(lm6_rmax) # 320.67 - will keep light as is
+
+# Moving forward with lm2_rmax.
 
 # Export table of current results.
-write_csv(lm3_rmax_tidy, "data_working/lm_rmax.csv")
+write_csv(lm2_rmax_tidy, "data_working/lm_rmax.csv")
 
 ##### Qc exceedance #####
 
