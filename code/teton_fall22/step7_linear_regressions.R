@@ -38,19 +38,42 @@ dat_Qc <- readRDS("data_working/QcQ2_filtered_141sites_113022.rds")
 # Finally, the data for sites' Qc exceedances.
 dat_exc <- readRDS("data_working/Qc_exceedances_141sites_120122.rds")
 
+# And the hypoxia dataset for additional info re: precip. "pre_mm_cyr"
+site_info <- read_csv("data_raw/GRDO_GEE_HA_NHD_2021_02_07.csv")
+
+# And the dataset with JUC10 delineations.
+site_HUC <- readRDS("data_working/HUC12_159sites_120722.rds")
+
+# Select for additional variables of interest.
+
+# Annual average precip for local catchment/watershed from HydroATLAS (mm)
+site_precip <- site_info %>%
+  dplyr::select(SiteID, pre_mm_cyr, pre_mm_uyr)
+
+site_HUC10 <- site_HUC %>%
+  dplyr::select(site_name, huc10_id)
+
 #### Model 1: rmax ####
 
-# Trim imported data down to variables of interest (17 total covariates).
+# Trim imported data down to variables of interest.
 
 dat_rmax_trim <- dat_rmax %>%
   dplyr::select(site_name,
          r_med:NHD_AREASQKM, NHD_RdDensCat:NHD_PctImp2011Ws, 
          Canal:Orthophosphate)
 
+# Join with precip data.
+dat_rmax_trim <- left_join(dat_rmax_trim, site_precip, by = c("site_name" = "SiteID"))
+
+# Join with HUC10 data.
+dat_rmax_trim <- left_join(dat_rmax_trim, site_HUC10)
+
 # And visualize the relationships with rmax median values.
 
-rmax_covs <- ggpairs(dat_rmax_trim %>% select(-site_name) %>%
-          select(-meanL, -NHD_RdDensWs, -NHD_PctImp2011Ws)) # trimming for space
+rmax_covs <- ggpairs(dat_rmax_trim %>% 
+                       dplyr::select(-site_name,
+                                     -huc10_id,
+                                     -geometry))
 
 # ggsave(rmax_covs,
 #        filename = "figures/teton_fall22/rmax_covariates.jpg",
@@ -61,405 +84,292 @@ rmax_covs <- ggpairs(dat_rmax_trim %>% select(-site_name) %>%
 # Some notes regarding these covariates.
 
 # (1) I think I should log transform the following variables based on their
-# relationships with r_med: meanGPP, NHD_AREASQKM, width_med, Nitrate,
-# and Orthophosphate.
+# relationships with r_med: NHD_AREASQKM, width_med, Nitrate, and orthoP.
 
 # (2) Road density and impervious cover appear tightly correlated (0.838), so
 # I should probably only include one of these in the final model build.
 
 # (3) Then, summer temp and latitude appear tightly correlated (0.666).
-# They do provide somewhat different information, so I will include them as
-# an interaction term. (Thinking about latitude as a temp gradient while
-# longitude might be a kind of aridity gradient.)
+# They do provide somewhat different information, but after a discussion
+# with Joanna, I'll be removing lat and lon.
 
 # (4) After that, NO3 and PO4 appear the most tightly correlated (0.548).
 # Those aren't duplicates, so I will include them as an interaction term.
 
 # (5) Remaining Pearson's correlation values are below 0.5.
 
+# (6) Removing GPP because it's a value used to generate rmax, so therefore
+# doesn't make sense to include in post-hoc analysis.
+
 # Log transform necessary covariates.
 
 dat_rmax_trim <- dat_rmax_trim %>%
   mutate(r_log = log10(r_med),
-         GPP_log = log10(meanGPP),
+         #GPP_log = log10(meanGPP),
          area_log = log10(NHD_AREASQKM),
          width_log = log10(width_med),
          no3_log = log10(Nitrate),
-         po4_log = log10(Orthophosphate))
+         po4_log = log10(Orthophosphate)) %>%
+  mutate(dam_num = as.numeric(as.character(Dam)))
 
 # Notes on model structure:
+
+# rmax ~ cvQ + light + temp + precip + size + roads + dams + 1 | HUC10
 
 # I am going to include the following covariates as representatives of the
 # corresponding environmental factors:
 
 # cvQ - flow
-# GPP - biological productivity (function of flow & light)*
-# summer light - light at the stream surface during greatest canopy
-# summer temp - water temperature (decoupled from air temperature)**
-# latitude - air temperature/growing season**
-# longitude - a rough location/aridity index?
+# summer light - light at the stream surface during greatest canopy*
+# daily light - light at the stream surface throughout the year*
+# summer temp - water temperature (decoupled from air temperature)
+# precipitation - aridity and land-water connectivity metric
 # order - stream size**
 # watershed area - stream size**
 # width - stream size**
 # road density - terrestrial development
 # dam - aquatic development
 
-# * Models will explore with and without GPP since GPP ~ f(flow, light).
-# ** Models will explore each of the temperature and size indicators separately.
+# * Models will explore with summer vs. avg. daily light.
+# ** Models will explore each of the size indicators separately.
 
 # The following covariates have been removed for the following reasons:
 
+# latitude/longitude - following discussion with Joanna, not a good measure
+# GPP - a function of f(light, flow) and also a direct predictor of rmax
 # % impervious land cover - too closely correlated with road density
 # canal - another metric of terr/aq development but felt duplicative
 # NO3/PO4 - 50% of sites have no data, so these will be examined separately
 
-##### Temperature #####
+# One on one plots for covariates of interest vs. rmax.
 
-# Build initial set of models to investigate temperature covariates.
-# Not including stream size effect for this step.
+plot(r_med ~ cvQ, data = dat_rmax_trim)
+plot(r_med ~ meanL, data = dat_rmax_trim)
+plot(r_med ~ summerL, data = dat_rmax_trim) # looks more related
+plot(r_med ~ summerT, data = dat_rmax_trim)
+plot(r_med ~ area_log, data = dat_rmax_trim)
+plot(r_med ~ NHD_RdDensCat, data = dat_rmax_trim) # this too
+plot(r_med ~ Dam, data = dat_rmax_trim)
+plot(r_med ~ pre_mm_cyr, data = dat_rmax_trim)
+hist(dat_rmax_trim$r_med)
 
-str(dat_rmax_trim) # keeping order and dam data as categorical
+# Going to log transform r_med too.
+dat_rmax_trim <- dat_rmax_trim %>%
+  mutate(logrmax = log10(r_med))
 
-lm0_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + Lat_WGS84 +
-                 Lon_WGS84 + NHD_RdDensCat + Dam, 
-               data = dat_rmax_trim)
+hist(dat_rmax_trim$logrmax)
 
-lm0.1_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-                 Lon_WGS84 + NHD_RdDensCat + Dam, 
-               data = dat_rmax_trim)
+# Ok, and making the final dataset with which to build models since I can't have
+# NAs with many of these functions.
+dat_rmax_lm <- dat_rmax_trim %>%
+  dplyr::select(logrmax, cvQ, summerL, meanL, summerT, NHD_RdDensCat, Dam,
+         Order, area_log, width_log, huc10_id) %>%
+  drop_na() # 151 sites left
 
-# Examine the outputs.
+##### Step 1: Create lm() and check residuals.
 
-summary(lm0_rmax)
-summary(lm0.1_rmax)
+# rmax ~ cvQ + light + temp + precip + size + roads + dams + 1 | HUC10
 
-# Examine the coefficients.
+a1 <- lm(logrmax ~ cvQ + summerL + summerT + NHD_RdDensCat + Dam, 
+         data = dat_rmax_lm)
 
-lm0_rmax_tidy <- broom::tidy(lm0_rmax) # using lat
-View(lm0_rmax_tidy) # GPP, Lon, dam (80%) (p<0.05)
+plot(a1) # residuals looking better with the log transform
 
-lm0.1_rmax_tidy <- broom::tidy(lm0.1_rmax) # using temp
-View(lm0.1_rmax_tidy) # GPP, Lon, temp, dam (80% & 95%), cvQ, (p<0.05)
+##### Step 2: Fit the lm() with GLS and compare to lme().
 
-# Examine model fit.
+a2 <- gls(logrmax ~ cvQ + summerL + summerT + NHD_RdDensCat + Dam, 
+          data = dat_rmax_lm) # effectively a lm
 
-lm0_rmax_fit <- broom::glance(lm0_rmax) # lat
-View(lm0_rmax_fit) # adj R2 = 0.38, sigma = 0.08, p < 0.0001, nobs = 152
+a3 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensCat + Dam, 
+          random = ~1 | huc10_id, data = dat_rmax_lm) # with random effect
 
-lm0.1_rmax_fit <- broom::glance(lm0.1_rmax) # temp
-View(lm0.1_rmax_fit) # adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+anova(a2, a3) # a3 preferred, and I want to keep the random term in
 
-# Examine model diagnostics.
+##### Step 3: Decide on a variance structure.
 
-plot(lm0_rmax) # meh
-plot(lm0.1_rmax) # fairly curvy still
+# Not going to add alternate variance structure at this time.
 
-# Compare models.
+##### Step 4,5,6: Fit the lme(), compare with lm(), and check residuals.
 
-aic0 <- AIC(lm0_rmax) # -314.43
-aic0.1 <- AIC(lm0.1_rmax) # -322.22
+# See Steps 2 & 3.
 
-# Moving forward with water temperature as the effect, because this
-# provides more in-stream information.
+##### Step 7/8: Step-wise Optimal Fixed Structure.
 
-##### Stream Size #####
+a3.2 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensCat + Dam, 
+          random = ~1 | huc10_id, 
+          method = "ML",
+          data = dat_rmax_lm) 
 
-# Now, build models to examine stream size.
+# Try alternate data for light.
+a4 <- lme(logrmax ~ cvQ + meanL + summerT + NHD_RdDensCat + Dam, 
+          random = ~1 | huc10_id, 
+          method = "ML",
+          data = dat_rmax_lm) 
 
-lm1_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-                 Lon_WGS84 + Order + NHD_RdDensCat + Dam, 
-               data = dat_rmax_trim)
+anova(a3.2, a4) # a3.2 preferred - use summerL
 
-lm2_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-                 Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
-               data = dat_rmax_trim)
+# Try different covariates for stream size.
+a5 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensCat + Dam + Order, 
+          random = ~1 | huc10_id, 
+          method = "ML",
+          data = dat_rmax_lm) 
 
-lm3_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-                 Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
-               data = dat_rmax_trim)
+a6 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensCat + Dam + area_log, 
+          random = ~1 | huc10_id, 
+          method = "ML",
+          data = dat_rmax_lm)
 
-# Examine the outputs.
+a7 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensCat + Dam + width_log, 
+          random = ~1 | huc10_id, 
+          method = "ML",
+          data = dat_rmax_lm)
 
-summary(lm1_rmax)
-summary(lm2_rmax)
-summary(lm3_rmax)
-
-# Examine the coefficients.
-
-lm1_rmax_tidy <- broom::tidy(lm1_rmax) # using order
-View(lm1_rmax_tidy) # GPP, Lon, Temp, cvQ, dam (80%), 6th order (p<0.05)
-
-lm2_rmax_tidy <- broom::tidy(lm2_rmax) # using area
-View(lm2_rmax_tidy) # GPP, Lon, Temp, dam (80%, 95%), cvQ (p<0.05)
-
-lm3_rmax_tidy <- broom::tidy(lm3_rmax) # using width
-View(lm3_rmax_tidy) # GPP, Lon, Temp, dam(80%), cvQ (p<0.05)
-
-# Examine model fit.
-
-lm1_rmax_fit <- broom::glance(lm1_rmax) # order
-View(lm1_rmax_fit) # adj R2 = 0.42, sigma = 0.08, p < 0.0001, nobs = 152
-
-lm2_rmax_fit <- broom::glance(lm2_rmax) # area
-View(lm2_rmax_fit) # adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
-
-lm3_rmax_fit <- broom::glance(lm3_rmax) # width
-View(lm3_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
-
-# Examine model diagnostics.
-plot(lm1_rmax) # site 30 does appear to be an outlier here
-plot(lm2_rmax) # looks the same
-plot(lm3_rmax) # also fine
-
-# The first residuals plots all look a bit curvy, so may think about log-transforming r values.
-
-# Compare models.
-
-aic1 <- AIC(lm1_rmax) # -317.45
-aic2 <- AIC(lm2_rmax) # -320.39
-aic3 <- AIC(lm3_rmax) # -316.98
+anova(a5, a6, a7) # order (a5) AIC is least, but see rationale below
 
 # Moving forward with watershed area as the indicator of stream size.
 # Since they're fairly similar results-wise, choose area, because it's
 # the most objectively measured. Order can be a bit subjective/misleading
-# and stream width was calculated, not measured directly.
+# and stream width was calculated, not measured directly..
 
-##### GPP #####
+# Investigate precipitation, but keep in mind, it drops 40+ records.
+a6.2 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensCat + Dam + area_log, 
+          random = ~1 | huc10_id, 
+          method = "ML",
+          data = dat_rmax_trim %>%
+            dplyr::select(logrmax, cvQ, summerL, meanL, summerT, NHD_RdDensCat, 
+                          Dam, Order, area_log, width_log, 
+                          pre_mm_cyr, huc10_id) %>%
+            drop_na())
 
-# Build second set of models to investigate influence of GPP (with/without).
+a8 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensCat + Dam + area_log +
+            pre_mm_cyr, 
+            random = ~1 | huc10_id, 
+            method = "ML",
+            data = dat_rmax_trim %>%
+            dplyr::select(logrmax, cvQ, summerL, meanL, summerT, NHD_RdDensCat, 
+                          Dam, Order, area_log, width_log, 
+                          pre_mm_cyr, huc10_id) %>%
+              drop_na())
 
-# lm2_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-#                  Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
-#                data = dat_rmax_trim)
+anova(a6.2, a8) # They are identical - precip adds nothing to the model.
 
-lm4_rmax <- lm(r_med ~ cvQ + summerL + summerT +
-                 Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
-               data = dat_rmax_trim)
-
-# Examine the outputs.
-
-summary(lm2_rmax)
-summary(lm4_rmax)
-
-# Examine the coefficients.
-
-# with GPP, using width
-View(lm2_rmax_tidy) # GPP, Lon, Temp, dam (80%, 95%), cvQ (p<0.05)
-
-lm4_rmax_tidy <- broom::tidy(lm4_rmax) # without GPP, using area
-View(lm4_rmax_tidy) # Lon, Temp (p<0.05)
-
-# Examine model fit.
-
-# with GPP, width
-View(lm2_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
-
-lm4_rmax_fit <- broom::glance(lm4_rmax) # without GPP, area
-View(lm4_rmax_fit) #adj R2 = 0.06, sigma = 0.10, p = 0.03, nobs = 152
-
-# Examine model diagnostics.
-plot(lm2_rmax) # fine
-plot(lm4_rmax) # also fine - less curvy on first residuals pane
-
-# Compare models.
-aic2 # -320.39
-aic4 <- AIC(lm4_rmax) # -251.20 EEK!
-
-# Moving forward with GPP included in the model.
-
-##### log(cvQ) #####
-
-# Building another model with cvQ values on the log scale.
-
-# lm2_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-#                  Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
-#                data = dat_rmax_trim)
-
-lm5_rmax <- lm(r_med ~ cvQ_log + GPP_log + summerL + summerT +
-                 Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
-               data = dat_rmax_trim %>%
-                 mutate(cvQ_log = log10(cvQ)))
-
-# Examine the outputs.
-
-summary(lm2_rmax)
-summary(lm5_rmax) # same covariates emerge as important
-
-# Examine the coefficients.
-
-# with GPP, using area
-View(lm2_rmax_tidy) # GPP, Lon, Temp, dam (80%, 95%), cvQ (p<0.05)
-
-lm5_rmax_tidy <- broom::tidy(lm5_rmax) # with GPP, using area, log(cvQ)
-View(lm5_rmax_tidy) # GPP, Lon, Temp, cvQ, dam (80%, 95%) (p<0.05)
-
-# Examine model fit.
-
-# with GPP, width, rmax
-View(lm2_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
-
-lm5_rmax_fit <- broom::glance(lm5_rmax) # with GPP, using area, log(cvQ)
-View(lm5_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
-
-# Examine model diagnostics.
-plot(lm2_rmax) # curvy first pane that I'm trying to address
-plot(lm5_rmax) # not really any better
-
-# Compare models.
-aic2 # -320.39
-aic5 <- AIC(lm5_rmax) # 321.10 - will keep cvQ as is
-
-##### log(light) #####
-
-# Building another model with cvQ values on the log scale.
-
-# lm2_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-#                  Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
-#                data = dat_rmax_trim)
-
-lm6_rmax <- lm(r_med ~ cvQ + GPP_log + sL_log + summerT +
-                 Lon_WGS84 + area_log + NHD_RdDensCat + Dam, 
-               data = dat_rmax_trim %>%
-                 mutate(sL_log = log10(summerL)))
-
-# Examine the outputs.
-
-summary(lm2_rmax)
-summary(lm6_rmax) # same covariates emerge as important
-
-# Examine the coefficients.
-
-# with GPP, using area
-View(lm2_rmax_tidy) # GPP, Lon, Temp, dam (80%, 95%), cvQ (p<0.05)
-
-lm6_rmax_tidy <- broom::tidy(lm6_rmax) # with GPP, using area, log(light)
-View(lm6_rmax_tidy) # GPP, Lon, Temp, cvQ, dam (80%) (p<0.05)
-
-# Examine model fit.
-
-# with GPP, width, rmax
-View(lm2_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
-
-lm6_rmax_fit <- broom::glance(lm6_rmax) # with GPP, using area, log(light)
-View(lm6_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
-
-# Examine model diagnostics.
-plot(lm2_rmax) # curvy first pane that I'm trying to address
-plot(lm6_rmax) # not really any better
-
-# Compare models.
-aic2 # -320.39
-aic6 <- AIC(lm6_rmax) # 320.67 - will keep light as is
-
-# Moving forward with lm2_rmax.
-
-# Export table of current results.
-write_csv(lm2_rmax_tidy, "data_working/lm_rmax.csv")
-
-##### Qc exceedance #####
+# Investigate Qc exceedance metrics.
 
 # Build a model to investigate Qc exceedance instead of cvQ as a measured of
 # flow disturbance.
 
 dat_rmax_trim2 <- left_join(dat_rmax_trim, dat_exc)
 
-# lm3_rmax <- lm(r_med ~ cvQ + GPP_log + summerL + summerT +
-#                  Lon_WGS84 + width_log + NHD_RdDensCat + Dam,
-#                data = dat_rmax_trim)
+dat_rmax_lm2 <- dat_rmax_trim2 %>%
+  dplyr::select(logrmax, cvQ, total_exc_events, total_exc_days, summerL, meanL, summerT, 
+                NHD_RdDensCat, Dam, Order, area_log, width_log, huc10_id) %>%
+  drop_na() # 134 sites left
 
-lm6_rmax <- lm(r_med ~ total_exc_events + GPP_log + summerL + summerT +
-                 Lon_WGS84 + width_log + NHD_RdDensCat + Dam, 
-               data = dat_rmax_trim2)
+a6.3 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensCat + Dam + area_log, 
+          random = ~1 | huc10_id, 
+          method = "ML",
+          data = dat_rmax_lm2)
 
-# Examine the outputs.
+a9 <- lme(logrmax ~ total_exc_events + summerL + summerT + NHD_RdDensCat + 
+            Dam + area_log, 
+            random = ~1 | huc10_id, 
+            method = "ML",
+            data = dat_rmax_lm2)
 
-summary(lm3_rmax)
-summary(lm6_rmax) # flow & light jump in importance, dams no longer
+a10 <- lme(logrmax ~ total_exc_days + summerL + summerT + NHD_RdDensCat + 
+            Dam + area_log, 
+          random = ~1 | huc10_id, 
+          method = "ML",
+          data = dat_rmax_lm2)
 
-# Examine the coefficients.
+anova(a6.3, a9, a10) # exceedance events seems to be the best measure of discharge
 
-# lm3_rmax_tidy <- broom::tidy(lm3_rmax) # with GPP, using width
-View(lm3_rmax_tidy) # GPP, Lon, Temp, dam(80%), cvQ (p<0.05)
+summary(a9)
 
-lm6_rmax_tidy <- broom::tidy(lm6_rmax) # using exceedances instead of cvQ
-View(lm6_rmax_tidy) # GPP, exceedances, Lon (p<0.05)
+ggpairs(dat_rmax_lm2 %>%
+          dplyr::select(logrmax, total_exc_events, summerL, summerT,
+                 NHD_RdDensCat, Dam, area_log))
 
-# Examine model fit.
+# Examine how the residuals model looks for the structure I'm working with.
+# Fit linear model between rmax median values and cvQ.
+fit1 <- lm(logrmax ~ cvQ, data = dat_rmax_lm)
 
-# lm3_rmax_fit <- broom::glance(lm3_rmax) # with GPP, width
-View(lm3_rmax_fit) #adj R2 = 0.41, sigma = 0.08, p < 0.0001, nobs = 152
+# Add residuals to original dataset for fitting lm().
+dat_rmax_lm$residuals <- residuals(fit1)
 
-lm6_rmax_fit <- broom::glance(lm6_rmax) # using exceedances instead of cvQ
-View(lm6_rmax_fit) #adj R2 = 0.52, sigma = 0.08, p < 0.0001, nobs = 134
+# Fit residuals and remove discharge metric.
+a11 <- lme(residuals ~ summerL + summerT + NHD_RdDensCat + Dam + area_log, 
+          random = ~1 | huc10_id, 
+          method = "ML",
+          data = dat_rmax_lm)
+
+anova(a11) # No other metrics appear significant.
+
+##### Step 9: Refit with REML for final full model
+
+afinal <- lme(logrmax ~ total_exc_events + summerL + summerT + 
+                NHD_RdDensCat + Dam + area_log, 
+              random = ~1 | huc10_id, 
+              method = "REML",
+              data = dat_rmax_lm2)
 
 # Examine model diagnostics.
-plot(lm3_rmax) # fine
-plot(lm6_rmax) # also fine
+plot(afinal, col = 1)
+qqnorm(afinal)
 
-# Compare models.
-aic3 <- AIC(lm3_rmax) # -316.98
-aic6 <- AIC(lm6_rmax) # -297.00 a.k.a. not quite as good
+# Examine contrasts between singular effects.
+summary(afinal)
 
-# Moving forward with cvQ included in the model - truly independent covariate.
+# Output model results.
+anova(afinal)
+
+#                  numDF denDF   F-value p-value
+# (Intercept)          1   109 1056.4571  <.0001
+# total_exc_events     1    16   19.5004  0.0004
+# summerL              1    16    0.1382  0.7150
+# summerT              1    16    0.4912  0.4935
+# NHD_RdDensCat        1    16    0.9327  0.3485
+# Dam                  3    16    0.1025  0.9574
+# area_log             1    16    0.2410  0.6302
 
 ##### Nutrients #####
 
 # And build separate model for nutrients.
-lmnuts_rmax <- lm(r_med ~ no3_log*po4_log, 
-                  data = dat_rmax_trim)
 
-# Examine the outputs.
-summary(lmnuts_rmax)
+dat_rmax_lm3 <- dat_rmax_trim2 %>%
+  dplyr::select(logrmax, no3_log, po4_log, huc10_id) %>%
+  drop_na() # 89 sites left
 
-# Examine the coefficients.
+a12 <- lme(logrmax ~ no3_log + po4_log, 
+           random = ~1 | huc10_id, 
+           method = "ML",
+           data = dat_rmax_lm3)
 
-lmnuts_rmax_tidy <- broom::tidy(lmnuts_rmax)
-View(lmnuts_rmax_tidy) # neither NO3 nor PO4 is significant
+summary(a12)
 
-# Examine model fit.
+# Refit with REML for final full model
 
-lmnuts_rmax_fit <- broom::glance(lmnuts_rmax)
-View(lmnuts_rmax_fit) # adj R2 = 0.09, sigma = 0.09, p = 0.01, nobs = 89
+afinal_nuts <- lme(logrmax ~ no3_log + po4_log,
+              random = ~1 | huc10_id, 
+              method = "REML",
+              data = dat_rmax_lm3)
 
-# Examine model diagnostics.
-plot(lmnuts_rmax) # site 135 does *nearly* appear to be an outlier
-
-#### Model 2: rmax vs. cvQ residuals ####
-
-# Fit linear model between rmax median values and cvQ.
-fit1 <- lm(r_med ~ cvQ, data = dat_rmax_trim)
-
-dat_rmax_trim$residuals <- residuals(fit1)
-
-# Building final model with residuals instead of rmax values.
-
-lm1_resids <- lm(residuals ~ GPP_log + summerL + summerT +
-                 Lon_WGS84 + area_log + NHD_RdDensCat + Dam,
-               data = dat_rmax_trim)
-
-# Examine the outputs.
-
-summary(lm1_resids) # less covariates emerge as important
-
-# Examine the coefficients.
-
-lm1_resids_tidy <- broom::tidy(lm1_resids) # with GPP, without cvQ, using residuals
-View(lm1_resids_tidy) # GPP, Lon (p<0.05)
-
-# Examine model fit.
-
-lm1_resids_fit <- broom::glance(lm1_resids) # with GPP, without cvQ, using residuals
-View(lm1_resids_fit) #adj R2 = 0.33, sigma = 0.09, p < 0.0001, nobs = 152
+# Examine the output.
+summary(afinal_nuts)
 
 # Examine model diagnostics.
-plot(lm1_resids) # first pane still a bit curvy, same outliers as other lms (30, 91, 133)
+plot(afinal_nuts, col = 1)
+qqnorm(afinal_nuts)
 
-# Compare models.
-aic1r <- AIC(lm1_resids) # -305.18 Oh dear!
+# Output model results.
+anova(afinal_nuts)
 
-# Not sure this adds information since the significant parameters decrease.
+#             numDF denDF  F-value p-value
+# (Intercept)     1    73 863.2928  <.0001
+# no3_log         1    13  12.6835  0.0035
+# po4_log         1    13   0.4779  0.5016
 
-#### Model 3: Qc:Q2yr ####
+#### Model 2: Qc:Q2yr ####
 
 # Trim imported data down to variables of interest (17 total covariates).
 
