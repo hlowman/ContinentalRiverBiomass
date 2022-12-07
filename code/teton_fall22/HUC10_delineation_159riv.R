@@ -55,7 +55,7 @@ for(i in 1:length(dat_locations$site_name)){
 
 # Testing a few maps to see if this worked properly.
 
-mapview(huc12[10]) + mapview(dat_locations$geometry[10])
+mapview(huc12[30]) + mapview(dat_locations$geometry[30])
 
 mapview(huc12[150]) + mapview(dat_locations$geometry[150])
 
@@ -68,6 +68,9 @@ huc12_df <- do.call(rbind, huc12)
 
 # And add huc10 to it.
 huc12_df$huc10_id <- substr(huc12_df$huc12, 1, 10)
+
+# and add site names to it.
+huc12_df$site_name <- dat_locations$site_name
 
 # Quick bar plot to visualize how many sites are in the same watershed.
 ggplot(huc12_df, aes(x = huc10_id)) + geom_bar()
