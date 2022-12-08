@@ -17,8 +17,8 @@ lapply(c("lubridate","tidyverse", "here", "viridis",
 dat_in <- readRDS("data_working/list_182sites_Qmaxnorm_allSL.rds")
 
 # And then a dataset containing Qc values that have been converted from
-# c values estimated by our model and filtered for high-performing sites.
-dat_Qc <- readRDS("data_working/QcQ2_filtered_141sites_113022.rds")
+# c values estimated by our model.
+dat_Qc <- readRDS("data_working/QcQ2_159sites_120822.rds")
 
 # Finally the dataset containing rmax values for plotting purposes.
 dat_rmax <- readRDS("data_working/rmax_filtered_159sites_113022.rds")
@@ -43,7 +43,7 @@ dat_in_df <- map_df(dat_in, ~as.data.frame(.x), .id="site_name")
 
 # Trim down to columns of interest for Qc dataset
 dat_Qc_trim <- dat_Qc %>%
-  select(site_name, Qc)
+  dplyr::select(site_name, Qc)
 
 # Need to add Qc values for each site to the input data
 dat_in_Qc <- inner_join(dat_in_df, dat_Qc_trim)
@@ -134,12 +134,12 @@ dat_exc_rmax <- inner_join(dat_exceed_sum, dat_rmax)
 
 # And export for use in the Rmarkdown file.
 # ggsave(fig_exc,
-#        filename = "figures/teton_fall22/rmax_exceedance_120122.jpg",
+#        filename = "figures/teton_fall22/rmax_exceedance_120822.jpg",
 #        width = 20,
 #        height = 20,
-#        units = "cm") # n = 141
+#        units = "cm") # n = 159
 
 # And export just the exceedance data for use in the linear models.
-saveRDS(dat_exceed_sum, "data_working/Qc_exceedances_141sites_120122.rds")
+saveRDS(dat_exceed_sum, "data_working/Qc_exceedances_159sites_120822.rds")
 
 # End of script.
