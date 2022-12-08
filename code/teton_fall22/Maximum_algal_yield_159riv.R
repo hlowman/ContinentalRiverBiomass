@@ -37,6 +37,9 @@ dat_out_maymed <- dat_out_df %>%
 # Combine with rmax dataset.
 dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
 
+# Export for future use.
+saveRDS(dat_may_rmax, "data_working/maxalgalyield_159sites_120822.rds")
+
 #### Figures ####
 
 # Distribution of MAY values:
