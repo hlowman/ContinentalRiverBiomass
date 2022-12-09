@@ -80,4 +80,25 @@ ggplot(huc12_df, aes(x = huc10_id)) + geom_bar()
 # And export this data for use in the linear-mixed effects modeling.
 saveRDS(huc12_df, file = "data_working/HUC12_159sites_120722.rds")
 
+#### Additional HUC groupings ####
+
+# Since the HUC10 level had too few sites per grouping (mean = 1), I'm
+# deriving the remaining data from the above dataset.
+
+#huc12_df <- readRDS("data_working/HUC12_159sites_120722.rds")
+
+huc12_df$huc8_id <- substr(huc12_df$huc12, 1, 8)
+huc12_df$huc6_id <- substr(huc12_df$huc12, 1, 6)
+huc12_df$huc4_id <- substr(huc12_df$huc12, 1, 4)
+huc12_df$huc2_id <- substr(huc12_df$huc12, 1, 2)
+
+# And see how many groups there are for each (looking to hit ~15/group)
+ggplot(huc12_df, aes(x = huc8_id)) + geom_bar() # still mostly 1/group
+ggplot(huc12_df, aes(x = huc6_id)) + geom_bar() # a bit better but ~2/group
+ggplot(huc12_df, aes(x = huc4_id)) + geom_bar() # not a single group at 15 yet
+ggplot(huc12_df, aes(x = huc2_id)) + geom_bar() # ok now we might be talking
+
+# Export data.
+saveRDS(huc12_df, file = "data_working/HUC12_159sites_120922.rds")
+
 # End of script.
