@@ -44,8 +44,8 @@ dat_exc <- readRDS("data_working/Qc_exceedances_159sites_120822.rds")
 # And the hypoxia dataset for additional info re: precip. "pre_mm_cyr"
 site_info <- read_csv("data_raw/GRDO_GEE_HA_NHD_2021_02_07.csv")
 
-# And the dataset with JUC10 delineations.
-site_HUC <- readRDS("data_working/HUC12_159sites_120722.rds")
+# And the dataset with all HUC delineations.
+site_HUC <- readRDS("data_working/HUC12_159sites_120922.rds")
 
 # Select for additional variables of interest.
 
@@ -53,8 +53,8 @@ site_HUC <- readRDS("data_working/HUC12_159sites_120722.rds")
 site_precip <- site_info %>%
   dplyr::select(SiteID, pre_mm_cyr, pre_mm_uyr)
 
-site_HUC10 <- site_HUC %>%
-  dplyr::select(site_name, huc10_id)
+site_HUC2 <- site_HUC %>%
+  dplyr::select(site_name, huc2_id)
 
 #### Model 1: rmax ####
 
@@ -68,14 +68,14 @@ dat_rmax_trim <- dat_rmax %>%
 # Join with precip data.
 dat_rmax_trim <- left_join(dat_rmax_trim, site_precip, by = c("site_name" = "SiteID"))
 
-# Join with HUC10 data.
-dat_rmax_trim <- left_join(dat_rmax_trim, site_HUC10)
+# Join with HUC2 data.
+dat_rmax_trim <- left_join(dat_rmax_trim, site_HUC2)
 
 # And visualize the relationships with rmax median values.
 
 rmax_covs <- ggpairs(dat_rmax_trim %>% 
                        dplyr::select(-site_name,
-                                     -huc10_id))
+                                     -huc2_id))
 
 # ggsave(rmax_covs,
 #        filename = "figures/teton_fall22/rmax_covariates.jpg",
@@ -100,8 +100,8 @@ rmax_covs <- ggpairs(dat_rmax_trim %>%
 
 # (5) Remaining Pearson's correlation values are below 0.5.
 
-# (6) Removing GPP because it's a value used to generate rmax, so therefore
-# doesn't make sense to include in post-hoc analysis.
+# (6) Removing GPP, light, and Q, because they were used to generate rmax,
+# so therefore doesn't make sense to include in post-hoc analysis.
 
 # Log transform necessary covariates.
 
@@ -116,24 +116,21 @@ dat_rmax_trim <- dat_rmax_trim %>%
 
 # Notes on model structure:
 
-# rmax ~ cvQ + light + temp + precip + size + roads + dams + 1 | HUC10
+# rmax ~ temp + precip + size + roads + dams + nuts + 1 | HUC2
 
 # I am going to include the following covariates as representatives of the
 # corresponding environmental factors:
 
-# cvQ - flow
-# summer light - light at the stream surface during greatest canopy*
-# daily light - light at the stream surface throughout the year*
 # summer temp - water temperature (decoupled from air temperature)
 # precipitation - aridity and land-water connectivity metric
-# longitude - as a geographic metric
 # order - stream size**
 # watershed area - stream size**
 # width - stream size**
 # road density - terrestrial development
 # dam - aquatic development
+# nutrients - NO3 + PO4 where available
+# HUC2 - to account for random effect of geography
 
-# * Models will explore with summer vs. avg. daily light.
 # ** Models will explore each of the size indicators separately.
 
 # The following covariates have been removed for the following reasons:
@@ -141,9 +138,13 @@ dat_rmax_trim <- dat_rmax_trim %>%
 # latitude - too closely correlated with temperature
 # longitude - too much of a east coast data bias for this to be accurate
 # GPP - a function of f(light, flow) and also a direct predictor of rmax
+# cvQ - flow but also a direct predictor of rmax
+# summer light - light at the stream surface during greatest canopy, but
+# also a direct predictor of biomass/rmax
+# daily light - light at the stream surface throughout the year, but
+# also a direct predictor of biomass/rmax
 # % impervious land cover - too closely correlated with road density
 # canal - another metric of terr/aq development but felt duplicative
-# NO3/PO4 - 50% of sites have no data, so these will be examined separately
 
 # One on one plots for covariates of interest vs. rmax.
 
@@ -153,30 +154,31 @@ hist(dat_rmax_trim$r_med)
 dat_rmax_trim <- dat_rmax_trim %>%
   mutate(logrmax = log10(r_med))
 
-plot(logrmax ~ cvQ, data = dat_rmax_trim)
-plot(logrmax ~ meanL, data = dat_rmax_trim)
-plot(logrmax ~ summerL, data = dat_rmax_trim) # looks more related
+#plot(logrmax ~ cvQ, data = dat_rmax_trim)
+#plot(logrmax ~ meanL, data = dat_rmax_trim)
+#plot(logrmax ~ summerL, data = dat_rmax_trim)
 plot(logrmax ~ summerT, data = dat_rmax_trim)
 plot(logrmax ~ area_log, data = dat_rmax_trim)
 plot(logrmax ~ Order, data = dat_rmax_trim)
-plot(logrmax ~ NHD_RdDensWs, data = dat_rmax_trim) # this too
+plot(logrmax ~ width_log, data = dat_rmax_trim)
+plot(logrmax ~ NHD_RdDensWs, data = dat_rmax_trim)
 plot(logrmax ~ Dam, data = dat_rmax_trim)
 plot(logrmax ~ pre_mm_cyr, data = dat_rmax_trim)
-plot(logrmax ~ Lon_WGS84, data = dat_rmax_trim)
+plot(logrmax ~ huc2_id, data = dat_rmax_trim)
 hist(dat_rmax_trim$logrmax)
 
 # Ok, and making the final dataset with which to build models since I can't have
 # NAs with many of these functions.
 dat_rmax_lm <- dat_rmax_trim %>%
-  dplyr::select(logrmax, cvQ, summerL, meanL, summerT, NHD_RdDensWs, 
-                Dam, Order, area_log, width_log, huc10_id) %>%
+  dplyr::select(logrmax, summerT, Order, area_log, width_log, NHD_RdDensWs, 
+                Dam, huc2_id, cvQ) %>%
   drop_na() # 151 sites left
 
 ##### Step 1: Create lm() and check residuals.
 
-# rmax ~ cvQ + light + temp + longitude + size + roads + dams + 1 | HUC10
+# rmax ~ temp + roads + dams
 
-a1 <- lm(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + Dam, 
+a1 <- lm(logrmax ~ summerT + NHD_RdDensWs + Dam, 
          data = dat_rmax_lm)
 
 plot(a1) # residuals looking better with the log transform
@@ -186,11 +188,11 @@ summary(a1) # examine initial model output without the grouping by watershed
 
 ##### Step 2: Fit the lm() with GLS and compare to lme().
 
-a2 <- gls(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + Dam, 
+a2 <- gls(logrmax ~ summerT + NHD_RdDensWs + Dam, 
           data = dat_rmax_lm) # effectively a lm
 
-a3 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + Dam, 
-          random = ~1 | huc10_id, data = dat_rmax_lm) # with random effect
+a3 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam, 
+          random = ~1 | huc2_id, data = dat_rmax_lm) # with random effect
 
 anova(a2, a3) # a3 preferred, and I want to keep the random term in
 
@@ -207,25 +209,26 @@ anova(a2, a3) # a3 preferred, and I want to keep the random term in
 # Model doesn't converge with longitude or light as variance effect.
 # Residuals don't look any better with order or dam as variance effects.
 
-a_wvar <- lme(logrmax ~ total_exc_days + summerL + summerT + 
-                area_log + RdDensWs_log + Dam,
-              random = ~1 | huc10_id, 
-              weights = varIdent(form = ~1 | Dam),
-            data = dat_rmax_lm2 %>%
-                mutate(RdDensWs_log = log10(NHD_RdDensWs)))
+# a_wvar <- lme(logrmax ~ total_exc_days + summerL + summerT + 
+#                 area_log + RdDensWs_log + Dam,
+#               random = ~1 | huc10_id, 
+#               weights = varIdent(form = ~1 | Dam),
+#             data = dat_rmax_lm2 %>%
+#                 mutate(RdDensWs_log = log10(NHD_RdDensWs)))
 
-a_wovar <- lme(logrmax ~ total_exc_days + summerL + summerT + 
-                area_log + RdDensWs_log + Dam,
-              random = ~1 | huc10_id,
-              data = dat_rmax_lm2 %>%
-                mutate(RdDensWs_log = log10(NHD_RdDensWs)))
+# a_wovar <- lme(logrmax ~ total_exc_days + summerL + summerT + 
+#                 area_log + RdDensWs_log + Dam,
+#               random = ~1 | huc10_id,
+#               data = dat_rmax_lm2 %>%
+#                 mutate(RdDensWs_log = log10(NHD_RdDensWs)))
 
-anova(a_wvar, a_wovar)
-plot(a_wvar)
+# anova(a_wvar, a_wovar)
+# plot(a_wvar)
 
-# Explored some single-covariate model fits in the "one by one" section below,
-# and ultimately landed on the fact that residuals look worse with less covariates.
-# And the primary issue here may be the huge number of groupings (a.k.a. watersheds).
+# Explored some single-covariate model fits in the "one by one" section below.
+# Ultimately landed on the fact that residuals look worse with less covariates.
+# And the primary issue here may be the huge number of groupings (a.k.a. 
+# watersheds). So, went back and got larger HUCs to group by.
 
 ##### Step 4,5,6: Fit the lme(), compare with lm(), and check residuals.
 
@@ -233,100 +236,82 @@ plot(a_wvar)
 
 ##### Step 7/8: Step-wise Optimal Fixed Structure.
 
-a3.2 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + Dam, 
-          random = ~1 | huc10_id, 
-          method = "ML",
-          data = dat_rmax_lm) 
-
-# Try alternate data for light.
-a4 <- lme(logrmax ~ cvQ + meanL + summerT +NHD_RdDensWs + Dam, 
-          random = ~1 | huc10_id, 
-          method = "ML",
-          data = dat_rmax_lm) 
-
-anova(a3.2, a4) # a3.2 preferred - use summerL
-
 # Try different covariates for stream size.
-a5 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + Dam + Order, 
-          random = ~1 | huc10_id, 
+a4 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + Order, 
+          random = ~1 | huc2_id, 
           method = "ML",
-          data = dat_rmax_lm) 
+          data = dat_rmax_lm) # stream order
 
-a6 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + Dam + area_log, 
-          random = ~1 | huc10_id, 
+a5 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + area_log, 
+          random = ~1 | huc2_id, 
           method = "ML",
-          data = dat_rmax_lm)
+          data = dat_rmax_lm) # watershed area
 
-a7 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + Dam + width_log, 
-          random = ~1 | huc10_id, 
+a6 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log, 
+          random = ~1 | huc2_id, 
           method = "ML",
-          data = dat_rmax_lm)
+          data = dat_rmax_lm) # stream width
 
-anova(a5, a6, a7) # order (a5) AIC is least, but moving forward with width
+anova(a4, a5, a6) # order (a5) AIC is least, but moving forward with width
 # since it's better than area and order is somewhat subjective.
 
 # Investigate precipitation, but keep in mind, it drops 40+ records.
-a6.2 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + Dam + width_log, 
-          random = ~1 | huc10_id, 
+a6.2 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log, 
+          random = ~1 | huc2_id, 
           method = "ML",
           data = dat_rmax_trim %>%
-            dplyr::select(logrmax, cvQ, summerL, meanL, summerT, NHD_RdDensWs, 
-                          Dam, Order, area_log, width_log, Lon_WGS84,
-                          pre_mm_cyr, huc10_id) %>%
+            dplyr::select(logrmax, summerT, NHD_RdDensWs, 
+                          Dam, width_log, pre_mm_cyr, huc2_id) %>%
             drop_na())
 
-a8 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + Dam + width_log +
+a7 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log +
             pre_mm_cyr, 
-            random = ~1 | huc10_id, 
+            random = ~1 | huc2_id, 
             method = "ML",
             data = dat_rmax_trim %>%
-            dplyr::select(logrmax, cvQ, summerL, meanL, summerT, NHD_RdDensWs, 
-                          Dam, Order, area_log, width_log, Lon_WGS84,
-                          pre_mm_cyr, huc10_id) %>%
+            dplyr::select(logrmax, summerT, NHD_RdDensWs, 
+                          Dam, width_log, pre_mm_cyr, huc2_id) %>%
               drop_na())
 
-anova(a6.2, a8) # They are nearly identical, and precip is *somewhat* correlated with
+anova(a6.2, a7) # Nearly identical, and precip is *somewhat* correlated with
 # Lat/Lon, so since it forces us to drop so many records (n=115 remaining),
 # I'm skipping it.
 
-# Investigate Qc exceedance metrics.
+# Previous investigation Qc exceedance metrics. (Chose to archive this since
+# I'm not putting a measure of discharge in the post-hoc model.)
 
 # Build a model to investigate Qc exceedance instead of cvQ as a measured of
 # flow disturbance.
 
-dat_rmax_trim2 <- left_join(dat_rmax_trim, dat_exc)
+#dat_rmax_trim2 <- left_join(dat_rmax_trim, dat_exc)
 
-dat_rmax_lm2 <- dat_rmax_trim2 %>%
-  dplyr::select(logrmax, cvQ, total_exc_events, total_exc_days, summerL, summerT, 
-                NHD_RdDensWs, Order, Dam, width_log, Lon_WGS84, huc10_id) %>%
-  drop_na() # 151 sites left
+# dat_rmax_lm2 <- dat_rmax_trim2 %>%
+#   dplyr::select(logrmax, cvQ, total_exc_events, total_exc_days, summerL, summerT, 
+#                 NHD_RdDensWs, Order, Dam, width_log, Lon_WGS84, huc2_id) %>%
+#   drop_na() # 151 sites left
 
-a6.3 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + 
-              Dam + width_log, 
-          random = ~1 | huc10_id, 
-          method = "ML",
-          data = dat_rmax_lm2)
+# a6.3 <- lme(logrmax ~ cvQ + summerL + summerT + NHD_RdDensWs + 
+#               Dam + width_log, 
+#           random = ~1 | huc2_id, 
+#           method = "ML",
+#           data = dat_rmax_lm2)
 
-a9 <- lme(logrmax ~ total_exc_events + summerL + summerT + NHD_RdDensWs + 
-            Dam + width_log, 
-            random = ~1 | huc10_id, 
-            method = "ML",
-            data = dat_rmax_lm2)
+# a9 <- lme(logrmax ~ total_exc_events + summerL + summerT + NHD_RdDensWs + 
+#             Dam + width_log, 
+#             random = ~1 | huc2_id, 
+#             method = "ML",
+#             data = dat_rmax_lm2)
 
-a10 <- lme(logrmax ~ total_exc_days + summerL + summerT + NHD_RdDensWs + 
-            Dam + width_log, 
-          random = ~1 | huc10_id, 
-          method = "ML",
-          data = dat_rmax_lm2)
+# a10 <- lme(logrmax ~ total_exc_days + summerL + summerT + NHD_RdDensWs + 
+#             Dam + width_log, 
+#           random = ~1 | huc2_id, 
+#           method = "ML",
+#           data = dat_rmax_lm2)
 
-anova(a6.3, a9, a10) # exceedance days seems to be slightly better measure of discharge
+#anova(a6.3, a9, a10) # exceedance events seems to be slightly better measure of discharge
 
-summary(a10)
-summary(a6.3)
-
-ggpairs(dat_rmax_lm2 %>%
-          dplyr::select(logrmax, total_exc_days, summerL, summerT, Lon_WGS84,
-                 NHD_RdDensWs, Dam, area_log))
+#summary(a9)
+#summary(a6.3)
 
 # Examine how the residuals model looks for the structure I'm working with.
 # Fit linear model between rmax median values and cvQ.
@@ -336,116 +321,107 @@ fit1 <- lm(logrmax ~ cvQ, data = dat_rmax_lm)
 dat_rmax_lm$residuals <- residuals(fit1)
 
 # Fit residuals and remove discharge metric.
-a11 <- lme(residuals ~ summerL + summerT + NHD_RdDensWs + Dam + width_log, 
-          random = ~1 | huc10_id, 
+a8 <- lme(residuals ~ summerT + NHD_RdDensWs + Dam + width_log, 
+          random = ~1 | huc2_id, 
           method = "ML",
           data = dat_rmax_lm)
 
-summary(a11) # Doesn't appear to change all that much.
+summary(a6)
+summary(a8) # Doesn't appear to change all that much.
 
 ##### Step 9: Refit with REML for final full model
 
-# First, need to examine log transformations for a few more covariates,
-# after examining subsequent ggpairs() plots
-
-a12 <- lme(logrmax ~ total_exc_days + summerL_log + summerT + 
-             NHD_RdDensWs + Dam + width_log, 
-          random = ~1 | huc10_id, 
-          method = "ML",
-          data = dat_rmax_lm2 %>%
-            mutate(summerL_log = log10(summerL))) # log scaling light
-
-a13 <- lme(logrmax ~ total_exc_days + summerL + summerT +  
-             RdDensWs_log + Dam + width_log, 
-           random = ~1 | huc10_id, 
-           method = "ML",
-           data = dat_rmax_lm2 %>%
-             mutate(RdDensWs_log = log10(NHD_RdDensWs))) # log scaling roads
-
-anova(a10, a12, a13) # Makes little difference either way.
+# Maximize data availability:
+dat_rmax_lm2 <- dat_rmax_trim %>%
+  dplyr::select(logrmax, summerT, width_log, NHD_RdDensWs, Dam, huc2_id) %>%
+  drop_na() #151
 
 # Precip didn't seem to add anything to the model, and subtracted >40 records,
 # so choosing not to use it at this time. Nutrients examined below.
-afinal <- lme(logrmax ~ total_exc_days + # rather than cvQ bc it uses Qc threshold
-                summerL + # better performing than mean L
+afinal <- lme(logrmax ~ # log-transformed because right-skewed
                 summerT + # more informative than Lat, which it was correlated with
-                width_log + # not best performing, but more trustworthy than order
                 NHD_RdDensWs + # used by JB as metric of development, more sig. than Cat
-                Dam, # more pertinent to our interests than "Canal"
-              random = ~1 | huc10_id, # because ~30% of sites share a watershed
+                Dam + # more pertinent to our interests than "Canal"
+                width_log, # not best performing, but more trustworthy than order
+              random = ~1 | huc2_id, # because HUC10 was too few sites/watershed
               method = "REML",
-              data = dat_rmax_lm2) # n = 152
+              data = dat_rmax_lm) # n = 151
 
 # Examine model diagnostics.
-plot(afinal)
-qqnorm(afinal)
+plot(afinal) # YAY! Residuals looking WAY better using HUC2.
+qqnorm(afinal) # And qqplot looks just fine.
 
 # Examine model outputs.
 aout <- summary(afinal)
 coef(aout)
 
-#                    Value    Std.Error  DF    t-value      p-value
-# (Intercept)    -1.397494e+00 2.150842e-01 116 -6.4974274 2.128231e-09
-# total_exc_days  1.141956e-03 3.173875e-04  26  3.5979875 1.321342e-03
-# summerL         8.553462e-08 2.104997e-07  26  0.4063408 6.878175e-01
-# summerT        -6.268022e-03 8.053115e-03  26 -0.7783351 4.433975e-01
-# width_log       2.746842e-01 6.578702e-02  26  4.1753558 2.955439e-04
-# NHD_RdDensWs    3.248718e-02 1.108714e-02  26  2.9301676 6.968060e-03
-# Dam50          -9.908723e-02 9.266447e-02  26 -1.0693120 2.947565e-01
-# Dam80          -2.693219e-02 8.595985e-02  26 -0.3133113 7.565438e-01
-# Dam95           8.146615e-02 6.039462e-02  26  1.3488974 1.890018e-01
+#                    Value   Std.Error  DF    t-value      p-value
+# (Intercept)  -1.17660341 0.237187782 130 -4.9606409 2.155395e-06
+# summerT      -0.01774056 0.009215881 130 -1.9249985 5.641388e-02
+# NHD_RdDensWs  0.04005887 0.011634177 130  3.4432064 7.739853e-04
+# Dam50        -0.15159227 0.101653185 130 -1.4912693 1.383134e-01
+# Dam80        -0.05272356 0.087398021 130 -0.6032581 5.473881e-01
+# Dam95         0.04216065 0.062587345 130  0.6736289 5.017432e-01
+# width_log     0.33187653 0.071093583 130  4.6681643 7.464196e-06
 
 ##### Additional one by one models #####
 
-dat_rmax_lm3 <- dat_rmax_lm2 %>%
-  mutate(RdDensWs_log = log10(NHD_RdDensWs))
+# These were done when I was trying to figure out what the issue was with
+# poor residual distribution.
 
-a1.1 <- lme(logrmax ~ total_exc_events, 
-          random = ~1 | huc10_id, 
-          method = "ML",
-          data = dat_rmax_lm3)
-
-plot(a1.1) # WOW, that looks terrible. Maybe the zero-inflation here is the issue.
-
-a1.2 <- lme(logrmax ~ cvQ, 
-            random = ~1 | huc10_id, 
-            method = "ML",
-            data = dat_rmax_lm3)
-
-plot(a1.2) # Same here though.
-
-a1.3 <- lme(logrmax ~ summerL, 
-            random = ~1 | huc10_id, 
-            method = "ML",
-            data = dat_rmax_lm3)
-
-plot(a1.3) # Realizing this might be an issue of the random rather than fixed effects.
-
-a1.4 <- lm(logrmax ~ summerL, data = dat_rmax_lm3)
-plot(a1.4)
+# dat_rmax_lm3 <- dat_rmax_lm2 %>%
+#   mutate(RdDensWs_log = log10(NHD_RdDensWs))
+# 
+# a1.1 <- lme(logrmax ~ total_exc_events, 
+#           random = ~1 | huc10_id, 
+#           method = "ML",
+#           data = dat_rmax_lm3)
+# 
+# plot(a1.1) # WOW, that looks terrible. Maybe the zero-inflation here is the issue.
+# 
+# a1.2 <- lme(logrmax ~ cvQ, 
+#             random = ~1 | huc10_id, 
+#             method = "ML",
+#             data = dat_rmax_lm3)
+# 
+# plot(a1.2) # Same here though.
+# 
+# a1.3 <- lme(logrmax ~ summerL, 
+#             random = ~1 | huc10_id, 
+#             method = "ML",
+#             data = dat_rmax_lm3)
+# 
+# plot(a1.3) # Realizing this might be an issue of the random rather than fixed effects.
+# 
+# a1.4 <- lm(logrmax ~ summerL, data = dat_rmax_lm3)
+# plot(a1.4)
 
 ##### Nutrients #####
 
 # And build separate model for nutrients.
 
-dat_rmax_lm4 <- dat_rmax_trim2 %>%
-  dplyr::select(logrmax, no3_log, po4_log, huc10_id) %>%
-  drop_na() # 89 sites left
+dat_rmax_lm3 <- dat_rmax_trim %>%
+  dplyr::select(logrmax, summerT, width_log, NHD_RdDensWs, 
+                Dam, huc2_id, no3_log, po4_log) %>%
+  drop_na() # 87 sites left
 
-a14 <- lme(logrmax ~ no3_log + po4_log, 
-           random = ~1 | huc10_id, 
+a9 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log + 
+             no3_log + po4_log, # Adding nutrients in to be able to compare to
+           # other covariates and previous model fit.
+           random = ~1 | huc2_id, 
            method = "ML",
-           data = dat_rmax_lm4)
+           data = dat_rmax_lm3)
 
-plot(a14) # Looks alright actually.
-summary(a14)
+plot(a9) # Looks alright.
+summary(a9)
 
 # Refit with REML for final full model
 
-afinal_nuts <- lme(logrmax ~ no3_log + po4_log,
-              random = ~1 | huc10_id, 
+afinal_nuts <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log + 
+                     no3_log + po4_log,
+              random = ~1 | huc2_id, 
               method = "REML",
-              data = dat_rmax_lm4)
+              data = dat_rmax_lm3)
 
 # Examine model diagnostics.
 plot(afinal_nuts)
@@ -455,10 +431,16 @@ qqnorm(afinal_nuts) # Looking just fine.
 aout_nuts <- summary(afinal_nuts)
 coef(aout_nuts)
 
-#                   Value  Std.Error DF   t-value      p-value
-# (Intercept) -0.87892263 0.11910962 73 -7.379107 2.052277e-10
-# no3_log      0.17520313 0.08306747 13  2.109167 5.489118e-02
-# po4_log      0.05972981 0.08640591 13  0.691270 5.015545e-01
+#                     Value  Std.Error DF    t-value      p-value
+# (Intercept)  -1.379440083 0.35210413 67 -3.9177049 0.0002123089
+# summerT       0.008003002 0.01281819 67  0.6243471 0.5345199231
+# NHD_RdDensWs  0.012988349 0.01193486 67  1.0882695 0.2803753739
+# Dam50        -0.167631532 0.15945979 67 -1.0512464 0.2969223232
+# Dam80        -0.033620054 0.11455524 67 -0.2934833 0.7700598988
+# Dam95         0.074057268 0.07251922 67  1.0212088 0.3108288147
+# width_log     0.197495863 0.07636330 67  2.5862666 0.0118809167
+# no3_log       0.163805166 0.08589546 67  1.9070295 0.0608054303
+# po4_log       0.063028975 0.09046807 67  0.6966986 0.4884016515
 
 #### Model 2: Max. Algal Yield ####
 
