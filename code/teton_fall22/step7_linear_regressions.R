@@ -364,6 +364,11 @@ coef(aout)
 # Dam95         0.04216065 0.062587345 130  0.6736289 5.017432e-01
 # width_log     0.33187653 0.071093583 130  4.6681643 7.464196e-06
 
+r.squaredGLMM(afinal)
+
+#           R2m       R2c
+# [1,] 0.171693 0.3000676
+
 ##### Additional one by one models #####
 
 # These were done when I was trying to figure out what the issue was with
@@ -653,13 +658,19 @@ coef(bout_nuts)
 
 #### Model 3: Qc:Q2yr ####
 
-# Trim imported data down to variables of interest (17 total covariates).
+# Trim imported data down to variables of interest.
 
 dat_Qc_trim <- dat_Qc %>%
   select(site_name,
          c_med, Qc_Q2yr, cvQ, meanGPP:NHD_AREASQKM, 
          NHD_RdDensCat:NHD_PctImp2011Ws, 
          Canal:width_med)
+
+# Join with precip data.
+dat_Qc_trim <- left_join(dat_Qc_trim, site_precip, by = c("site_name" = "SiteID"))
+
+# Join with HUC2 data.
+dat_Qc_trim <- left_join(dat_Qc_trim, site_HUC2)
 
 # And visualize the relationships with Qc:Qy2r values.
 
@@ -678,7 +689,8 @@ QcQ2_covs <- ggpairs(dat_Qc_trim %>% select(-site_name) %>%
 # I should probably only include one of these in the final model build again.
 
 # (2) Stream width and meanGPP also appear correlated (0.618), more strongly
-# than they did in the rmax covariate exploration.
+# than they did in the rmax covariate exploration. So, makes double sense
+# to remove them.
 
 # (3) Remaining Pearson's correlation values are below 0.5.
 
@@ -691,128 +703,167 @@ dat_Qc_trim <- dat_Qc_trim %>%
 
 # Notes on model structure:
 
+# Qc:Q2yr ~ precip + size + roads + dams + 1 | HUC2
+
 # I am going to include the following covariates as representatives of the
 # corresponding environmental factors:
 
-# cvQ - flow
-# GPP - biological productivity (function of flow & light)*
-# latitude - a rough location/temperature index?
-# longitude - a rough location/aridity index?
+# precipitation - land and water connectivity metric
 # order - stream size**
 # watershed area - stream size**
 # width - stream size**
 # road density - terrestrial development
 # dam - aquatic development
+# HUC2 - to account for random effect of geography
 
-# * Models will explore with and without GPP since GPP ~ f(flow, light).
-# ** Models will explore each of the size indicators separately.
+# ** Models will explore each of the size indicators separately. Although
+# I lean towards using width to mirror rmax above.
 
 # The following covariates have been removed for the following reasons:
 
 # light - not a factor for flow disturbance thresholds
 # temperature - not a factor for flow disturbance thresholds
+# cvQ - flow but used to estimate Qc
+# GPP - biological productivity (function of flow & light) but used to 
+# estimate Qc
+# latitude - a rough location/temperature index?
+# longitude - a rough location/aridity index?
 # % impervious land cover - too closely correlated with road density
 # canal - another metric of terr/aq development but felt duplicative
 # NO3/PO4 - not a factor for flow disturbance thresholds
 
-##### Stream Size #####
+# One on one plots for covariates of interest vs. QcQ2yr.
+hist(dat_Qc_trim$Qc_Q2yr)
 
-# Build initial set of models to investigate size covariates.
+# Going to log transform QcQ2yr too.
+dat_Qc_trim <- dat_Qc_trim %>%
+  mutate(logQcQ2max = log10(Qc_Q2yr))
 
-str(dat_Qc_trim) # keeping order and dam data as categorical
+plot(logQcQ2max ~ area_log, data = dat_Qc_trim)
+plot(logQcQ2max ~ Order, data = dat_Qc_trim) # Look about the same
+plot(logQcQ2max ~ width_log, data = dat_Qc_trim)
+plot(logQcQ2max ~ NHD_RdDensWs, data = dat_Qc_trim)
+plot(logQcQ2max ~ Dam, data = dat_Qc_trim)
+plot(logQcQ2max ~ pre_mm_cyr, data = dat_Qc_trim)
+plot(logQcQ2max ~ huc2_id, data = dat_Qc_trim)
+hist(dat_Qc_trim$logQcQ2max)
 
-lm1_Qc <- lm(Qc_Q2yr ~ cvQ + GPP_log + Lat_WGS84 + Lon_WGS84 +
-               Order + NHD_RdDensCat + Dam, 
-               data = dat_Qc_trim)
+# Ok, and making the final dataset with which to build models since I can't have
+# NAs with many of these functions.
+dat_Qc_lm <- dat_Qc_trim %>%
+  dplyr::select(logQcQ2max, Order, area_log, 
+                width_log, NHD_RdDensWs, Dam, huc2_id) %>%
+  drop_na() # 151 sites left
 
-lm2_Qc <- lm(Qc_Q2yr ~ cvQ + GPP_log + Lat_WGS84 + Lon_WGS84 +
-               area_log + NHD_RdDensCat + Dam,  
-               data = dat_Qc_trim)
+##### Step 1: Create lm() and check residuals.
 
-lm3_Qc <- lm(Qc_Q2yr ~ cvQ + GPP_log + Lat_WGS84 + Lon_WGS84 +
-               width_log + NHD_RdDensCat + Dam, 
-               data = dat_Qc_trim)
+# rmax ~ temp + roads + dams
 
-# Examine the outputs.
+c1 <- lm(logQcQ2max ~ NHD_RdDensWs + Dam, 
+         data = dat_Qc_lm)
 
-summary(lm1_Qc)
-summary(lm2_Qc)
-summary(lm3_Qc)
+plot(c1) # looks alright
 
-# Examine the coefficients.
+summary(c1) # examine initial model output without the grouping by watershed
+# hmmm, let's see how this does with the other covariates added in
 
-lm1_Qc_tidy <- broom::tidy(lm1_Qc) # using order
-View(lm1_Qc_tidy) # Lon (p<0.05)
+##### Step 2: Fit the lm() with GLS and compare to lme().
 
-lm2_Qc_tidy <- broom::tidy(lm2_Qc) # using area
-View(lm2_Qc_tidy) # Lon (p<0.05)
+c2 <- gls(logQcQ2max ~ NHD_RdDensWs + Dam, 
+          data = dat_Qc_lm) # effectively a lm
 
-lm3_Qc_tidy <- broom::tidy(lm3_Qc) # using width
-View(lm3_Qc_tidy) # Lon (p<0.05)
+c3 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam, 
+          random = ~1 | huc2_id, data = dat_Qc_lm) # with random effect
 
-# Examine model fit.
+anova(c2, c3) # c2 preferred, but I want to keep the random term in
 
-lm1_Qc_fit <- broom::glance(lm1_Qc) # order
-View(lm1_Qc_fit) # adj R2 = 0.03, sigma = 1.22, p = 0.23, nobs = 134
+##### Step 3: Decide on a variance structure.
 
-lm2_Qc_fit <- broom::glance(lm2_Qc) # area
-View(lm2_Qc_fit) # adj R2 = 0.03, sigma = 1.22, p = 0.20, nobs = 134
+# None at this time.
 
-lm3_Qc_fit <- broom::glance(lm3_Qc) # width
-View(lm3_Qc_fit) #adj R2 = 0.03, sigma = 1.22, p = 0.17, nobs = 133
+##### Step 4,5,6: Fit the lme(), compare with lm(), and check residuals.
+
+# See Steps 2 & 3.
+
+##### Step 7/8: Step-wise Optimal Fixed Structure.
+
+# Try different covariates for stream size.
+c4 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + Order, 
+          random = ~1 | huc2_id, 
+          method = "ML",
+          data = dat_Qc_lm) # stream order
+
+c5 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + area_log, 
+          random = ~1 | huc2_id, 
+          method = "ML",
+          data = dat_Qc_lm) # watershed area
+
+c6 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log, 
+          random = ~1 | huc2_id, 
+          method = "ML",
+          data = dat_Qc_lm) # stream width
+
+anova(c4, c5, c6) # order (c5) AIC is least, but moving forward with width
+# since it's better than area and order is somewhat subjective.
+
+# Investigate precipitation, but keep in mind, it drops 40+ records.
+c6.2 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log, 
+            random = ~1 | huc2_id, 
+            method = "ML",
+            data = dat_Qc_trim %>%
+              dplyr::select(logQcQ2max, NHD_RdDensWs, Dam,
+                            width_log, pre_mm_cyr, huc2_id) %>%
+              drop_na())
+
+c7 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log +
+            pre_mm_cyr, 
+          random = ~1 | huc2_id, 
+          method = "ML",
+          data = dat_Qc_trim %>%
+            dplyr::select(logQcQ2max, NHD_RdDensWs, Dam,
+                          width_log, pre_mm_cyr, huc2_id) %>%
+            drop_na())
+
+anova(c6.2, c7) # Identical, so since it forces us to drop so many records 
+# (n=115 remaining), I'm skipping it.
+
+##### Step 9: Refit with REML for final full model
+
+# Maximize data availability:
+dat_Qc_lm2 <- dat_Qc_trim %>%
+  dplyr::select(logQcQ2max, width_log, NHD_RdDensWs, 
+                Dam, huc2_id) %>%
+  drop_na() #151
+
+# Precip didn't seem to add anything to the model, and subtracted >40 records,
+# so choosing not to use it at this time.
+cfinal <- lme(logQcQ2max ~ # log-transformed because right-skewed
+                NHD_RdDensWs + # used by JB as metric of development, more sig. than Cat
+                Dam + # more pertinent to our interests than "Canal"
+                width_log, # not best performing, but more trustworthy than order
+              random = ~1 | huc2_id, # because HUC10 was too few sites/watershed
+              method = "REML",
+              data = dat_Qc_lm2) # n = 133
 
 # Examine model diagnostics.
-plot(lm1_Qc) # qqplot doesn't look good
-plot(lm2_Qc) # looks the same
-plot(lm3_Qc) # same outliers - 102, 122, 125
+plot(cfinal) # YAY! Residuals looking great.
+qqnorm(cfinal) # And qqplot looks just fine.
 
-# Compare models.
-aic1q <- AIC(lm1_Qc) # 450
-aic2q <- AIC(lm2_Qc) # 446
-aic3q <- AIC(lm3_Qc) # 443
+# Examine model outputs.
+cout <- summary(cfinal)
+coef(cout)
 
-# Moving forward with width as the indicator of stream size again.
+#                   Value  Std.Error  DF    t-value   p-value
+# (Intercept)  -0.23264861 0.19330081 113 -1.2035573 0.2312760
+# NHD_RdDensWs -0.02130914 0.01818270 113 -1.1719462 0.2436836
+# Dam50         0.29308797 0.18682568 113  1.5687777 0.1194958
+# Dam80         0.05513241 0.14634429 113  0.3767309 0.7070801
+# Dam95         0.02196567 0.09679328 113  0.2269339 0.8208852
+# width_log    -0.01459310 0.10789160 113 -0.1352570 0.8926493
 
-# After examining the outliers of this model and finding they
-# are all in Texas/arid West, I am going to try adding light back
-# in the model.
+r.squaredGLMM(cfinal)
 
-# Need to pull summerL from rmax dataset.
-dat_light <- dat_rmax_trim %>%
-  select(site_name, summerL)
-
-dat_Qc_trim_light <- left_join(dat_Qc_trim, dat_light)
-
-# Build new model including light.
-
-lm4_Qc <- lm(Qc_Q2yr ~ cvQ + GPP_log + Lat_WGS84 + Lon_WGS84 +
-             summerL + width_log + NHD_RdDensCat + Dam, 
-             data = dat_Qc_trim_light)
-
-# Examine the outputs.
-
-summary(lm4_Qc)
-
-# Examine the coefficients.
-
-lm4_Qc_tidy <- broom::tidy(lm4_Qc) # using width
-View(lm4_Qc_tidy) # Lon (p<0.05)
-
-# Examine model fit.
-
-lm4_Qc_fit <- broom::glance(lm4_Qc) # order
-View(lm4_Qc_fit) # adj R2 = 0.02, sigma = 1.23, p = 0.24, nobs = 133
-
-# Examine model diagnostics.
-plot(lm4_Qc) # diagnostic plots look the same, with the same outliers
-
-# Compare models.
-aic4q <- AIC(lm4_Qc) # 445 - so not really any better with light.
-
-# So, moving forward with lm3_Qc as model of choice, although it did a 
-# terrible job of explaining variance.
-
-# Export table of current results.
-write_csv(lm3_Qc_tidy, "data_working/lm_Qc.csv")
+#             R2m        R2c
+# [1,] 0.02458802 0.06703832
 
 # End of script.
