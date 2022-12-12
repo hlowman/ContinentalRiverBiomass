@@ -160,7 +160,7 @@ dat_out_join3 <- left_join(dat_out_join2, med_width)
 dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
 
 # Export for future use.
-saveRDS(dat_out_full, "data_working/rmax_filtered_159sites_113022.rds")
+#saveRDS(dat_out_full, "data_working/rmax_filtered_159sites_113022.rds")
 
 #### rmax Figures ####
 
@@ -173,7 +173,7 @@ dat_out_full <- dat_out_full %>%
 # Distribution of rmax values:
 (fig1 <- ggplot(dat_out_full, aes(x = r_med)) +
   geom_histogram(bins = 60, alpha = 0.8, 
-                 fill = "#23341E", color = "#23341E") +
+                 fill = "#0B4221", color = "#0B4221") +
   labs(x = expression(Maximum~Growth~Rate~(r[max])),
        y = "Count") +
   theme_bw())
@@ -181,22 +181,23 @@ dat_out_full <- dat_out_full %>%
 # Mean daily GPP vs. rmax: X axis LOG SCALED
 (fig1.1 <- ggplot(dat_out_full, aes(x = meanGPP, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#2D4029") +
+               color = "#285B5D") +
     geom_linerange(alpha = 0.8, 
-                   color = "#2D4029",
+                   color = "#285B5D",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(y = expression(r[max]),
-         x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
+         x = expression(Mean~Daily~GPP~(g~O[2]~m^-2~d^-1))) +
     theme_bw())
 
 # CV of Discharge vs. rmax:
 (fig2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#374C34") +
+               color = "#518393") +
     geom_linerange(alpha = 0.8, 
-                   color = "#374C34",
+                   color = "#518393",
                    aes(ymin = minCI, ymax = `97.5%`)) +
+    scale_x_log10() +
     labs(x = expression(CV[Q]),
          y = expression(r[max])) +
     theme_bw())
@@ -218,19 +219,20 @@ dat_out_full <- dat_out_full %>%
 
 (fig3.1 <- ggplot(dat_out_full, aes(x = summerL, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#41583F") +
+               color = "#7DACBC") +
     geom_linerange(alpha = 0.8, 
-                   color = "#41583F",
+                   color = "#7DACBC",
                    aes(ymin = minCI, ymax = `97.5%`)) +
+    scale_x_log10() +
     labs(x = expression(Cumulative~Summer~PAR~(mol~m^-2~d^-1)),
          y = expression(r[max])) +
     theme_bw())
 
 (fig3.2 <- ggplot(dat_out_full, aes(x = summerT, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#4B6048") +
+               color = "#96B0BB") +
     geom_linerange(alpha = 0.8, 
-                   color = "#4B6048",
+                   color = "#96B0BB",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Mean~Daily~Summer~Temperature~(Celsius)),
          y = expression(r[max])) +
@@ -247,9 +249,9 @@ dat_out_full <- dat_out_full %>%
 
 # Stream Width vs. rmax: note, x axis LOG SCALED
 (fig4.1 <- ggplot(dat_out_full, aes(x = width_med, y = r_med)) +
-    geom_point(alpha = 0.8, size = 3, color = "#374C34") +
+    geom_point(alpha = 0.8, size = 3, color = "#C9B7A5") +
     geom_linerange(alpha = 0.8, 
-                   color = "#374C34",
+                   color = "#C9B7A5",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() + 
     labs(x = expression(Stream~Width~(m)),
@@ -307,9 +309,9 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
 #     theme_bw())
 
 (fig9 <- ggplot(dat_out_full, aes(x = NHD_RdDensCat, y = r_med)) +
-    geom_point(alpha = 0.8, size = 3, color = "#6E7466") +
+    geom_point(alpha = 0.8, size = 3, color = "#E9C6A5") +
     geom_linerange(alpha = 0.8, 
-                   color = "#6E7466",
+                   color = "#E9C6A5",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
          y = expression(r[max])) +
@@ -359,7 +361,7 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
                                               levels = c("5", "20", "50", "100"))), 
                           aes(x = DamReOrder, y = r_med)) +
     geom_boxplot(alpha = 0.8, 
-                 fill = "#8C9088", color = "#8C9088") +
+                 fill = "#E4DECE", color = "black") +
     labs(x = expression(Likelihood~of~Influence~by~Dams~(`%`)),
          y = expression(r[max])) +
     theme_bw())
@@ -386,17 +388,16 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
     theme_bw())
 
 # Combine figures above.
-(fig_r_med <- fig1 + fig1.1 + fig2 +
-    fig3.1 + fig3.2 + fig6 +
-    fig7 + fig9 + fig14 +
+(fig_r_med <- fig1 + fig1.1 + fig2 + fig3.1 +
+    fig3.2 + fig4.1 + fig9 + fig14 +
     plot_annotation(tag_levels = 'A') +
-    plot_layout(nrow = 3))
+    plot_layout(nrow = 2))
 
 # And export for use in the Rmarkdown file.
 # ggsave(fig_r_med,
-#        filename = "figures/teton_fall22/rmax_9panel_120522.jpg",
-#        width = 30,
-#        height = 30,
+#        filename = "figures/teton_fall22/rmax_8panel_121222.jpg",
+#        width = 40,
+#        height = 20,
 #        units = "cm") # n = 159
 
 (fig_r_supp <- fig5 + fig4 + fig4.1 +
@@ -631,12 +632,12 @@ dat_out_full_141_3 <- left_join(dat_out_full_141_2, med_width)
 dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 
 # Export for future use.
-saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
+#saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
 
 # Distribution of c values:
 (fig0c <- ggplot(dat_out_full_141, aes(x = c_med)) +
     geom_histogram(bins = 60, alpha = 0.8, 
-                   fill = "#7E8C69", color = "#7E8C69") +
+                   fill = "#395B5F", color = "#395B5F") +
     labs(x = "Critical Disturbance Threshold (c)",
          y = "Count") +
     theme_bw())
@@ -644,7 +645,7 @@ saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
 # Distribution of Qc/Q2 values:
 (fig1qcq2 <- ggplot(dat_out_full_141, aes(x = Qc_Q2yr)) +
     geom_histogram(bins = 60, alpha = 0.8, 
-                   fill = "#B2995F", color = "#B2995F") +
+                   fill = "#548389", color = "#548389") +
     geom_vline(xintercept = 1, linetype = "dashed") +
     labs(x = expression(Q[c]:Q[2~yr]),
          y = "Count") +
@@ -653,11 +654,13 @@ saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
 # CV of Discharge vs. c: note, x axis on LOG SCALE
 (fig2qcq2 <- ggplot(dat_out_full_141, aes(x = cvQ, y = Qc_Q2yr)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#E6A169") +
+               color = "#4E8273") +
     geom_linerange(alpha = 0.8, 
-                   color = "#E6A169",
+                   color = "#4E8273",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
+    scale_x_log10() +
+    scale_y_log10() + 
     labs(x = expression(CV[Q]),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
@@ -682,12 +685,13 @@ saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
 
 # Stream Width vs. c: note, x axis LOG SCALED
 (fig4.1qcq2 <- ggplot(dat_out_full_141, aes(x = width_med, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#A8655F") +
+    geom_point(alpha = 0.6, size = 3, color = "#647B42") +
     geom_linerange(alpha = 0.8, 
-                   color = "#A8655F",
+                   color = "#647B42",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() + 
+    scale_y_log10() + 
     labs(x = expression(Stream~Width~(m)),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
@@ -745,23 +749,25 @@ saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
 # Mean daily GPP vs. c: X axis LOG SCALED
 (fig9qcq2 <- ggplot(dat_out_full_141, aes(x = meanGPP, y = Qc_Q2yr)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#E7A655") +
+               color = "#509AA6") +
     geom_linerange(alpha = 0.8, 
-                   color = "#E7A655",
+                   color = "#509AA6",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() +
+    scale_y_log10() + 
     labs(y = expression(Q[c]:Q[2~yr]),
          x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
     theme_bw())
 
 # More Land Use vs. c:
 (fig10qcq2 <- ggplot(dat_out_full_141, aes(x = NHD_RdDensCat, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#E59D7F") +
+    geom_point(alpha = 0.6, size = 3, color = "#9EB45F") +
     geom_linerange(alpha = 0.8, 
-                   color = "#E59D7F",
+                   color = "#9EB45F",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
+    scale_y_log10() + 
     labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
@@ -794,10 +800,18 @@ saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
 
 # Effect of Dams
 # "95 indicates the least probable interference from a structure of a given type"
-(fig14qcq2 <- ggplot(dat_out_full_141, aes(x = Dam, y = Qc_Q2yr)) +
+(fig14qcq2 <- ggplot(dat_out_full_141 %>%
+                       na.omit(Dam) %>%
+                       mutate(DamReOrder = factor(case_when(Dam == "0" ~ "100",
+                                                            Dam == "50" ~ "50",
+                                                            Dam == "80" ~ "20",
+                                                            Dam == "95" ~ "5"),
+                                                  levels = c("5", "20", "50", "100"))), 
+                     aes(x = DamReOrder, y = Qc_Q2yr)) +
     geom_boxplot(alpha = 0.6, 
-                 fill = "#6D4847", color = "#6D4847") +
+                 fill = "#FDD989", color = "black") +
     geom_hline(yintercept = 1, linetype = "dashed") +
+    scale_y_log10() + 
     labs(x = expression(Likelihood~of~Influence~by~Dams),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
@@ -813,17 +827,16 @@ saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
     theme_bw())
 
 # Combine figures above.
-(fig_qcq2 <- fig0c + fig1qcq2 + fig9qcq2 + 
-    fig2qcq2 + fig10qcq2 + fig12qcq2 +
-    fig4qcq2 + fig4.1qcq2 + fig7qcq2 +
+(fig_qcq2 <- fig0c + fig1qcq2 + fig9qcq2 + fig2qcq2 + 
+    fig4.1qcq2 + fig10qcq2 + fig14qcq2 +
     plot_annotation(tag_levels = 'A') +
-    plot_layout(nrow = 3))
+    plot_layout(nrow = 2))
 
 # And export for use in RMarkdown.
 # ggsave(fig_qcq2,
-#        filename = "figures/teton_fall22/QcQ2_9panel_111722.jpg",
-#        width = 30,
-#        height = 30,
+#        filename = "figures/teton_fall22/QcQ2_7panel_log_121222.jpg",
+#        width = 40,
+#        height = 20,
 #        units = "cm") # n = 141
 
 (fig_qcq2_supp <- fig5qcq2 + fig15qcq2 + fig14qcq2 +
