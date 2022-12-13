@@ -241,8 +241,8 @@ dat_out_full <- dat_out_full %>%
 # Stream Order vs. rmax: Removing singular site w/o order info for now.
 (fig4 <- ggplot(dat_out_full %>%
                   filter(!is.na(Order)), aes(x = Order, y = r_med)) +
-    geom_boxplot(alpha = 0.8, color = "#2D4029", 
-                 fill = "#2D4029") +
+    geom_boxplot(alpha = 0.8, color = "black", 
+                 fill = "#9BB1BB") +
     labs(x = expression(Stream~Order),
          y = expression(r[max])) +
     theme_bw())
@@ -279,9 +279,9 @@ plot(as.numeric(dat_out_full$Order), dat_out_full$width_med)
 
 # Longitude vs. rmax:
 (fig6 <- ggplot(dat_out_full, aes(x = Lon_WGS84, y = r_med)) +
-    geom_point(alpha = 0.8, size = 3, color = "#556551") +
+    geom_point(alpha = 0.8, size = 3, color = "#79ACBD") +
     geom_linerange(alpha = 0.8, 
-                   color = "#556551",
+                   color = "#79ACBD",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Longitude),
          y = expression(r[max])) +
@@ -292,9 +292,9 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
 
 # Catchment size vs. rmax: note, missing Miss. R. and x axis LOG SCALED
 (fig7 <- ggplot(dat_out_full, aes(x = NHD_AREASQKM, y = r_med)) +
-    geom_point(alpha = 0.8, size = 3, color = "#5F6A59") +
+    geom_point(alpha = 0.8, size = 3, color = "#ECBD95") +
     geom_linerange(alpha = 0.8, 
-                   color = "#5F6A59",
+                   color = "#ECBD95",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Watershed~Area~(km^2)),
@@ -324,9 +324,9 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
     theme_bw())
 
 (fig11 <- ggplot(dat_out_full, aes(x = NHD_PctImp2011Cat, y = r_med)) +
-    geom_point(alpha = 0.8, size = 3, color = "#41583F") +
+    geom_point(alpha = 0.8, size = 3, color = "#E4DECE") +
     geom_linerange(alpha = 0.8, 
-                   color = "#41583F",
+                   color = "#E4DECE",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Impervious~Land~Cover~by~Catchment~(`%`)),
          y = expression(r[max])) +
@@ -368,9 +368,9 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
 
 # Nutrients - note, both x axes are LOG SCALED
 (fig15 <- ggplot(dat_out_full, aes(x = Nitrate, y = r_med)) +
-    geom_point(alpha = 0.8, size = 3, color = "#4B6048") +
+    geom_point(alpha = 0.8, size = 3, color = "#0B4221") +
     geom_linerange(alpha = 0.8, 
-                   color = "#4B6048",
+                   color = "#0B4221",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
@@ -378,9 +378,9 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
     theme_bw())
 
 (fig16 <- ggplot(dat_out_full, aes(x = Orthophosphate, y = r_med)) +
-    geom_point(alpha = 0.8, size = 3, color = "#556551") +
+    geom_point(alpha = 0.8, size = 3, color = "#346575") +
     geom_linerange(alpha = 0.8, 
-                   color = "#556551",
+                   color = "#346575",
                    aes(ymin = minCI, ymax = `97.5%`)) +
     scale_x_log10() +
     labs(x = expression(Mean~OrthoPhosphate~(mg/L~PO[4]-P)),
@@ -400,14 +400,14 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
 #        height = 20,
 #        units = "cm") # n = 159
 
-(fig_r_supp <- fig5 + fig4 + fig4.1 +
-    fig11 + fig15 + fig16 +
+(fig_r_supp <- fig15 + fig16 + fig6 +
+    fig4 + fig7 + fig11 +
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 2))
 
 # And export for use in the Rmarkdown file.
 # ggsave(fig_r_supp,
-#        filename = "figures/teton_fall22/rmax_6panel_120522.jpg",
+#        filename = "figures/teton_fall22/rmax_6panel_121322.jpg",
 #        width = 30,
 #        height = 20,
 #        units = "cm") # n = 159
