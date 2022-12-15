@@ -255,25 +255,26 @@ a6 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log,
 anova(a4, a5, a6) # order (a5) AIC is least, but moving forward with width
 # since it's better than area and order is somewhat subjective.
 
-# Investigate precipitation, but keep in mind, it drops 40+ records.
-a6.2 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log, 
-          random = ~1 | huc2_id, 
-          method = "ML",
-          data = dat_rmax_trim %>%
-            dplyr::select(logrmax, summerT, NHD_RdDensWs, 
-                          Dam, width_log, pre_mm_cyr, huc2_id) %>%
-            drop_na())
+# Investigate precipitation, but keep in mind, it drops 40+ records. (Also,
+# chose to archive this because investigating precip separately below.)
+# a6.2 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log, 
+#           random = ~1 | huc2_id, 
+#           method = "ML",
+#           data = dat_rmax_trim %>%
+#             dplyr::select(logrmax, summerT, NHD_RdDensWs, 
+#                           Dam, width_log, pre_mm_cyr, huc2_id) %>%
+#             drop_na())
 
-a7 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log +
-            pre_mm_cyr, 
-            random = ~1 | huc2_id, 
-            method = "ML",
-            data = dat_rmax_trim %>%
-            dplyr::select(logrmax, summerT, NHD_RdDensWs, 
-                          Dam, width_log, pre_mm_cyr, huc2_id) %>%
-              drop_na())
+# a7 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log +
+#             pre_mm_cyr, 
+#             random = ~1 | huc2_id, 
+#             method = "ML",
+#             data = dat_rmax_trim %>%
+#             dplyr::select(logrmax, summerT, NHD_RdDensWs, 
+#                           Dam, width_log, pre_mm_cyr, huc2_id) %>%
+#               drop_na())
 
-anova(a6.2, a7) # Nearly identical, and precip is *somewhat* correlated with
+# anova(a6.2, a7) # Nearly identical, and precip is *somewhat* correlated with
 # Lat/Lon, so since it forces us to drop so many records (n=115 remaining),
 # I'm skipping it.
 
@@ -446,6 +447,51 @@ coef(aout_nuts)
 # width_log     0.197495863 0.07636330 67  2.5862666 0.0118809167
 # no3_log       0.163805166 0.08589546 67  1.9070295 0.0608054303
 # po4_log       0.063028975 0.09046807 67  0.6966986 0.4884016515
+
+##### Precipitation #####
+
+# And build separate model for precipitation.
+
+dat_rmax_lm4 <- dat_rmax_trim %>%
+  dplyr::select(logrmax, summerT, width_log, NHD_RdDensWs, 
+                Dam, huc2_id, pre_mm_cyr) %>%
+  drop_na() # 115 sites left
+
+a10 <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log + 
+            pre_mm_cyr, # Adding precip.
+          random = ~1 | huc2_id, 
+          method = "ML",
+          data = dat_rmax_lm4)
+
+plot(a10) # Looks alright.
+qqnorm(a10) # Yep, totally fine.
+summary(a10)
+
+# Refit with REML for final full model
+
+afinal_pre <- lme(logrmax ~ summerT + NHD_RdDensWs + Dam + width_log + 
+                     pre_mm_cyr,
+                   random = ~1 | huc2_id, 
+                   method = "REML",
+                   data = dat_rmax_lm4)
+
+# Examine model diagnostics.
+plot(afinal_pre)
+qqnorm(afinal_pre) # Looking just fine.
+
+# Examine model outputs.
+aout_pre <- summary(afinal_pre)
+coef(aout_pre)
+
+#                      Value    Std.Error DF    t-value      p-value
+# (Intercept)  -1.1196727973 0.3071445953 93 -3.6454257 0.0004396778
+# summerT      -0.0161320206 0.0099431295 93 -1.6224289 0.1080968595
+# NHD_RdDensWs  0.0379258201 0.0133298879 93  2.8451717 0.0054595347
+# Dam50        -0.0520960691 0.1255499627 93 -0.4149429 0.6791393598
+# Dam80        -0.0327519496 0.1047495372 93 -0.3126692 0.7552320717
+# Dam95         0.0346755633 0.0730668281 93  0.4745733 0.6362036521
+# width_log     0.3185124321 0.0835037112 93  3.8143506 0.0002455406
+# pre_mm_cyr   -0.0000872829 0.0001621342 93 -0.5383375 0.5916302415
 
 #### Model 2: Max. Algal Yield ####
 
