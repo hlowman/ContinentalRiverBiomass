@@ -850,27 +850,28 @@ c6 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log,
           data = dat_Qc_lm) # stream width
 
 anova(c4, c5, c6) # order (c5) AIC is least, but moving forward with width
-# since it's better than area and order is somewhat subjective.
+# since it's better than order (which is somewhat subjective).
 
 # Investigate precipitation, but keep in mind, it drops 40+ records.
-c6.2 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log, 
-            random = ~1 | huc2_id, 
-            method = "ML",
-            data = dat_Qc_trim %>%
-              dplyr::select(logQcQ2max, NHD_RdDensWs, Dam,
-                            width_log, pre_mm_cyr, huc2_id) %>%
-              drop_na())
+# (Archiving this because investigating this below.)
+# c6.2 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log, 
+#             random = ~1 | huc2_id, 
+#             method = "ML",
+#             data = dat_Qc_trim %>%
+#               dplyr::select(logQcQ2max, NHD_RdDensWs, Dam,
+#                             width_log, pre_mm_cyr, huc2_id) %>%
+#               drop_na())
 
-c7 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log +
-            pre_mm_cyr, 
-          random = ~1 | huc2_id, 
-          method = "ML",
-          data = dat_Qc_trim %>%
-            dplyr::select(logQcQ2max, NHD_RdDensWs, Dam,
-                          width_log, pre_mm_cyr, huc2_id) %>%
-            drop_na())
+# c7 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log +
+#             pre_mm_cyr, 
+#           random = ~1 | huc2_id, 
+#           method = "ML",
+#           data = dat_Qc_trim %>%
+#             dplyr::select(logQcQ2max, NHD_RdDensWs, Dam,
+#                           width_log, pre_mm_cyr, huc2_id) %>%
+#             drop_na())
 
-anova(c6.2, c7) # Identical, so since it forces us to drop so many records 
+#anova(c6.2, c7) # Identical, so since it forces us to drop so many records 
 # (n=115 remaining), I'm skipping it.
 
 ##### Step 9: Refit with REML for final full model
@@ -911,5 +912,48 @@ r.squaredGLMM(cfinal)
 
 #             R2m        R2c
 # [1,] 0.02458802 0.06703832
+
+##### Precipitation #####
+
+# Maximize data availability:
+dat_Qc_lm3 <- dat_Qc_trim %>%
+  dplyr::select(logQcQ2max, width_log, NHD_RdDensWs, 
+                Dam, huc2_id, pre_mm_cyr) %>%
+  drop_na() #103
+
+c8 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log + 
+             pre_mm_cyr, # Adding precip.
+           random = ~1 | huc2_id, 
+           method = "ML",
+           data = dat_Qc_lm3)
+
+plot(c8) # Looks alright.
+qqnorm(c8) # Yep, totally fine.
+summary(c8)
+
+# Refit with REML for final full model
+
+cfinal_pre <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log + 
+                    pre_mm_cyr,
+                  random = ~1 | huc2_id, 
+                  method = "REML",
+                  data = dat_Qc_lm3)
+
+# Examine model diagnostics.
+plot(cfinal_pre)
+qqnorm(cfinal_pre) # Looking just fine.
+
+# Examine model outputs.
+cout_pre <- summary(cfinal_pre)
+coef(cout_pre)
+
+#                      Value    Std.Error DF      t-value   p-value
+# (Intercept)   0.0930882014 0.3122302087 82  0.298139638 0.7663507
+# NHD_RdDensWs -0.0126805666 0.0194349217 82 -0.652462963 0.5159275
+# Dam50         0.3012597661 0.2146412775 82  1.403550005 0.1642286
+# Dam80        -0.0017105104 0.1756896271 82 -0.009735978 0.9922556
+# Dam95        -0.0838730873 0.1093675140 82 -0.766892145 0.4453480
+# width_log    -0.0592449483 0.1150885535 82 -0.514777069 0.6080936
+# pre_mm_cyr   -0.0002641592 0.0002098016 82 -1.259090714 0.2115701
 
 # End of script.
