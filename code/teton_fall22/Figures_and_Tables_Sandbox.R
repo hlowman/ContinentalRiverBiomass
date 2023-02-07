@@ -85,5 +85,49 @@ summary_pivot <- site_summary %>%
 # gtsave(summary_table,
 #        "summary_data_table_101222.png",
 #        path = "figures/teton_fall22") 
+
+#### Timeseries Length Appendix Figure ####
+
+# Making a histogram of the lengths of the timeseries for an appendix figure.
+
+site_lengths <- site_all %>%
+  group_by(site_name) %>%
+  summarize(days = n()) %>% # count the number of rows/days
+  ungroup() %>%
+  mutate(years = days/365)
+
+ggplot(site_lengths, aes(x = years)) +
+  geom_histogram() +
+  theme_bw()
+
+# Adding bins for more intuitive plotting.
+site_lengths <- site_lengths %>%
+  mutate(bin = factor(case_when(days < 180 ~ "3 to 6 months",
+                         days >= 180 & days < 365 ~ "6 months to 1 year",
+                         days >= 365 & days < 730 ~ "1 to 2 years",
+                         days >= 730 & days < 1460 ~ "2 to 4 years",
+                         days >= 1460 & days < 2190 ~ "4 to 6 years",
+                         days >= 2190 & days < 2920 ~ "6 to 8 years",
+                         days >= 2920 ~ "8 to 10 years"),
+                      levels = c("3 to 6 months", "6 months to 1 year",
+                                 "1 to 2 years", "2 to 4 years",
+                                 "4 to 6 years", "6 to 8 years",
+                                 "8 to 10 years")))
+
+(ts_hist <- ggplot(site_lengths, aes(x = bin)) +
+  geom_histogram(stat = "count") +
+  labs(x = "Length of Timeseries",
+       y = "Number of Sites") +
+  theme_bw())
+
+# And export for use in manuscript Google doc.
+# ggsave(ts_hist,
+#        filename = "figures/teton_fall22/TS_length_hist_020723.jpg",
+#        width = 20,
+#        height = 10,
+#        units = "cm")
+
+# And calculate median timeseries length for inclusion in methods.
+median(site_lengths$days) # 873.5
             
 # End of script.
