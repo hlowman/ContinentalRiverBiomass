@@ -21,7 +21,7 @@ lapply(c("tidyverse", "lubridate", "data.table",
          "rstan","bayesplot","shinystan", "here",
          "GGally", "glmmTMB", "MuMIn", "effects",
          "DHARMa", "lme4", "multcomp", "patchwork",
-         "calecopal", "viridis", "plotly"), require, character.only=T)
+         "calecopal", "viridis", "plotly", "ggbreak"), require, character.only=T)
 
 # Load necessary datasets.
 # Load site-level info (hypoxia and Appling datasets).
@@ -1167,6 +1167,8 @@ nRMSE_1site <- nRMSE_fxn(rmse1, dat_in$nwis_01649500)
 #        height = 10,
 #        units = "cm")
 
+##### 8-panel NRMSE plot #####
+
 # As of 11/21/22, calculating/exporting RMSE values for 8 sites.
 
 my8sites <- c("nwis_0166818623", "nwis_02217643",
@@ -1186,7 +1188,7 @@ dat_in8df <- dat_in_df %>%
 dat_in8 <- split(dat_in8df, dat_in8df$site_name)
 
 # Re-simulating, because it's simpler than hunting down the right index
-# in the matrix above. Started ~1:16, Ended ~1:33
+# in the matrix above. Started ~10:00, Ended ~10:20
 Ricker_sim8sites <- mapply(Ricker_sim_fxn, dat_out8, dat_in8)
 
 # And for each day, I would like to calculate
@@ -1207,8 +1209,8 @@ pred_gpp8 <- lapply(data_8site_gpp,
                                         apply(x, 1, quantile25),
                                         apply(x, 1, quantile975)))
 
-# Pull out original GPP values used
-orig_gpp_date8 <- lapply(dat_in8, function(x) x %>% select(date, GPP))
+# Pull out original GPP values used and sequence #s (for plotting)
+orig_gpp_date8 <- lapply(dat_in8, function(x) x %>% select(date, GPP, seq))
 
 # Add names to confidence interval lists
 my_names <- c("nwis_0166818623", "nwis_02217643", "nwis_04176500", "nwis_05082500", "nwis_06893350", "nwis_07075250", "nwis_08374550", "nwis_13013650")
@@ -1329,7 +1331,7 @@ nRMSE_8site <- mapply(nRMSE_fxn, rmse8, dat_in8)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Large Order - Calm Flow - High Light") +
+         title = "Large Order - Steady Flow - High Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5),
@@ -1348,14 +1350,14 @@ nRMSE_8site <- mapply(nRMSE_fxn, rmse8, dat_in8)
 # Snake River, WY
 (gpp_plot8.6 <- ggplot(df_pred8$nwis_13013650, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
-    geom_line(aes(date, Median), 
+    geom_line(aes(date, Median, group = seq), 
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Large Order - Calm Flow - Low Light") +
+         title = "Large Order - Steady Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
-    geom_ribbon(aes(ymin = q2.5,
-                    ymax = q97.5),
+    #scale_x_break(c(as.Date("2011-01-01"), as.Date("2014-01-01"))) +
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
     annotate(geom = "text", x = date("2015-01-01"), y = 30,
              label = paste("nRMSE = ",round(nRMSE_8site[8], 
@@ -1394,14 +1396,13 @@ nRMSE_8site <- mapply(nRMSE_fxn, rmse8, dat_in8)
 # Rio Grande, TX
 (gpp_plot8.8 <- ggplot(df_pred8$nwis_08374550, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
-    geom_line(aes(date, Median), 
+    geom_line(aes(date, Median, group = seq), 
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
          title = "Large Order - Turbulent Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
-    geom_ribbon(aes(ymin = q2.5,
-                    ymax = q97.5),
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
     annotate(geom = "text", x = date("2013-12-01"), y = 7,
              label = paste("nRMSE = ",round(nRMSE_8site[7], 
@@ -1422,10 +1423,203 @@ nRMSE_8site <- mapply(nRMSE_fxn, rmse8, dat_in8)
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 4))
 
-ggsave(fig_nRMSE,
-       filename = "figures/teton_fall22/nRMSE_8panel_112222.jpg",
+# ggsave(fig_nRMSE,
+#        filename = "figures/teton_fall22/nRMSE_8panel_021023.jpg",
+#        width = 40,
+#        height = 50,
+#        units = "cm") # empty dates fixed :)
+
+##### 5-panel NRMSE plot #####
+
+# As of 02/10/23, calculating/exporting RMSE values for 5
+# additional sites that Jud requested.
+
+my5sites <- c("nwis_05524500", "nwis_05515500",
+              "nwis_05451210", "nwis_01645704",
+              "nwis_0165389205")
+
+# Trimming input and output datasets for the sites of interest.
+dat_out5df <- dat_out_df %>%
+  filter(site_name %in% my5sites)
+
+dat_out5 <- split(dat_out5df, dat_out5df$site_name)
+
+dat_in5df <- dat_in_df %>%
+  filter(site_name %in% my5sites)
+
+dat_in5 <- split(dat_in5df, dat_in5df$site_name)
+
+# Re-simulating, simpler than hunting down the right index
+# in the matrix above. Started at 11:00; finished 11:13.
+Ricker_sim5sites <- mapply(Ricker_sim_fxn, 
+                           dat_out5, dat_in5)
+
+# And for each day, I would like to calculate
+# - median GPP
+# - 97.5% and 2.5% percentiles
+
+# Going to pull out just the predicted GPP values.
+# So, making a list of odd numbers to pull out predGPP values (see above for reasoning).
+my_values5 <- seq(from = 1, to = 10, by = 2)
+data_5site_gpp <- Ricker_sim5sites[my_values5]
+
+# Use median and confidence intervals' functions from above
+pred_gpp5 <- lapply(data_5site_gpp, 
+                    function(x) cbind(apply(x, 1, median),
+                                      apply(x, 1, quantile25),
+                                      apply(x, 1, quantile975)))
+
+# Pull out original GPP values and sequence numbers used
+orig_gpp_date5 <- lapply(dat_in5, function(x) x %>% select(date, GPP, seq))
+
+# Add names to confidence interval lists
+# be sure that these are in the correct order given output above
+my_names5 <- c("nwis_01645704", "nwis_0165389205",
+               "nwis_05451210", "nwis_05515500",
+               "nwis_05524500")
+
+names(pred_gpp5) <- my_names5
+pred_gpp5 <- lapply(pred_gpp5, function(x) as.data.frame(x) %>% 
+                      rename("Median" = "V1",
+                             "q2.5" = "V2",
+                             "q97.5" = "V3")) # OMG YAY!!!!
+
+# Bind into a single dataframe
+keys5 <- unique(c(names(orig_gpp_date5), names(pred_gpp5)))
+df_pred5 <- setNames(Map(cbind, orig_gpp_date5[keys5], 
+                         pred_gpp5[keys5]), keys5)
+
+# And finally, calculate the normalized RMSE.
+my_values52 <- seq(from = 2, to = 10, by = 2)
+rmse5 <- Ricker_sim5sites[my_values52]
+
+nRMSE_5site <- mapply(nRMSE_fxn, rmse5, dat_in5)
+
+# And plot
+# Iroquois River
+(gpp_plot8.9 <- ggplot(df_pred5$nwis_05524500, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Iroquois River, IN") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2016-09-01"), y = 8,
+             label = paste("nRMSE = ",round(nRMSE_5site[5], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# Kankakee River, IN
+(gpp_plot8.10 <- ggplot(df_pred5$nwis_05515500, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Kankakee River, IN") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2016-10-01"), y = 3,
+             label = paste("nRMSE = ",round(nRMSE_5site[4], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# South Fork Iowa River, IA
+(gpp_plot8.11 <- ggplot(df_pred5$nwis_05451210, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "S. Fork Iowa River, IA") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2009-06-01"), y = 15,
+             label = paste("nRMSE = ",round(nRMSE_5site[3], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# Difficult Run, VA
+(gpp_plot8.12 <- ggplot(df_pred5$nwis_01645704, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Difficult Run, VA") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2015-01-01"), y = 6,
+             label = paste("nRMSE = ",round(nRMSE_5site[1], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# Accotink Creek, VA
+(gpp_plot8.13 <- ggplot(df_pred5$nwis_0165389205, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Accotink Creek, VA") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2013-10-01"), y = 6,
+             label = paste("nRMSE = ",round(nRMSE_5site[2], 
+                                            digits = 2)), size = 8) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 20),
+          axis.title.x = element_text(size=20), 
+          axis.text.x = element_text(size=20),
+          axis.text.y = element_text(size=20),
+          axis.title.y = element_text(size=20)))
+
+# Combine and export.
+(fig_nRMSE5 <- gpp_plot8.9 + gpp_plot8.10 + 
+    gpp_plot8.11 + gpp_plot8.12 +
+    gpp_plot8.13 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 3))
+
+ggsave(fig_nRMSE5,
+       filename = "figures/teton_fall22/nRMSE_5panel_021023.jpg",
        width = 40,
-       height = 50,
-       units = "cm") # n = 141
+       height = 40,
+       units = "cm")
 
 # End of script.
