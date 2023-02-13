@@ -5,9 +5,20 @@
 # The following script will calculate the maximum algal yields.
 # Then, it will examine if they have any relationship with other covariates.
 
+# Edits on February 13th, 2023 : I've added in two additional metrics of yield
+# to try out, so the three formulations are as follows.
+
+# (1) Yield = ((-0.5*rmax/lambda)*(e^0.5*rmax)) + (0.5*rmax/lambda) [based
+# on calculations provided by C. Yakulic]
+# (2) Yield = (rmax*(0.5-(0.07*rmax))) / -lambda [based on Scheuerell 2016 
+# PeerJ]
+# (3) Yield = (lambert_W0(exp(1-rmax))) / -lambda [using the 'gsl' package]
+
+#### Setup ####
+
 # Load packages.
 lapply(c("lubridate","tidyverse", "here", "viridis",
-         "reshape2","ggExtra","patchwork"), require, character.only=T)
+         "reshape2","ggExtra","patchwork", "gsl"), require, character.only=T)
 
 # Load datasets.
 
@@ -20,25 +31,46 @@ dat_rmax <- readRDS("data_working/rmax_filtered_159sites_113022.rds")
 # Take list containing all iterations of parameters and make into a df.
 dat_out_df <- map_df(dat_out, ~as.data.frame(.x), .id="site_name")
 
-# Equation to calculate max. algal yield is:
-# max_algal_yield = -0.5*r*exp(0.5*r)/lambda + 0.5*r/lambda
+#### Yield Formulas ####
 
-# Create new column.
+# Equation to calculate max. algal yield using the first formula is:
+# yield = (-0.5*r*exp(0.5*r)/lambda) + (0.5*r/lambda)
+
+# Equation to calculate max. algal yield using the second formula is:
+# yield = (r*(0.5-(0.07*r)))/-lambda
+
+# Equation to calculate max algal yield using the third formula is:
+# yield = (lambert_W0(exp(1-r)))/-lambda
+
+# Create new columns to calculate yield for each iteration at each site.
 dat_out_df <- dat_out_df %>%
-  mutate(max_algal_yield = -0.5*r*exp(0.5*r)/lambda + 0.5*r/lambda)
+  mutate(yield_1 = (-0.5*r*exp(0.5*r)/lambda) + (0.5*r/lambda)) %>%
+  mutate(yield_2 = (r*(0.5-(0.07*r)))/-lambda) %>%
+  mutate(yield_3 = (lambert_W0(exp(1-r)))/-lambda)
 
-# Calculate median maximum algal yield for each site.
-# Instead of calculating the mean, I'll be using median rmax values.
-dat_out_maymed <- dat_out_df %>%
+# Note, I've added an extra negative value to the denominator in the second
+# and third formulas since our lambda values are negative, but the manuscript
+# assumes b values are positive (see Table 1, Scheuerell 2016 PeerJ).
+
+# Calculate median yield values for each site and each yield metric.
+dat_out_yield_med <- dat_out_df %>%
   group_by(site_name) %>%
-  summarize(may_med = median(max_algal_yield)) %>%
+  summarize(yield_med1 = median(yield_1),
+            yield_med2 = median(yield_2),
+            yield_med3 = median(yield_3)) %>%
   ungroup()
 
+# Quick plots.
+hist(dat_out_yield_med$yield_med1)
+hist(dat_out_yield_med$yield_med2) # still some negative values hmmm...
+hist(dat_out_yield_med$yield_med3) # seems similar to formula 1 but x100
+
 # Combine with rmax dataset.
-dat_may_rmax <- left_join(dat_rmax, dat_out_maymed)
+# Note, this will trim down from 182 to 159 sites due to model diagnostics.
+dat_yield_rmax <- left_join(dat_rmax, dat_out_yield_med)
 
 # Export for future use.
-saveRDS(dat_may_rmax, "data_working/maxalgalyield_159sites_120822.rds")
+saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
 
 #### Figures ####
 
