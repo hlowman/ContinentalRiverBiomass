@@ -74,126 +74,392 @@ saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
 
 #### Figures ####
 
+# Going to make three large plots of these formulae to see how 
+# they compare in terms of covariate trends also.
+
+##### Formula #1: #####
 # Distribution of MAY values:
-(fig1 <- ggplot(dat_may_rmax, aes(x = may_med)) +
+(fig1.1 <- ggplot(dat_yield_rmax, aes(x = yield_med1)) +
    geom_histogram(bins = 60, 
                   fill = "#D3E3CA", color = "#D3E3CA") +
-   labs(x = expression(Maximum~Algal~Yield),
+   labs(x = expression(Maximum~Algal~Yield~(Yakulic/Lowman)),
         y = "Count") +
    theme_bw())
 
 # MAY vs. rmax:
-(fig2 <- ggplot(dat_may_rmax, aes(x = r_med, y = may_med)) +
+(fig1.2 <- ggplot(dat_yield_rmax, aes(x = r_med, y = yield_med1)) +
     geom_point(alpha = 0.9, size = 3,
                color = "#CCDFC3") +
     scale_y_log10() +
-    labs(y = expression(Maximum~Algal~Yield),
+    labs(y = expression(Maximum~Algal~Yield~(Yakulic/Lowman)),
          x = expression(Maximum~Growth~Rate~(r[max]))) +
     theme_bw())
 
 # MAY vs. GPP:
-(fig3 <- ggplot(dat_may_rmax, aes(x = meanGPP, y = may_med)) +
+(fig1.3 <- ggplot(dat_yield_rmax, aes(x = meanGPP, y = yield_med1)) +
     geom_point(alpha = 0.9, size = 3,
                color = "#C7DBBC") +
     scale_x_log10() +
     scale_y_log10() +
-    labs(y = expression(Maximum~Algal~Yield),
+    labs(y = expression(Maximum~Algal~Yield~(Yakulic/Lowman)),
          x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
     theme_bw())
 
 # MAY vs. cvQ:
-(fig4 <- ggplot(dat_may_rmax, aes(x = cvQ, y = may_med)) +
+(fig1.4 <- ggplot(dat_yield_rmax, aes(x = cvQ, y = yield_med1)) +
     geom_point(alpha = 0.9, size = 3,
                color = "#C1D7B6") +
+    scale_x_log10() +
     scale_y_log10() +
     labs(x = expression(CV[Q]),
-         y = expression(Maximum~Algal~Yield)) +
+         y = expression(Maximum~Algal~Yield~(Yakulic/Lowman))) +
     theme_bw())
 
 # MAY vs. summer light:
-(fig5 <- ggplot(dat_may_rmax, aes(x = summerL, y = may_med)) +
+(fig1.5 <- ggplot(dat_yield_rmax, aes(x = summerL, y = yield_med1)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#B7CFAC") +
+    scale_x_log10() +
     scale_y_log10() +
     labs(x = expression(Cumulative~Summer~PAR~(mol~m^-2~d^-1)),
-         y = expression(Maximum~Algal~Yield)) +
+         y = expression(Maximum~Algal~Yield~(Yakulic/Lowman))) +
     theme_bw())
 
 # MAY vs. stream width:
-(fig6 <- ggplot(dat_may_rmax, aes(x = width_med, y = may_med)) +
+(fig1.6 <- ggplot(dat_yield_rmax, aes(x = width_med, y = yield_med1)) +
     geom_point(alpha = 0.8, size = 3, color = "#ABC1A0") +
     scale_x_log10() + 
     scale_y_log10() +
     labs(x = expression(Stream~Width~(m)),
-         y = expression(Maximum~Algal~Yield)) +
+         y = expression(Maximum~Algal~Yield~(Yakulic/Lowman))) +
     theme_bw())
 
 # MAY vs. longitude:
-(fig7 <- ggplot(dat_may_rmax, aes(x = Lon_WGS84, y = may_med)) +
+(fig1.7 <- ggplot(dat_yield_rmax, aes(x = Lon_WGS84, y = yield_med1)) +
     geom_point(alpha = 0.8, size = 3, 
                color = "#9EB393") +
     scale_y_log10() +
     labs(x = expression(Longitude),
-         y = expression(Maximum~Algal~Yield)) +
+         y = expression(Maximum~Algal~Yield~(Yakulic/Lowman))) +
     theme_bw())
 
 # MAY vs. Road density:
-(fig8 <- ggplot(dat_may_rmax, aes(x = NHD_RdDensCat, y = may_med)) +
+(fig1.8 <- ggplot(dat_yield_rmax, aes(x = NHD_RdDensCat, y = yield_med1)) +
     geom_point(alpha = 0.8, size = 3, 
                color = "#92A587") +
+    #scale_x_log10() +
     scale_y_log10() +
     labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
-         y = expression(Maximum~Algal~Yield)) +
+         y = expression(Maximum~Algal~Yield~(Yakulic/Lowman))) +
     theme_bw())
 
 # MAY vs. NO3:
-(fig9 <- ggplot(dat_may_rmax, aes(x = Nitrate, y = may_med)) +
+(fig1.9 <- ggplot(dat_yield_rmax, aes(x = Nitrate, y = yield_med1)) +
     geom_point(alpha = 0.8, size = 3, color = "#7D8D70") +
     scale_x_log10() +
     scale_y_log10() +
     labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
-         y = expression(Maximum~Algal~Yield)) +
+         y = expression(Maximum~Algal~Yield~(Yakulic/Lowman))) +
     theme_bw())
 
 # MAY vs. PO4:
-(fig10 <- ggplot(dat_may_rmax, aes(x = Orthophosphate, y = r_med)) +
+(fig1.10 <- ggplot(dat_yield_rmax, aes(x = Orthophosphate, 
+                                       y = yield_med1)) +
     geom_point(alpha = 0.8, size = 3, 
                color = "#687659") +
     scale_x_log10() +
     scale_y_log10() +
     labs(x = expression(Mean~OrthoPhosphate~(mg/L~PO[4]-P)),
-         y = expression(Maximum~Algal~Yield)) +
+         y = expression(Maximum~Algal~Yield~(Yakulic/Lowman))) +
     theme_bw())
 
 # MAY vs. dams:
-(fig11 <- ggplot(dat_may_rmax, aes(x = Dam, y = may_med)) +
+(fig1.11 <- ggplot(dat_yield_rmax, aes(x = Dam, y = yield_med1)) +
     geom_boxplot(alpha = 0.6, 
                  fill = "#545F43", color = "#545F43") +
     scale_y_log10() +
     labs(x = expression(Likelihood~of~Influence~by~Dams),
-         y = expression(Maximum~Algal~Yield)) +
+         y = expression(Maximum~Algal~Yield~(Yakulic/Lowman))) +
     theme_bw())
 
 # MAY vs. canals:
-(fig12 <- ggplot(dat_may_rmax, aes(x = Canal, y = may_med)) +
+(fig1.12 <- ggplot(dat_yield_rmax, aes(x = Canal, y = yield_med1)) +
     geom_boxplot(alpha = 0.6, 
                  fill = "#464F35", color = "#464F35") +
     scale_y_log10() +
     labs(x = expression(Likelihood~of~Influence~by~Canals),
-         y = expression(Maximum~Algal~Yield)) +
+         y = expression(Maximum~Algal~Yield~(Yakulic/Lowman))) +
     theme_bw())
 
 # Combine figures above.
-(fig_may_med_log <- fig1 + fig2 + fig3 +
-    fig4 + fig5 + fig6 +
-    fig7 + fig8 + fig9 +
-    fig10 + fig11 + fig12 +
+(fig_yield_med1 <- fig1.1 + fig1.2 + fig1.3 +
+    fig1.4 + fig1.5 + fig1.6 +
+    fig1.7 + fig1.8 + fig1.9 +
+    fig1.10 + fig1.11 + fig1.12 +
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 4))
 
 # And export for use in the Rmarkdown file.
-# ggsave(fig_may_med_log,
-#        filename = "figures/teton_fall22/maxalgyield_12panel_120222.jpg",
+# ggsave(fig_yield_med1,
+#        filename = "figures/teton_fall22/maxalgyield1_12panel_021323.jpg",
+#        width = 30,
+#        height = 40,
+#        units = "cm") # n = 159
+
+##### Formula #2: #####
+# Distribution of MAY values:
+(fig2.1 <- ggplot(dat_yield_rmax, aes(x = yield_med2)) +
+    geom_histogram(bins = 60, 
+                   fill = "#F6EECF", color = "#F6EECF") +
+    labs(x = expression(Maximum~Algal~Yield~(Scheuerell)),
+         y = "Count") +
+    theme_bw())
+
+# MAY vs. rmax:
+(fig2.2 <- ggplot(dat_yield_rmax, aes(x = r_med, y = yield_med2)) +
+    geom_point(alpha = 1, size = 3,
+               color = "#F2E5C1") +
+    scale_y_log10() +
+    labs(y = expression(Maximum~Algal~Yield~(Scheuerell)),
+         x = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# MAY vs. GPP:
+(fig2.3 <- ggplot(dat_yield_rmax, aes(x = meanGPP, y = yield_med2)) +
+    geom_point(alpha = 1, size = 3,
+               color = "#EEDCB4") +
+    scale_x_log10() +
+    scale_y_log10() +
+    labs(y = expression(Maximum~Algal~Yield~(Scheuerell)),
+         x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
+    theme_bw())
+
+# MAY vs. cvQ:
+(fig2.4 <- ggplot(dat_yield_rmax, aes(x = cvQ, y = yield_med2)) +
+    geom_point(alpha = 0.9, size = 3,
+               color = "#E6CFA6") +
+    scale_x_log10() +
+    scale_y_log10() +
+    labs(x = expression(CV[Q]),
+         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    theme_bw())
+
+# MAY vs. summer light:
+(fig2.5 <- ggplot(dat_yield_rmax, aes(x = summerL, y = yield_med2)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#D0B692") +
+    scale_x_log10() +
+    scale_y_log10() +
+    labs(x = expression(Cumulative~Summer~PAR~(mol~m^-2~d^-1)),
+         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    theme_bw())
+
+# MAY vs. stream width:
+(fig2.6 <- ggplot(dat_yield_rmax, aes(x = width_med, y = yield_med2)) +
+    geom_point(alpha = 0.8, size = 3, color = "#BA9D7E") +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = expression(Stream~Width~(m)),
+         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    theme_bw())
+
+# MAY vs. longitude:
+(fig2.7 <- ggplot(dat_yield_rmax, aes(x = Lon_WGS84, y = yield_med2)) +
+    geom_point(alpha = 0.8, size = 3, 
+               color = "#A27E65") +
+    scale_y_log10() +
+    labs(x = expression(Longitude),
+         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    theme_bw())
+
+# MAY vs. Road density:
+(fig2.8 <- ggplot(dat_yield_rmax, aes(x = NHD_RdDensCat, y = yield_med2)) +
+    geom_point(alpha = 0.8, size = 3, 
+               color = "#865A46") +
+    #scale_x_log10() +
+    scale_y_log10() +
+    labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
+         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    theme_bw())
+
+# MAY vs. NO3:
+(fig2.9 <- ggplot(dat_yield_rmax, aes(x = Nitrate, y = yield_med2)) +
+    geom_point(alpha = 0.8, size = 3, color = "#693626") +
+    scale_x_log10() +
+    scale_y_log10() +
+    labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
+         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    theme_bw())
+
+# MAY vs. PO4:
+(fig2.10 <- ggplot(dat_yield_rmax, aes(x = Orthophosphate, 
+                                       y = yield_med2)) +
+    geom_point(alpha = 0.8, size = 3, 
+               color = "#53261B") +
+    scale_x_log10() +
+    scale_y_log10() +
+    labs(x = expression(Mean~OrthoPhosphate~(mg/L~PO[4]-P)),
+         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    theme_bw())
+
+# MAY vs. dams:
+(fig2.11 <- ggplot(dat_yield_rmax, aes(x = Dam, y = yield_med2)) +
+    geom_boxplot(alpha = 0.6, 
+                 fill = "#3E1E16", color = "#3E1E16") +
+    scale_y_log10() +
+    labs(x = expression(Likelihood~of~Influence~by~Dams),
+         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    theme_bw())
+
+# MAY vs. canals:
+(fig2.12 <- ggplot(dat_yield_rmax, aes(x = Canal, y = yield_med2)) +
+    geom_boxplot(alpha = 0.6, 
+                 fill = "#291611", color = "#291611") +
+    scale_y_log10() +
+    labs(x = expression(Likelihood~of~Influence~by~Canals),
+         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    theme_bw())
+
+# Combine figures above.
+(fig_yield_med2 <- fig2.1 + fig2.2 + fig2.3 +
+    fig2.4 + fig2.5 + fig2.6 +
+    fig2.7 + fig2.8 + fig2.9 +
+    fig2.10 + fig2.11 + fig2.12 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 4))
+
+# And export for use in the Rmarkdown file.
+# ggsave(fig_yield_med2,
+#        filename = "figures/teton_fall22/maxalgyield2_12panel_021323.jpg",
+#        width = 30,
+#        height = 40,
+#        units = "cm") # n = 159
+
+##### Formula #3: #####
+# Distribution of MAY values:
+(fig3.1 <- ggplot(dat_yield_rmax, aes(x = yield_med3)) +
+   geom_histogram(bins = 60, 
+                  fill = "#A1CAF6", color = "#A1CAF6") +
+   labs(x = expression(Maximum~Algal~Yield~(Lambert)),
+        y = "Count") +
+   theme_bw())
+
+# MAY vs. rmax:
+(fig3.2 <- ggplot(dat_yield_rmax, aes(x = r_med, y = yield_med3)) +
+    geom_point(alpha = 0.9, size = 3,
+               color = "#8BB5EA") +
+    scale_y_log10() +
+    labs(y = expression(Maximum~Algal~Yield~(Lambert)),
+         x = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# MAY vs. GPP:
+(fig3.3 <- ggplot(dat_yield_rmax, aes(x = meanGPP, y = yield_med3)) +
+    geom_point(alpha = 0.9, size = 3,
+               color = "#75A1DE") +
+    scale_x_log10() +
+    scale_y_log10() +
+    labs(y = expression(Maximum~Algal~Yield~(Lambert)),
+         x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
+    theme_bw())
+
+# MAY vs. cvQ:
+(fig3.4 <- ggplot(dat_yield_rmax, aes(x = cvQ, y = yield_med3)) +
+    geom_point(alpha = 0.9, size = 3,
+               color = "#628ED1") +
+    scale_x_log10() +
+    scale_y_log10() +
+    labs(x = expression(CV[Q]),
+         y = expression(Maximum~Algal~Yield~(Lambert))) +
+    theme_bw())
+
+# MAY vs. summer light:
+(fig3.5 <- ggplot(dat_yield_rmax, aes(x = summerL, y = yield_med3)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#5982BD") +
+    scale_x_log10() +
+    scale_y_log10() +
+    labs(x = expression(Cumulative~Summer~PAR~(mol~m^-2~d^-1)),
+         y = expression(Maximum~Algal~Yield~(Lambert))) +
+    theme_bw())
+
+# MAY vs. stream width:
+(fig3.6 <- ggplot(dat_yield_rmax, aes(x = width_med, y = yield_med3)) +
+    geom_point(alpha = 0.8, size = 3, color = "#5075AA") +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = expression(Stream~Width~(m)),
+         y = expression(Maximum~Algal~Yield~(Lambert))) +
+    theme_bw())
+
+# MAY vs. longitude:
+(fig3.7 <- ggplot(dat_yield_rmax, aes(x = Lon_WGS84, y = yield_med3)) +
+    geom_point(alpha = 0.8, size = 3, 
+               color = "#486999") +
+    scale_y_log10() +
+    labs(x = expression(Longitude),
+         y = expression(Maximum~Algal~Yield~(Lambert))) +
+    theme_bw())
+
+# MAY vs. Road density:
+(fig3.8 <- ggplot(dat_yield_rmax, aes(x = NHD_RdDensCat, y = yield_med3)) +
+    geom_point(alpha = 0.8, size = 3, 
+               color = "#405F8A") +
+    #scale_x_log10() +
+    scale_y_log10() +
+    labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
+         y = expression(Maximum~Algal~Yield~(Lambert))) +
+    theme_bw())
+
+# MAY vs. NO3:
+(fig3.9 <- ggplot(dat_yield_rmax, aes(x = Nitrate, y = yield_med3)) +
+    geom_point(alpha = 0.8, size = 3, color = "#38557A") +
+    scale_x_log10() +
+    scale_y_log10() +
+    labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
+         y = expression(Maximum~Algal~Yield~(Lambert))) +
+    theme_bw())
+
+# MAY vs. PO4:
+(fig3.10 <- ggplot(dat_yield_rmax, aes(x = Orthophosphate, 
+                                       y = yield_med3)) +
+    geom_point(alpha = 0.8, size = 3, 
+               color = "#304969") +
+    scale_x_log10() +
+    scale_y_log10() +
+    labs(x = expression(Mean~OrthoPhosphate~(mg/L~PO[4]-P)),
+         y = expression(Maximum~Algal~Yield~(Lambert))) +
+    theme_bw())
+
+# MAY vs. dams:
+(fig3.11 <- ggplot(dat_yield_rmax, aes(x = Dam, y = yield_med3)) +
+    geom_boxplot(alpha = 0.6, 
+                 fill = "#273C57", color = "#273C57") +
+    scale_y_log10() +
+    labs(x = expression(Likelihood~of~Influence~by~Dams),
+         y = expression(Maximum~Algal~Yield~(Lambert))) +
+    theme_bw())
+
+# MAY vs. canals:
+(fig3.12 <- ggplot(dat_yield_rmax, aes(x = Canal, y = yield_med3)) +
+    geom_boxplot(alpha = 0.6, 
+                 fill = "#1E2F46", color = "#1E2F46") +
+    scale_y_log10() +
+    labs(x = expression(Likelihood~of~Influence~by~Canals),
+         y = expression(Maximum~Algal~Yield~(Lambert))) +
+    theme_bw())
+
+# Combine figures above.
+(fig_yield_med3 <- fig3.1 + fig3.2 + fig3.3 +
+    fig3.4 + fig3.5 + fig3.6 +
+    fig3.7 + fig3.8 + fig3.9 +
+    fig3.10 + fig3.11 + fig3.12 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 4))
+
+# And export for use in the Rmarkdown file.
+# ggsave(fig_yield_med3,
+#        filename = "figures/teton_fall22/maxalgyield3_12panel_021323.jpg",
 #        width = 30,
 #        height = 40,
 #        units = "cm") # n = 159
