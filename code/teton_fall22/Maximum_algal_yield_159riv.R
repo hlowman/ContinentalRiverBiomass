@@ -57,12 +57,15 @@ dat_out_yield_med <- dat_out_df %>%
   group_by(site_name) %>%
   summarize(yield_med1 = median(yield_1),
             yield_med2 = median(yield_2),
-            yield_med3 = median(yield_3)) %>%
+            yield_med3 = median(yield_3),
+            lambda_med = median(lambda)) %>%
   ungroup()
 
 # Quick plots.
 hist(dat_out_yield_med$yield_med1)
 hist(dat_out_yield_med$yield_med2) # still some negative values hmmm...
+# Oh, this is because we don't yet have the poorly performing sites
+# filtered out.
 hist(dat_out_yield_med$yield_med3) # seems similar to formula 1 but x100
 
 # Combine with rmax dataset.
@@ -81,18 +84,27 @@ saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
 # Distribution of MAY values:
 (fig1.1 <- ggplot(dat_yield_rmax, aes(x = yield_med1)) +
    geom_histogram(bins = 60, 
-                  fill = "#D3E3CA", color = "#D3E3CA") +
+                  fill = "#D3E3CA", color = "#C7DBBC") +
    labs(x = expression(Maximum~Algal~Yield~(Yakulic/Lowman)),
         y = "Count") +
    theme_bw())
 
 # MAY vs. rmax:
 (fig1.2 <- ggplot(dat_yield_rmax, aes(x = r_med, y = yield_med1)) +
-    geom_point(alpha = 0.9, size = 3,
-               color = "#CCDFC3") +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#B7CFAC") +
     scale_y_log10() +
     labs(y = expression(Maximum~Algal~Yield~(Yakulic/Lowman)),
          x = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# MAY vs. lambda:
+(fig1.2.2 <- ggplot(dat_yield_rmax, aes(x = lambda_med, y = yield_med1)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#687659") +
+    scale_y_log10() +
+    labs(y = expression(Maximum~Algal~Yield~(Yakulic/Lowman)),
+         x = expression(Lambda)) +
     theme_bw())
 
 # MAY vs. GPP:
@@ -206,22 +218,42 @@ saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
 #        height = 40,
 #        units = "cm") # n = 159
 
+# And making a smaller, three-panel plot.
+(fig_yield_med1_tiny <- fig1.1 + fig1.2 + fig1.2.2 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 1))
+
+# ggsave(fig_yield_med1_tiny,
+#        filename = "figures/teton_fall22/maxalgyield1_3panel_021323.jpg",
+#        width = 30,
+#        height = 10,
+#        units = "cm") # n = 159
+
 ##### Formula #2: #####
 # Distribution of MAY values:
 (fig2.1 <- ggplot(dat_yield_rmax, aes(x = yield_med2)) +
     geom_histogram(bins = 60, 
-                   fill = "#F6EECF", color = "#F6EECF") +
+                   fill = "#F6EECF", color = "#EEDCB4") +
     labs(x = expression(Maximum~Algal~Yield~(Scheuerell)),
          y = "Count") +
     theme_bw())
 
 # MAY vs. rmax:
 (fig2.2 <- ggplot(dat_yield_rmax, aes(x = r_med, y = yield_med2)) +
-    geom_point(alpha = 1, size = 3,
-               color = "#F2E5C1") +
+    geom_point(alpha = 0.9, size = 3,
+               color = "#D0B692") +
     scale_y_log10() +
     labs(y = expression(Maximum~Algal~Yield~(Scheuerell)),
          x = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# MAY vs. lambda:
+(fig2.2.2 <- ggplot(dat_yield_rmax, aes(x = lambda_med, y = yield_med2)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#53261B") +
+    scale_y_log10() +
+    labs(y = expression(Maximum~Algal~Yield~(Scheuerell)),
+         x = expression(Lambda)) +
     theme_bw())
 
 # MAY vs. GPP:
@@ -335,11 +367,22 @@ saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
 #        height = 40,
 #        units = "cm") # n = 159
 
+# And combine and export tiny figure as well.
+(fig_yield_med2_tiny <- fig2.1 + fig2.2 + fig2.2.2 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 1))
+
+# ggsave(fig_yield_med2_tiny,
+#        filename = "figures/teton_fall22/maxalgyield2_3panel_021323.jpg",
+#        width = 30,
+#        height = 10,
+#        units = "cm") # n = 159
+
 ##### Formula #3: #####
 # Distribution of MAY values:
 (fig3.1 <- ggplot(dat_yield_rmax, aes(x = yield_med3)) +
    geom_histogram(bins = 60, 
-                  fill = "#A1CAF6", color = "#A1CAF6") +
+                  fill = "#A1CAF6", color = "#75A1DE") +
    labs(x = expression(Maximum~Algal~Yield~(Lambert)),
         y = "Count") +
    theme_bw())
@@ -347,10 +390,19 @@ saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
 # MAY vs. rmax:
 (fig3.2 <- ggplot(dat_yield_rmax, aes(x = r_med, y = yield_med3)) +
     geom_point(alpha = 0.9, size = 3,
-               color = "#8BB5EA") +
+               color = "#5982BD") +
     scale_y_log10() +
     labs(y = expression(Maximum~Algal~Yield~(Lambert)),
          x = expression(Maximum~Growth~Rate~(r[max]))) +
+    theme_bw())
+
+# MAY vs. lambda:
+(fig3.2.2 <- ggplot(dat_yield_rmax, aes(x = lambda_med, y = yield_med3)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#304969") +
+    scale_y_log10() +
+    labs(y = expression(Maximum~Algal~Yield~(Lambert)),
+         x = expression(Lambda)) +
     theme_bw())
 
 # MAY vs. GPP:
@@ -462,6 +514,17 @@ saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
 #        filename = "figures/teton_fall22/maxalgyield3_12panel_021323.jpg",
 #        width = 30,
 #        height = 40,
+#        units = "cm") # n = 159
+
+# And again create smaller three-paneled plot and export.
+(fig_yield_med3_tiny <- fig3.1 + fig3.2 + fig3.2.2 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 1))
+
+# ggsave(fig_yield_med3_tiny,
+#        filename = "figures/teton_fall22/maxalgyield3_3panel_021323.jpg",
+#        width = 30,
+#        height = 10,
 #        units = "cm") # n = 159
 
 # End of script.
