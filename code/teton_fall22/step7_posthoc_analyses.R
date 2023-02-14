@@ -14,7 +14,7 @@
 # downloaded and added to a folder of the appropriate name prior to running
 # the code.
 
-# This file will perform the linear regressions to explore covariates that
+# This file will perform the post-hoc analyses to explore covariates that
 # might explain the median parameter estimates from our model output.
 
 #### Setup ####
@@ -23,7 +23,7 @@
 lapply(c("tidyverse", "lubridate", "data.table",
          "GGally", "glmmTMB", "MuMIn", "effects",
          "DHARMa", "lme4", "multcomp", "patchwork",
-         "modelsummary", "here", "nlme"), require, character.only=T)
+         "modelsummary", "here", "nlme", "brms"), require, character.only=T)
 
 #### Data ####
 
@@ -36,10 +36,10 @@ dat_rmax <- readRDS("data_working/rmax_filtered_159sites_113022.rds")
 dat_Qc <- readRDS("data_working/QcQ2_filtered_141sites_113022.rds")
 
 # Also , the data for maximum algal yields.
-dat_yield <- readRDS("data_working/maxalgalyield_159sites_120822.rds")
+dat_yield <- readRDS("data_working/maxalgalyield_159sites_021323.rds")
 
 # Finally, the data for sites' Qc exceedances.
-dat_exc <- readRDS("data_working/Qc_exceedances_159sites_120822.rds")
+dat_exc <- readRDS("data_working/Qc_exceedances_159sites_021423.rds")
 
 # And the hypoxia dataset for additional info re: precip. "pre_mm_cyr"
 site_info <- read_csv("data_raw/GRDO_GEE_HA_NHD_2021_02_07.csv")
@@ -56,7 +56,7 @@ site_precip <- site_info %>%
 site_HUC2 <- site_HUC %>%
   dplyr::select(site_name, huc2_id)
 
-#### Model 1: rmax ####
+#### Model 1: rmax LMEM  ####
 
 # Trim imported data down to variables of interest.
 
@@ -493,20 +493,22 @@ coef(aout_pre)
 # width_log     0.3185124321 0.0835037112 93  3.8143506 0.0002455406
 # pre_mm_cyr   -0.0000872829 0.0001621342 93 -0.5383375 0.5916302415
 
-#### Model 2: Max. Algal Yield ####
+#### Model 2: Max. Algal Yield using 'brms' ####
 
-# First, need to bind MAY estimates with remaining data
-just_may <- dat_yield %>%
-  dplyr::select(site_name, may_med)
+# First, need to bind yield estimates with remaining data
+# Using calculation based on eq. 7b from Scheuerell 2016 = `yield_med2`
+# Combining with datasets from above.
+dat_yield_combo <- left_join(dat_yield, site_precip, by = c("site_name" = "SiteID"))
 
-dat_rmax_trim3 <- left_join(dat_rmax_trim2, just_may)
+dat_yield_combo <- left_join(dat_yield_combo, site_HUC2)
 
-# And visualize the relationships with MAY median values.
-may_covs <- ggpairs(dat_rmax_trim3 %>% 
-                       dplyr::select(may_med, cvQ:Orthophosphate))
+# And visualize the relationships with median yield values.
+may_covs <- ggpairs(dat_yield_combo %>% 
+                       dplyr::select(yield_med2, cvQ:Orthophosphate,
+                                     pre_mm_cyr:huc2_id))
 
 # ggsave(may_covs,
-#        filename = "figures/teton_fall22/may_covariates.jpg",
+#        filename = "figures/teton_fall22/yield_covariates.jpg",
 #        width = 50,
 #        height = 50,
 #        units = "cm")
@@ -514,45 +516,56 @@ may_covs <- ggpairs(dat_rmax_trim3 %>%
 # Some notes regarding these covariates.
 
 # (1) I think I will again log transform the following variables: 
-# NHD_AREASQKM, width_med, Nitrate, and orthoP.
+# width_med, Nitrate, and orthoP.
 
 # (2) Will keep in mind correlations btw covariates found earlier.
 
-# (3) CVq and stream width jump out as potentially important.
+# (3) The following jump out as potentially important (not including those
+# data used to actually generate estimates): temperature, latitude, road
+# density/pct impervious in watershed, empirical coefficient `a` of
+# width estimation equation, maybe canals+dams??, width, precip, and highest
+# outliers appear in certain HUC2s.
 
 # Proposed starting model structure:
 
-# max algal yield ~ cvQ + light + temp + size + roads + dams + 1 | HUC10
+# max algal yield ~ temp + precip + roads + dams + width + 1 | HUC2
+
+# Choosing precip over latitude for now, since they're highly
+# correlated, but precip seems less skewed than the obvious geographic
+# NE bias of these USGS gauges.
+
+# Wil create a separate model adding in nutrients based on best model
+# fit here (since records are far fewer).
 
 # One on one plots for covariates of interest vs. may.
 
-hist(dat_rmax_trim3$may_med)
+hist(dat_yield_combo$yield_med2)
 
-# Going to log transform may_med too.
-dat_rmax_trim3 <- dat_rmax_trim3 %>%
-  mutate(logmay = log10(may_med))
+# Going to log transform yield too.
+dat_yield_combo <- dat_yield_combo %>%
+  mutate(log_yield = log10(yield_med2)) %>%
+  mutate(log_width = log10(width_med))
 
-plot(logmay ~ cvQ, data = dat_rmax_trim3)
-plot(logmay ~ summerL, data = dat_rmax_trim3)
-plot(logmay ~ summerT, data = dat_rmax_trim3)
-plot(logmay ~ width_log, data = dat_rmax_trim3)
-plot(logmay ~ NHD_RdDensWs, data = dat_rmax_trim3)
-plot(logmay ~ Dam, data = dat_rmax_trim3)
-hist(dat_rmax_trim3$logmay)
+plot(log_yield ~ summerT, data = dat_yield_combo)
+plot(log_yield ~ pre_mm_cyr, data = dat_yield_combo)
+plot(log_yield ~ NHD_RdDensWs, data = dat_yield_combo)
+plot(log_yield ~ Dam, data = dat_yield_combo)
+plot(log_yield ~ log_width, data = dat_yield_combo)
+plot(log_yield ~ huc2_id, data = dat_yield_combo)
+hist(dat_yield_combo$log_yield)
 
-# Ok, and making the final dataset with which to build models since I can't have
-# NAs with many of these functions.
-dat_may_lm <- dat_rmax_trim3 %>%
-  dplyr::select(logmay, cvQ, summerL, summerT, NHD_RdDensWs, 
-                Dam, width_log, huc10_id) %>%
-  drop_na() # 151 sites left
+# Ok, and making the final dataset with which to build models
+dat_yield_brms <- dat_yield_combo %>%
+  dplyr::select(log_yield, summerT, pre_mm_cyr,
+                NHD_RdDensWs, Dam, log_width,
+                huc2_id)
 
-##### Step 1: Create lm() and check residuals.
+##### Step 1: Create multi-level model.
 
-# max algal yield ~ cvQ + light + temp + size + roads + dams + 1 | HUC10
-
-b1 <- lm(logmay ~ cvQ + summerL + summerT + width_log + NHD_RdDensWs + Dam, 
-         data = dat_may_lm)
+y1 <- brm(log_yield ~ summerT + pre_mm_cyr + NHD_RdDensWs +
+            Dam + log_width + (1|huc2_id), 
+         data = dat_yield_brms, family = gaussian())
+# assumes 4 chains and 2000 iterations
 
 plot(b1) # residuals looking better with the log transform
 
