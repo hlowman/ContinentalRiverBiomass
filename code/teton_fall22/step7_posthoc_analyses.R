@@ -24,7 +24,7 @@ lapply(c("tidyverse", "lubridate", "data.table",
          "GGally", "glmmTMB", "MuMIn", "effects",
          "DHARMa", "lme4", "multcomp", "patchwork",
          "modelsummary", "here", "nlme", "brms", "loo",
-         "tidybayes"), require, character.only=T)
+         "bayesplot", "tidybayes"), require, character.only=T)
 
 #### Data ####
 
@@ -680,6 +680,30 @@ get_variables(y1)
 # to see all results.
 
 # Default is type = "intervals".
+
+# Also trying to figure out a way to plot histograms/density plots
+# over top of these intervals.
+
+my_posterior <- as.matrix(y1)
+
+(y_fig2 <- mcmc_areas(my_posterior,
+           # removed precip bc it was flattening everything
+           # then removed all but "significant" covariates
+           pars = c("b_summerT", "b_Dam95", "b_log_width"),
+           prob = 0.95) +
+  ggtitle("Posterior distributions",
+          "with 95% credible intervals not crossing zero") +
+  vline_at(v = 0) +
+  labs(x = "Posterior",
+       y = "Coefficients") +
+  theme_bw())
+
+# Save out this figure.
+# ggsave(y_fig2,
+#        filename = "figures/teton_fall22/brms_yield_sig_021423.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
 
 ##### Nutrients #####
 
