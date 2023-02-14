@@ -23,7 +23,8 @@
 lapply(c("tidyverse", "lubridate", "data.table",
          "GGally", "glmmTMB", "MuMIn", "effects",
          "DHARMa", "lme4", "multcomp", "patchwork",
-         "modelsummary", "here", "nlme", "brms"), require, character.only=T)
+         "modelsummary", "here", "nlme", "brms", "loo",
+         "tidybayes"), require, character.only=T)
 
 #### Data ####
 
@@ -565,118 +566,120 @@ dat_yield_brms <- dat_yield_combo %>%
 y1 <- brm(log_yield ~ summerT + pre_mm_cyr + NHD_RdDensWs +
             Dam + log_width + (1|huc2_id), 
          data = dat_yield_brms, family = gaussian())
-# assumes 4 chains and 2000 iterations
+# assumes 4 chains and 2000 iterations (1000 warm-up)
+# started at 10:39am - finished at 10:40am :)
 
-plot(b1) # residuals looking better with the log transform
+# Warning message:
+# Rows containing NAs were excluded from the model. 
 
-summary(b1) # examine initial model output without the grouping by watershed
-# width, temperature, and maybe roads/dams jump out as important?
+##### Step 2: Examine model outputs.
 
-##### Step 2: Fit the lm() with GLS and compare to lme().
+summary(y1)
 
-b2 <- gls(logmay ~ cvQ + summerL + summerT + width_log + NHD_RdDensWs + Dam, 
-          data = dat_may_lm) # effectively a lm
+#              Estimate Est.Error l-95% CI u-95% CI Rhat
+# Intercept        0.55      0.37    -0.16     1.25 1.00
+# summerT         -0.03      0.01    -0.05    -0.01 1.00
+# pre_mm_cyr      -0.00      0.00    -0.00    -0.00 1.00
+# NHD_RdDensWs     0.02      0.02    -0.01     0.05 1.00
+# Dam50            0.10      0.16    -0.22     0.41 1.00
+# Dam80            0.10      0.13    -0.16     0.36 1.00
+# Dam95            0.19      0.09     0.02     0.37 1.00
+# log_width        0.50      0.10     0.30     0.71 1.00
 
-b3 <- lme(logmay ~ cvQ + summerL + summerT + width_log + NHD_RdDensWs + Dam, 
-          random = ~1 | huc10_id, data = dat_may_lm) # with random effect
+# Well, for one, this is great convergence! All Rhat < 1.05.
+# And at first glance, temperature, dam95, and stream width jump out
+# as important.
 
-anova(b2, b3) # b3 preferred, and I want to keep the random term in
+##### Step 3: Examine model diagnostics.
 
-##### Step 3: Decide on a variance structure.
+# Everything appears to have converged well, so let's look at chain
+# mixing and posterior distributions.
+plot(y1, variable = c("b_summerT", "b_pre_mm_cyr", "b_NHD_RdDensWs",
+                      "b_Dam50", "b_Dam80", "b_Dam95", "b_log_width"))
 
-# None at the moment.
+# Chains all appear well-mixed, but let's also check things in shinystan.
+launch_shinystan(y1)
 
-##### Step 4,5,6: Fit the lme(), compare with lm(), and check residuals.
+# No divergent transitions appear in the log posterior plots for any
+# of the parameters.
 
-# See Steps 2 & 3.
+# Finally, examine to be sure no n_eff are < 0.1
+mcmc_plot(y1, type = "neff")
 
-##### Step 7/8: Step-wise Optimal Fixed Structure.
+##### Step 4: Examine model relationships for each predictor.
 
-# Investigate precipitation, but keep in mind, it drops 40+ records.
-b4 <- lme(logmay ~ cvQ + summerL + summerT + width_log + NHD_RdDensWs + Dam, 
-            random = ~1 | huc10_id, 
-            method = "ML",
-            data = dat_rmax_trim3 %>%
-              dplyr::select(logmay, cvQ, summerL, summerT, NHD_RdDensWs, 
-                            Dam, width_log, pre_mm_cyr, huc10_id) %>%
-              drop_na())
+plot(conditional_effects(y1, effects = "summerT"))
+plot(conditional_effects(y1, effects = "pre_mm_cyr"))
+plot(conditional_effects(y1, effects = "NHD_RdDensWs"))
+plot(conditional_effects(y1, effects = "Dam"))
+plot(conditional_effects(y1, effects = "log_width"))
 
-b5 <- lme(logmay ~ cvQ + summerL + summerT + width_log + NHD_RdDensWs + Dam +
-            pre_mm_cyr, 
-          random = ~1 | huc10_id, 
-          method = "ML",
-          data = dat_rmax_trim3 %>%
-            dplyr::select(logmay, cvQ, summerL, summerT, NHD_RdDensWs, 
-                          Dam, width_log, pre_mm_cyr, huc10_id) %>%
-            drop_na())
+# Note, can investigate scenarios like effect1:effect2 here
+# and it will automatically choose percentiles to predict.
 
-anova(b4, b5) # They're nearly identical, and precip is *somewhat* correlated with
-# Lat/Lon, so since it forces us to drop so many records (n=115 remaining),
-# I'm skipping it again.
+##### Step 5: Investigate possible overdispersion.
 
-# Investigate Qc exceedance metrics.
+# Add column denoting number of observations.
+dat_yield_brms$obs <- c(1:length(dat_yield_brms$log_yield))
 
-# Build a model to investigate Qc exceedance instead of cvQ as a measured of
-# flow disturbance.
+y1.1 <- brm(log_yield ~ summerT + pre_mm_cyr + NHD_RdDensWs +
+            Dam + log_width + (1|huc2_id) + (1|obs), 
+          data = dat_yield_brms, family = gaussian())
+# 603 divergent transitions EEK!
 
-dat_rmax_trim4 <- left_join(dat_rmax_trim3, dat_exc)
+# Compare with original model using leave-one-out approximation.
+loo(y1, y1.1)
 
-dat_may_lm2 <- dat_rmax_trim4 %>%
-  dplyr::select(logmay, cvQ, total_exc_events, total_exc_days, summerL, summerT, 
-                NHD_RdDensWs, Dam, width_log, huc10_id) %>%
-  drop_na() # 152 sites left
+# Model comparisons:
+#     elpd_diff se_diff
+# y1.1   0.0       0.0  
+# y1   -14.9       1.7 
 
-b6 <- lme(logmay ~ cvQ + summerL + summerT +  NHD_RdDensWs + Dam + width_log, 
-            random = ~1 | huc10_id, 
-            method = "ML",
-            data = dat_may_lm2)
+# Higher expected log posterior density (elpd) values = better fit.
 
-b7 <- lme(logmay ~ total_exc_events + summerL + summerT + NHD_RdDensWs + 
-            Dam + width_log, 
-          random = ~1 | huc10_id, 
-          method = "ML",
-          data = dat_may_lm2)
+# So, in this case model accounting for overdispersion (y1.1) fits better.
+# But there are 40 problematic observations...
 
-b8 <- lme(logmay ~ total_exc_days + summerL + summerT + NHD_RdDensWs + 
-             Dam + width_log, 
-           random = ~1 | huc10_id, 
-           method = "ML",
-           data = dat_may_lm2)
+# Compare with WAIC instead.
+waic1 <- waic(y1)
+waic2 <- waic(y1.1)
+loo_compare(waic1, waic2)
 
-anova(b6, b7, b8) # exceedance events seems to be slightly better measure of discharge, going to include exceedance days for continuity with rmax
+# Same output as above.
+#      elpd_diff se_diff
+# y1.1   0.0       0.0  
+# y1   -17.4       1.2
 
-##### Step 9: Refit with REML for final full model
+##### Step 6: Plot the results.
 
-# Precip didn't seem to add anything to the model, and subtracted >40 records,
-# so choosing not to use it at this time. Nutrients examined below.
-bfinal <- lme(logmay ~ total_exc_days + # rather than cvQ bc it uses Qc threshold
-                summerL + # better performing than mean L
-                summerT + # more informative than Lat, which it was correlated with
-                width_log + # not best performing, but most trustworthy size metric
-                NHD_RdDensWs + # used by JB as metric of development
-                Dam, # more pertinent to our interests than "Canal"
-              random = ~1 | huc10_id, # because ~30% of sites share a watershed
-              method = "REML",
-              data = dat_may_lm2) # n = 151
+get_variables(y1)
 
-# Examine model diagnostics.
-plot(bfinal) # similar shape as rmax residuals
-qqnorm(bfinal) # looks fine
+# b_Intercept refers to global mean
+# r_huc2_id[] are the offsets from that mean for each condition
 
-# Examine model outputs.
-bout <- summary(bfinal)
-coef(bout)
+(y_fig <- mcmc_plot(y1, variable = c("b_summerT", "b_pre_mm_cyr",
+                                    "b_NHD_RdDensWs", "b_Dam50", 
+                                    "b_Dam80", "b_Dam95", "b_log_width"),
+      #type = "intervals",
+      point_est = "median", # default = "median"
+      prob = 0.66, # default = 0.5
+      prob_outer = 0.95) + # default = 0.9
+    vline_at(v = 0) +
+    labs(x = "Posterior",
+         y = "Coefficients") +
+    theme_bw())
 
-#                        Value    Std.Error  DF    t-value      p-value
-# (Intercept)    -1.461022e+00 4.444644e-01 116 -3.2871513 1.339547e-03
-# total_exc_days  2.050021e-03 6.559679e-04  26  3.1251851 4.333923e-03
-# summerL         4.917369e-07 4.355078e-07  26  1.1291116 2.691612e-01
-# summerT        -3.292882e-02 1.662697e-02  26 -1.9804455 5.832675e-02
-# width_log       6.928018e-01 1.359675e-01  26  5.0953496 2.613403e-05
-# NHD_RdDensWs    4.451154e-02 2.293182e-02  26  1.9410382 6.316716e-02
-# Dam50          -7.789439e-02 1.928611e-01  26 -0.4038886 6.895975e-01
-# Dam80           1.292574e-01 1.781592e-01  26  0.7255162 4.746156e-01
-# Dam95           2.898039e-01 1.251119e-01  26  2.3163581 2.868362e-02
+# Save out this figure.
+# ggsave(y_fig,
+#        filename = "figures/teton_fall22/brms_yield_021423.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
+
+# Can also use pars = c("^r_", "^b_", "^sd_") in place of variable phrasing
+# to see all results.
+
+# Default is type = "intervals".
 
 ##### Nutrients #####
 
