@@ -4,6 +4,7 @@
 
 # The following script will calculate the number of times each site
 # exceeds what we have estimated as the critical disturbance threshold (Qc).
+
 # Then, it will examine if the number of exceedances has any relationship
 # estimated rmax values.
 
@@ -22,6 +23,9 @@ dat_Qc <- readRDS("data_working/QcQ2_159sites_120822.rds")
 
 # Finally the dataset containing rmax values for plotting purposes.
 dat_rmax <- readRDS("data_working/rmax_filtered_159sites_113022.rds")
+
+# Also also, hypoxia dataset for additional info re: slope
+site_info <- read_csv("data_raw/GRDO_GEE_HA_NHD_2021_02_07.csv")
 
 # Now, to create a practice workflow to later turn into a function to
 # quantify exceedances of Qc. Going to first pick a site where it actually
@@ -86,17 +90,21 @@ site1 <- dat_in_exc$nwis_02203900
 # Make the list back into a df
 dat_in_exc_df <- map_df(dat_in_exc, ~as.data.frame(.x), .id="site_name")
 
-# And summarize total exceedance events and exceedance days
+# And summarize total exceedance events and exceedance days as well as
+# total days in a record.
 dat_exceed_sum <- dat_in_exc_df %>%
   group_by(site_name) %>%
   summarize(total_exc_events = sum(sequence),
-            total_exc_days = sum(total)) %>%
-  ungroup()
+            total_exc_days = sum(total),
+            total_days = n()) %>%
+  ungroup() %>%
+  # calculate # of exceedance days relative to length of dataset
+  mutate(total_exc_rel = total_exc_days/total_days)
 
 # Join with rmax values.
 dat_exc_rmax <- inner_join(dat_exceed_sum, dat_rmax)
 
-# And plot to examine for relationship.
+# And plot to examine for relationships.
 (exceed_fig1 <- ggplot(dat_exc_rmax, aes(x = total_exc_events, y = r_med)) +
   geom_point(size = 3, alpha = 0.7) +
   labs(x = expression(Total~Q[c]~Exceedance~Events),
@@ -139,7 +147,66 @@ dat_exc_rmax <- inner_join(dat_exceed_sum, dat_rmax)
 #        height = 20,
 #        units = "cm") # n = 159
 
+# Additional figures after speaking with Joanna.
+(exceed_fig3 <- ggplot(dat_exc_rmax, aes(x = total_exc_rel*100, 
+                                         y = r_med,
+                                         color = width_med)) +
+    geom_point(size = 3, alpha = 0.8) +
+    labs(x = expression(Percent~Q[c]~Exceedance~Days~'in'~Record),
+         y = expression(Maximum~Growth~Rate~(r[max])),
+         color = "Stream Width") +
+    scale_color_viridis() +
+    scale_x_log10() + 
+    theme_bw())
+
+# Trim site info dataset for slope info only
+site_info_trim <- site_info %>%
+  select(SiteID, slope_calc)
+
+# Join with exceedance and rmax values.
+dat_exc_rmax_slope <- left_join(dat_exc_rmax, site_info_trim, by = c("site_name" = "SiteID"))
+
+# And additional figures using slope.
+(exceed_fig4 <- ggplot(dat_exc_rmax_slope, aes(x = total_exc_rel*100, 
+                                         y = slope_calc,
+                                         color = width_med)) +
+    geom_point(size = 3, alpha = 0.8) +
+    labs(x = expression(Percent~Q[c]~Exceedance~Days~'in'~Record),
+         y = "Slope",
+         color = "Stream Width") +
+    scale_color_viridis() +
+    scale_x_log10() + 
+    theme_bw())
+
+# Pulling out Qc:Q2yr values and adding to dataset.
+dat_Qc_trim2 <- dat_Qc %>%
+  select(site_name, Qc_Q2yr)
+
+dat_exc_rmax_slope_QcQ2 <- left_join(dat_exc_rmax_slope, dat_Qc_trim2)
+
+(exceed_fig4.2 <- ggplot(dat_exc_rmax_slope_QcQ2, aes(x = Qc_Q2yr, 
+                                               y = slope_calc,
+                                               color = width_med)) +
+    geom_point(size = 3, alpha = 0.8) +
+    labs(x = expression(Q[c]~to~Q["2yr"]),
+         y = "Slope",
+         color = "Stream Width") +
+    scale_color_viridis() +
+    scale_x_log10() + 
+    theme_bw())
+
+(fig_exc2 <- exceed_fig3 + exceed_fig4.2 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 1))
+
+# And export for use in the Rmarkdown file.
+# ggsave(fig_exc2,
+#        filename = "figures/teton_fall22/rmax_slope_exceedance_021423.jpg",
+#        width = 30,
+#        height = 10,
+#        units = "cm") # n = 159
+
 # And export just the exceedance data for use in the linear models.
-saveRDS(dat_exceed_sum, "data_working/Qc_exceedances_159sites_120822.rds")
+saveRDS(dat_exceed_sum, "data_working/Qc_exceedances_159sites_021423.rds")
 
 # End of script.
