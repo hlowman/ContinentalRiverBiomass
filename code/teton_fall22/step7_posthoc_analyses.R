@@ -705,42 +705,311 @@ my_posterior <- as.matrix(y1)
 #        height = 10,
 #        units = "cm")
 
+##### Latitude #####
+
+# Proposed starting model structure:
+
+# max algal yield ~ temp + lat + roads + dams + width + 1 | HUC2
+
+# Choosing latitude here, since it drops less observations.
+
+# One on one plots for covariates of interest vs. may.
+
+hist(dat_yield_combo$yield_med2)
+plot(log_yield ~ Lat_WGS84, data = dat_yield_combo)
+
+# Ok, and making the final dataset with which to build models
+dat_yield_brms2 <- dat_yield_combo %>%
+  dplyr::select(log_yield, summerT, Lat_WGS84,
+                NHD_RdDensWs, Dam, log_width,
+                huc2_id)
+
+##### Step 1: Create multi-level model.
+
+y2 <- brm(log_yield ~ summerT + Lat_WGS84 + NHD_RdDensWs +
+            Dam + log_width + (1|huc2_id), 
+          data = dat_yield_brms2, family = gaussian())
+# assumes 4 chains and 2000 iterations (1000 warm-up)
+# started at 10:53am - finished at 10:54am :)
+
+# Warning message:
+# Rows containing NAs were excluded from the model. 
+
+##### Step 2: Examine model outputs.
+
+summary(y2)
+
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.38      0.84    -1.29     2.05 1.00     3285     2745
+# summerT         -0.03      0.02    -0.06    -0.00 1.00     4034     3519
+# Lat_WGS84       -0.00      0.02    -0.03     0.03 1.00     3104     2767
+# NHD_RdDensWs     0.02      0.02    -0.01     0.05 1.00     3543     2774
+# Dam50           -0.04      0.13    -0.30     0.21 1.00     5807     3232
+# Dam80            0.17      0.11    -0.05     0.40 1.00     5305     2545
+# Dam95            0.18      0.08     0.02     0.34 1.00     4559     3233
+# log_width        0.50      0.10     0.31     0.69 1.00     3431     3238
+
+# Well, great convergence again! All Rhat < 1.05.
+# And temperature, dam95, and stream width again jump out.
+
+##### Step 3: Examine model diagnostics.
+
+# Everything appears to have converged well, so let's look at chain
+# mixing and posterior distributions.
+plot(y2, variable = c("b_summerT", "b_Lat_WGS84", "b_NHD_RdDensWs",
+                      "b_Dam50", "b_Dam80", "b_Dam95", "b_log_width"))
+
+# Chains all appear well-mixed, but let's also check things in shinystan.
+launch_shinystan(y2)
+
+# No divergent transitions appear in the log posterior plots for any
+# of the parameters.
+
+# Finally, examine to be sure no n_eff are < 0.1
+mcmc_plot(y2, type = "neff")
+
+##### Step 4: Examine model relationships for each predictor.
+
+plot(conditional_effects(y2, effects = "summerT"))
+plot(conditional_effects(y2, effects = "Lat_WGS84"))
+plot(conditional_effects(y2, effects = "NHD_RdDensWs"))
+plot(conditional_effects(y2, effects = "Dam"))
+plot(conditional_effects(y2, effects = "log_width"))
+
+# Note, can investigate scenarios like effect1:effect2 here
+# and it will automatically choose percentiles to predict.
+
+##### Step 5: Investigate possible overdispersion.
+
+# Add column denoting number of observations.
+dat_yield_brms2$obs <- c(1:length(dat_yield_brms2$log_yield))
+
+y2.1 <- brm(log_yield ~ summerT + Lat_WGS84 + NHD_RdDensWs +
+              Dam + log_width + (1|huc2_id) + (1|obs), 
+            data = dat_yield_brms2, family = gaussian())
+# 76 divergent transitions
+
+# Compare with original model using leave-one-out approximation.
+loo(y2, y2.1)
+
+# Model comparisons:
+#     elpd_diff se_diff
+# y2.1   0.0       0.0  
+# y2    -4.4       0.7 
+
+# Higher expected log posterior density (elpd) values = better fit.
+
+# So, in this case model accounting for overdispersion (y2.1) fits better.
+# But there are 22 problematic observations...
+
+##### Step 6: Plot the results.
+
+get_variables(y2)
+
+# b_Intercept refers to global mean
+# r_huc2_id[] are the offsets from that mean for each condition
+
+(y2_fig <- mcmc_plot(y2, variable = c("b_summerT", "b_Lat_WGS84",
+                                     "b_NHD_RdDensWs", "b_Dam50", 
+                                     "b_Dam80", "b_Dam95", "b_log_width"),
+                    #type = "intervals",
+                    point_est = "median", # default = "median"
+                    prob = 0.66, # default = 0.5
+                    prob_outer = 0.95) + # default = 0.9
+    vline_at(v = 0) +
+    labs(x = "Posterior",
+         y = "Coefficients") +
+    theme_bw())
+
+# Save out this figure.
+# ggsave(y2_fig,
+#        filename = "figures/teton_fall22/brms_yield2_021623.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
+
+# Also trying to figure out a way to plot histograms/density plots
+# over top of these intervals.
+
+my_posterior2 <- as.matrix(y2)
+
+(y2_fig2 <- mcmc_areas(my_posterior2,
+                      # removed lat bc it was flattening everything
+                      # then removed all but "significant" covariates
+                      pars = c("b_summerT", "b_Dam95", "b_log_width"),
+                      prob = 0.95) +
+    ggtitle("Posterior distributions",
+            "with 95% credible intervals not crossing zero") +
+    vline_at(v = 0) +
+    labs(x = "Posterior",
+         y = "Coefficients") +
+    theme_bw())
+
+# Save out this figure.
+# ggsave(y2_fig2,
+#        filename = "figures/teton_fall22/brms_yield2_sig_021623.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
+
 ##### Nutrients #####
 
 # And build separate model for nutrients.
+# Proposed starting model structure:
 
-dat_may_lm3 <- dat_rmax_trim3 %>%
-  dplyr::select(logmay, no3_log, po4_log, huc10_id) %>%
-  drop_na() # 89 sites left
+# max algal yield ~ temp + lat + roads + dams + width + NO3 + PO4 + 1 | HUC2
 
-b9 <- lme(logmay ~ no3_log + po4_log, 
-           random = ~1 | huc10_id, 
-           method = "ML",
-           data = dat_may_lm3)
+# Sticking with latitude here, since it drops less observations.
 
-plot(b9) # Looks ok.
-summary(b9)
+# Need to log transform nutrients.
+dat_yield_combo <- dat_yield_combo %>%
+  mutate(no3_log = log10(Nitrate),
+         po4_log = log10(Orthophosphate))
 
-# Refit with REML for final full model
+# One on one plots for covariates of interest vs. may.
 
-bfinal_nuts <- lme(logmay ~ no3_log + po4_log,
-                   random = ~1 | huc10_id, 
-                   method = "REML",
-                   data = dat_may_lm3)
+plot(log_yield ~ no3_log, data = dat_yield_combo)
+plot(log_yield ~ po4_log, data = dat_yield_combo)
 
-# Examine model diagnostics.
-plot(bfinal_nuts)
-qqnorm(bfinal_nuts) # Looking just fine.
+# Ok, and making the final dataset with which to build models
+dat_yield_brms3 <- dat_yield_combo %>%
+  dplyr::select(log_yield, summerT, Lat_WGS84,
+                NHD_RdDensWs, Dam, log_width,
+                no3_log, po4_log, huc2_id)
 
-# Examine model outputs.
-bout_nuts <- summary(bfinal_nuts)
-coef(bout_nuts)
+##### Step 1: Create multi-level model.
 
-#                   Value Std.Error DF    t-value     p-value
-# (Intercept) -0.73426230 0.2560306 73 -2.8678691 0.005398894
-# no3_log      0.32742324 0.1789020 13  1.8301825 0.090238344
-# po4_log      0.09956532 0.1856118 13  0.5364169 0.600729814
+y3 <- brm(log_yield ~ summerT + Lat_WGS84 + NHD_RdDensWs +
+            Dam + log_width + no3_log + po4_log + (1|huc2_id), 
+          data = dat_yield_brms3, family = gaussian(),
+          iter = 3000) 
+# upped to 3k, bc 2 div. transitions with 2000 iterations
+# started at 11:17am - finished at 11:20am :)
 
+# 1 divergent transition.
+
+##### Step 2: Examine model outputs.
+
+summary(y3)
+
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.40      1.24    -2.08     2.78 1.00     4411     3891
+# summerT         -0.02      0.03    -0.07     0.03 1.00     4646     4515
+# Lat_WGS84        0.00      0.02    -0.04     0.04 1.00     4243     3839
+# NHD_RdDensWs    -0.01      0.02    -0.04     0.03 1.00     5928     4530
+# Dam50           -0.20      0.21    -0.61     0.21 1.00     8027     4546
+# Dam80            0.01      0.15    -0.29     0.31 1.00     9333     4600
+# Dam95            0.13      0.10    -0.06     0.32 1.00     8336     4952
+# log_width        0.37      0.12     0.14     0.60 1.00     4768     4785
+# no3_log          0.02      0.12    -0.21     0.25 1.00     5186     4633
+# po4_log          0.14      0.12    -0.10     0.38 1.00     5485     4415
+
+# Well, great convergence again! All Rhat < 1.05.
+# And stream width again jumps out.
+
+##### Step 3: Examine model diagnostics.
+
+# Everything appears to have converged well, so let's look at chain
+# mixing and posterior distributions.
+plot(y3, variable = c("b_summerT", "b_Lat_WGS84", "b_NHD_RdDensWs",
+                      "b_Dam50", "b_Dam80", "b_Dam95", "b_log_width",
+                      "b_no3_log", "b_po4_log"))
+
+# Chains all appear well-mixed, but let's also check things in shinystan.
+launch_shinystan(y3)
+
+# 1 divergent transition.
+
+# Finally, examine to be sure no n_eff are < 0.1
+mcmc_plot(y3, type = "neff")
+
+##### Step 4: Examine model relationships for each predictor.
+
+plot(conditional_effects(y3, effects = "summerT"))
+plot(conditional_effects(y3, effects = "Lat_WGS84"))
+plot(conditional_effects(y3, effects = "NHD_RdDensWs"))
+plot(conditional_effects(y3, effects = "Dam"))
+plot(conditional_effects(y3, effects = "log_width"))
+plot(conditional_effects(y3, effects = "no3_log"))
+plot(conditional_effects(y3, effects = "po4_log"))
+
+# Note, can investigate scenarios like effect1:effect2 here
+# and it will automatically choose percentiles to predict.
+
+##### Step 5: Investigate possible overdispersion.
+
+# Add column denoting number of observations.
+dat_yield_brms3$obs <- c(1:length(dat_yield_brms3$log_yield))
+
+y3.1 <- brm(log_yield ~ summerT + Lat_WGS84 + NHD_RdDensWs +
+              Dam + log_width + no3_log + po4_log +
+              (1|huc2_id) + (1|obs), 
+            data = dat_yield_brms3, family = gaussian())
+# 13 divergent transitions
+
+# Compare with original model using leave-one-out approximation.
+loo(y3, y3.1)
+
+# Model comparisons:
+#     elpd_diff se_diff
+# y3.1   0.0       0.0  
+# y3   -11.3       1.0 
+
+# Higher expected log posterior density (elpd) values = better fit.
+
+# So, in this case model accounting for overdispersion (y3.1) fits better.
+# But there are 33 problematic observations...
+
+##### Step 6: Plot the results.
+
+get_variables(y3)
+
+# b_Intercept refers to global mean
+# r_huc2_id[] are the offsets from that mean for each condition
+
+(y3_fig <- mcmc_plot(y3, variable = c("b_summerT", "b_Lat_WGS84",
+                                      "b_NHD_RdDensWs", "b_Dam50", 
+                                      "b_Dam80", "b_Dam95", "b_log_width",
+                                      "b_no3_log", "b_po4_log"),
+                     #type = "intervals",
+                     point_est = "median", # default = "median"
+                     prob = 0.66, # default = 0.5
+                     prob_outer = 0.95) + # default = 0.9
+    vline_at(v = 0) +
+    labs(x = "Posterior",
+         y = "Coefficients") +
+    theme_bw())
+
+# Save out this figure.
+# ggsave(y3_fig,
+#        filename = "figures/teton_fall22/brms_yield3_021623.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
+
+# Also trying to figure out a way to plot histograms/density plots
+# over top of these intervals.
+
+my_posterior3 <- as.matrix(y3)
+
+(y3_fig2 <- mcmc_areas(my_posterior3,
+                       # removed lat bc it was flattening everything
+                       # then removed all but "significant" covariates
+                       pars = c("b_log_width"),
+                       prob = 0.95) +
+    ggtitle("Posterior distributions",
+            "with 95% credible intervals not crossing zero") +
+    vline_at(v = 0) +
+    labs(x = "Posterior",
+         y = "Coefficients") +
+    theme_bw())
+
+# Save out this figure.
+# ggsave(y3_fig2,
+#        filename = "figures/teton_fall22/brms_yield3_sig_021623.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
 
 #### Model 3: Qc:Q2yr ####
 
