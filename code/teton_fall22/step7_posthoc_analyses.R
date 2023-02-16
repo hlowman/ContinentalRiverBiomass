@@ -818,7 +818,7 @@ get_variables(y2)
                     prob_outer = 0.95) + # default = 0.9
     vline_at(v = 0) +
     labs(x = "Posterior",
-         y = "Coefficients") +
+         y = "Predictors") +
     theme_bw())
 
 # Save out this figure.
@@ -837,14 +837,14 @@ p_t <- conditional_effects(y2, effects = "summerT")
 (plot_t <- plot(p_t, plot = F)[[1]] +
   geom_smooth(color = "black") +
   labs(x = "Summer Temperature",
-       y = "Log of Maximum Biomass Accrual") +
+       y = "Log of Predicted Accrual") +
   theme_bw())
 
 p_d <- conditional_effects(y2, effects = "Dam")
 
 (plot_d <- plot(p_d, plot = F)[[1]] +
     labs(x = "Likelihood of Interference by Dams",
-         y = "Log of Maximum Biomass Accrual") +
+         y = "Log of Predicted Accrual") +
     theme_bw())
   
 p_w <- conditional_effects(y2, effects = "log_width")
@@ -852,7 +852,7 @@ p_w <- conditional_effects(y2, effects = "log_width")
 (plot_w <- plot(p_w, plot = F)[[1]] +
     geom_smooth(color = "black") +
     labs(x = "Log of River Width",
-         y = "Log of Maximum Biomass Accrual") +
+         y = "Log of Predicted Accrual") +
     theme_bw())
 
 # Now, let's combine the above using patchwork.
