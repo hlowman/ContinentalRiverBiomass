@@ -1053,9 +1053,8 @@ my_posterior3 <- as.matrix(y3)
 #### Model 3: Qc:Q2yr ####
 
 # Trim imported data down to variables of interest.
-
 dat_Qc_trim <- dat_Qc %>%
-  select(site_name,
+  dplyr::select(site_name,
          c_med, Qc_Q2yr, cvQ, meanGPP:NHD_AREASQKM, 
          NHD_RdDensCat:NHD_PctImp2011Ws, 
          Canal:width_med)
@@ -1067,9 +1066,11 @@ dat_Qc_trim <- left_join(dat_Qc_trim, site_precip, by = c("site_name" = "SiteID"
 dat_Qc_trim <- left_join(dat_Qc_trim, site_HUC2)
 
 # And visualize the relationships with Qc:Qy2r values.
-
-QcQ2_covs <- ggpairs(dat_Qc_trim %>% select(-site_name) %>%
-                       select(-NHD_RdDensWs, -NHD_PctImp2011Ws)) # trim for space
+QcQ2_covs <- ggpairs(dat_Qc_trim %>% 
+                       dplyr::select(-site_name) %>%
+                       dplyr::select(-NHD_RdDensWs,
+                                     -NHD_PctImp2011Ws)) 
+# trim for space
 
 # ggsave(QcQ2_covs,
 #        filename = "figures/teton_fall22/QcQ2_covariates.jpg",
@@ -1084,12 +1085,11 @@ QcQ2_covs <- ggpairs(dat_Qc_trim %>% select(-site_name) %>%
 
 # (2) Stream width and meanGPP also appear correlated (0.618), more strongly
 # than they did in the rmax covariate exploration. So, makes double sense
-# to remove them.
+# to remove GPP.
 
 # (3) Remaining Pearson's correlation values are below 0.5.
 
 # Log transform necessary covariates.
-
 dat_Qc_trim <- dat_Qc_trim %>%
   mutate(GPP_log = log10(meanGPP),
          area_log = log10(NHD_AREASQKM),
@@ -1103,15 +1103,10 @@ dat_Qc_trim <- dat_Qc_trim %>%
 # corresponding environmental factors:
 
 # precipitation - land and water connectivity metric
-# order - stream size**
-# watershed area - stream size**
-# width - stream size**
+# width - stream size
 # road density - terrestrial development
 # dam - aquatic development
 # HUC2 - to account for random effect of geography
-
-# ** Models will explore each of the size indicators separately. Although
-# I lean towards using width to mirror rmax above.
 
 # The following covariates have been removed for the following reasons:
 
@@ -1131,177 +1126,223 @@ hist(dat_Qc_trim$Qc_Q2yr)
 
 # Going to log transform QcQ2yr too.
 dat_Qc_trim <- dat_Qc_trim %>%
-  mutate(logQcQ2max = log10(Qc_Q2yr))
+  mutate(logQcQ2 = log10(Qc_Q2yr))
 
-plot(logQcQ2max ~ area_log, data = dat_Qc_trim)
-plot(logQcQ2max ~ Order, data = dat_Qc_trim) # Look about the same
-plot(logQcQ2max ~ width_log, data = dat_Qc_trim)
-plot(logQcQ2max ~ NHD_RdDensWs, data = dat_Qc_trim)
-plot(logQcQ2max ~ Dam, data = dat_Qc_trim)
-plot(logQcQ2max ~ pre_mm_cyr, data = dat_Qc_trim)
-plot(logQcQ2max ~ huc2_id, data = dat_Qc_trim)
+plot(logQcQ2 ~ width_log, data = dat_Qc_trim)
+plot(logQcQ2 ~ NHD_RdDensWs, data = dat_Qc_trim)
+plot(logQcQ2 ~ Dam, data = dat_Qc_trim)
+plot(logQcQ2 ~ pre_mm_cyr, data = dat_Qc_trim)
+plot(logQcQ2 ~ huc2_id, data = dat_Qc_trim)
 hist(dat_Qc_trim$logQcQ2max)
 
-# Ok, and making the final dataset with which to build models since I can't have
-# NAs with many of these functions.
-dat_Qc_lm <- dat_Qc_trim %>%
-  dplyr::select(logQcQ2max, Order, area_log, 
-                width_log, NHD_RdDensWs, Dam, huc2_id) %>%
-  drop_na() # 151 sites left
+# Ok, and making the final dataset with which to build models.
+dat_Qc_brms <- dat_Qc_trim %>%
+  dplyr::select(logQcQ2, pre_mm_cyr, width_log, 
+                NHD_RdDensWs, Dam, huc2_id)
 
-##### Step 1: Create lm() and check residuals.
+##### Step 1: Create multi-level model.
 
-# rmax ~ temp + roads + dams
+q1 <- brm(logQcQ2 ~ pre_mm_cyr + NHD_RdDensWs +
+            Dam + width_log + (1|huc2_id), 
+          data = dat_Qc_brms, family = gaussian())
+# assumes 4 chains and 2000 iterations (1000 warm-up)
+# started at 2:27pm - finished at 2:40pm :)
 
-c1 <- lm(logQcQ2max ~ NHD_RdDensWs + Dam, 
-         data = dat_Qc_lm)
+##### Step 2: Examine model outputs.
 
-plot(c1) # looks alright
+summary(q1)
 
-summary(c1) # examine initial model output without the grouping by watershed
-# hmmm, let's see how this does with the other covariates added in
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.08      0.34    -0.56     0.74 1.00     3029     3082
+# pre_mm_cyr      -0.00      0.00    -0.00     0.00 1.00     4246     3365
+# NHD_RdDensWs    -0.01      0.02    -0.05     0.03 1.00     3927     2886
+# Dam50            0.29      0.22    -0.13     0.73 1.00     4381     3451
+# Dam80           -0.01      0.18    -0.36     0.36 1.00     4395     2695
+# Dam95           -0.08      0.11    -0.31     0.14 1.00     3269     3104
+# width_log       -0.06      0.12    -0.30     0.18 1.00     3042     2773
 
-##### Step 2: Fit the lm() with GLS and compare to lme().
+# Well, great convergence, but nothing looks significant.
 
-c2 <- gls(logQcQ2max ~ NHD_RdDensWs + Dam, 
-          data = dat_Qc_lm) # effectively a lm
+##### Step 3: Examine model diagnostics.
 
-c3 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam, 
-          random = ~1 | huc2_id, data = dat_Qc_lm) # with random effect
+# Everything appears to have converged well, so let's look at chain
+# mixing and posterior distributions.
+plot(q1, variable = c("b_pre_mm_cyr", "b_NHD_RdDensWs",
+                      "b_Dam50", "b_Dam80", "b_Dam95", "b_width_log"))
 
-anova(c2, c3) # c2 preferred, but I want to keep the random term in
+# Chains all appear well-mixed, but let's also check things in shinystan.
+launch_shinystan(q1)
 
-##### Step 3: Decide on a variance structure.
+# No divergent transitions :)
 
-# None at this time.
+# Finally, examine to be sure no n_eff are < 0.1
+mcmc_plot(q1, type = "neff")
 
-##### Step 4,5,6: Fit the lme(), compare with lm(), and check residuals.
+##### Step 4: Examine model relationships for each predictor.
 
-# See Steps 2 & 3.
+plot(conditional_effects(q1, effects = "pre_mm_cyr"))
+plot(conditional_effects(q1, effects = "NHD_RdDensWs"))
+plot(conditional_effects(q1, effects = "Dam"))
+plot(conditional_effects(q1, effects = "width_log"))
 
-##### Step 7/8: Step-wise Optimal Fixed Structure.
+##### Step 5: Investigate possible overdispersion.
 
-# Try different covariates for stream size.
-c4 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + Order, 
-          random = ~1 | huc2_id, 
-          method = "ML",
-          data = dat_Qc_lm) # stream order
+# Add column denoting number of observations.
+dat_Qc_brms$obs <- c(1:length(dat_Qc_brms$logQcQ2))
 
-c5 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + area_log, 
-          random = ~1 | huc2_id, 
-          method = "ML",
-          data = dat_Qc_lm) # watershed area
+q1.1 <- brm(logQcQ2 ~ pre_mm_cyr + NHD_RdDensWs +
+              Dam + width_log + (1|huc2_id) + (1|obs), 
+            data = dat_Qc_brms, family = gaussian())
+# 69 divergent transitions EEE!
 
-c6 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log, 
-          random = ~1 | huc2_id, 
-          method = "ML",
-          data = dat_Qc_lm) # stream width
+# Compare with original model using leave-one-out approximation.
+loo(q1, q1.1)
 
-anova(c4, c5, c6) # order (c5) AIC is least, but moving forward with width
-# since it's better than order (which is somewhat subjective).
+# Model comparisons:
+#     elpd_diff se_diff
+# q1.1   0.0       0.0  
+# q1    -8.1       1.0 
 
-# Investigate precipitation, but keep in mind, it drops 40+ records.
-# (Archiving this because investigating this below.)
-# c6.2 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log, 
-#             random = ~1 | huc2_id, 
-#             method = "ML",
-#             data = dat_Qc_trim %>%
-#               dplyr::select(logQcQ2max, NHD_RdDensWs, Dam,
-#                             width_log, pre_mm_cyr, huc2_id) %>%
-#               drop_na())
+# Higher expected log posterior density (elpd) values = better fit.
 
-# c7 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log +
-#             pre_mm_cyr, 
-#           random = ~1 | huc2_id, 
-#           method = "ML",
-#           data = dat_Qc_trim %>%
-#             dplyr::select(logQcQ2max, NHD_RdDensWs, Dam,
-#                           width_log, pre_mm_cyr, huc2_id) %>%
-#             drop_na())
+# So, in this case model accounting for overdispersion (q1.1) fits better.
+# But there are 53 problematic observations...
 
-#anova(c6.2, c7) # Identical, so since it forces us to drop so many records 
-# (n=115 remaining), I'm skipping it.
+##### Step 6: Plot the results.
 
-##### Step 9: Refit with REML for final full model
+get_variables(q1)
 
-# Maximize data availability:
-dat_Qc_lm2 <- dat_Qc_trim %>%
-  dplyr::select(logQcQ2max, width_log, NHD_RdDensWs, 
-                Dam, huc2_id) %>%
-  drop_na() #151
+# b_Intercept refers to global mean
+# r_huc2_id[] are the offsets from that mean for each condition
 
-# Precip didn't seem to add anything to the model, and subtracted >40 records,
-# so choosing not to use it at this time.
-cfinal <- lme(logQcQ2max ~ # log-transformed because right-skewed
-                NHD_RdDensWs + # used by JB as metric of development, more sig. than Cat
-                Dam + # more pertinent to our interests than "Canal"
-                width_log, # not best performing, but more trustworthy than order
-              random = ~1 | huc2_id, # because HUC10 was too few sites/watershed
-              method = "REML",
-              data = dat_Qc_lm2) # n = 133
+(q_fig <- mcmc_plot(q1, variable = c("b_pre_mm_cyr",
+                                     "b_NHD_RdDensWs", "b_Dam50", 
+                                     "b_Dam80", "b_Dam95", "b_width_log"),
+                    #type = "intervals",
+                    point_est = "median", # default = "median"
+                    prob = 0.66, # default = 0.5
+                    prob_outer = 0.95) + # default = 0.9
+    vline_at(v = 0) +
+    labs(x = "Posterior",
+         y = "Predictors") +
+    theme_bw())
 
-# Examine model diagnostics.
-plot(cfinal) # YAY! Residuals looking great.
-qqnorm(cfinal) # And qqplot looks just fine.
+# Save out this figure.
+# ggsave(q_fig,
+#        filename = "figures/teton_fall22/brms_QcQ2_021623.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
 
-# Examine model outputs.
-cout <- summary(cfinal)
-coef(cout)
+##### Latitude #####
 
-#                   Value  Std.Error  DF    t-value   p-value
-# (Intercept)  -0.23264861 0.19330081 113 -1.2035573 0.2312760
-# NHD_RdDensWs -0.02130914 0.01818270 113 -1.1719462 0.2436836
-# Dam50         0.29308797 0.18682568 113  1.5687777 0.1194958
-# Dam80         0.05513241 0.14634429 113  0.3767309 0.7070801
-# Dam95         0.02196567 0.09679328 113  0.2269339 0.8208852
-# width_log    -0.01459310 0.10789160 113 -0.1352570 0.8926493
+# Proposed starting model structure:
 
-r.squaredGLMM(cfinal)
+# Qc:Q2 ~ lat + size + roads + dams + 1 | HUC2
 
-#             R2m        R2c
-# [1,] 0.02458802 0.06703832
+# Choosing latitude here, since it drops less observations.
 
-##### Precipitation #####
+# One on one plots for covariates of interest vs. Qc.
+plot(logQcQ2 ~ Lat_WGS84, data = dat_Qc_trim)
 
-# Maximize data availability:
-dat_Qc_lm3 <- dat_Qc_trim %>%
-  dplyr::select(logQcQ2max, width_log, NHD_RdDensWs, 
-                Dam, huc2_id, pre_mm_cyr) %>%
-  drop_na() #103
+# Ok, and making the final dataset with which to build models
+dat_Qc_brms2 <- dat_Qc_trim %>%
+  dplyr::select(logQcQ2, Lat_WGS84, width_log, 
+                NHD_RdDensWs, Dam, huc2_id)
 
-c8 <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log + 
-             pre_mm_cyr, # Adding precip.
-           random = ~1 | huc2_id, 
-           method = "ML",
-           data = dat_Qc_lm3)
+##### Step 1: Create multi-level model.
 
-plot(c8) # Looks alright.
-qqnorm(c8) # Yep, totally fine.
-summary(c8)
+q2 <- brm(logQcQ2 ~ Lat_WGS84 + NHD_RdDensWs +
+            Dam + width_log + (1|huc2_id), 
+          data = dat_Qc_brms2, family = gaussian())
+# assumes 4 chains and 2000 iterations (1000 warm-up)
+# started at 2:43pm - finished at 2:44pm :)
 
-# Refit with REML for final full model
+# 4 divergent transitions.
 
-cfinal_pre <- lme(logQcQ2max ~ NHD_RdDensWs + Dam + width_log + 
-                    pre_mm_cyr,
-                  random = ~1 | huc2_id, 
-                  method = "REML",
-                  data = dat_Qc_lm3)
+##### Step 2: Examine model outputs.
 
-# Examine model diagnostics.
-plot(cfinal_pre)
-qqnorm(cfinal_pre) # Looking just fine.
+summary(q2)
 
-# Examine model outputs.
-cout_pre <- summary(cfinal_pre)
-coef(cout_pre)
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept       -0.25      0.56    -1.42     0.79 1.01     1527      911
+# Lat_WGS84        0.00      0.01    -0.02     0.03 1.00     1491      963
+# NHD_RdDensWs    -0.02      0.02    -0.06     0.02 1.00     2860     2376
+# Dam50            0.28      0.20    -0.10     0.67 1.00     3792     2764
+# Dam80            0.06      0.15    -0.23     0.35 1.00     3617     2510
+# Dam95            0.02      0.10    -0.17     0.21 1.00     3204     2736
+# width_log       -0.01      0.11    -0.23     0.21 1.00     2718     2870
 
-#                      Value    Std.Error DF      t-value   p-value
-# (Intercept)   0.0930882014 0.3122302087 82  0.298139638 0.7663507
-# NHD_RdDensWs -0.0126805666 0.0194349217 82 -0.652462963 0.5159275
-# Dam50         0.3012597661 0.2146412775 82  1.403550005 0.1642286
-# Dam80        -0.0017105104 0.1756896271 82 -0.009735978 0.9922556
-# Dam95        -0.0838730873 0.1093675140 82 -0.766892145 0.4453480
-# width_log    -0.0592449483 0.1150885535 82 -0.514777069 0.6080936
-# pre_mm_cyr   -0.0002641592 0.0002098016 82 -1.259090714 0.2115701
+# Well, great convergence but nothing jumps out again.
+
+##### Step 3: Examine model diagnostics.
+
+# Everything appears to have converged well, so let's look at chain
+# mixing and posterior distributions.
+plot(q2, variable = c("b_Lat_WGS84", "b_NHD_RdDensWs",
+                      "b_Dam50", "b_Dam80", "b_Dam95", "b_width_log"))
+
+# Chains all appear well-mixed, but let's also check things in shinystan.
+launch_shinystan(q2)
+
+# 4 divergent transitions appear.
+
+# Finally, examine to be sure no n_eff are < 0.1
+mcmc_plot(q2, type = "neff")
+
+##### Step 4: Examine model relationships for each predictor.
+
+plot(conditional_effects(q2, effects = "Lat_WGS84"))
+plot(conditional_effects(q2, effects = "NHD_RdDensWs"))
+plot(conditional_effects(q2, effects = "Dam"))
+plot(conditional_effects(q2, effects = "width_log"))
+
+##### Step 5: Investigate possible overdispersion.
+
+# Add column denoting number of observations.
+dat_Qc_brms2$obs <- c(1:length(dat_Qc_brms2$logQcQ2))
+
+q2.1 <- brm(logQcQ2 ~ Lat_WGS84 + NHD_RdDensWs +
+              Dam + width_log + (1|huc2_id) + (1|obs), 
+            data = dat_Qc_brms2, family = gaussian())
+# 95 divergent transitions
+
+# Compare with original model using leave-one-out approximation.
+loo(q2, q2.1)
+
+# Model comparisons:
+#     elpd_diff se_diff
+# q2.1   0.0       0.0  
+# q2    -4.1       0.7 
+
+# Higher expected log posterior density (elpd) values = better fit.
+# So, in this case model accounting for overdispersion (q2.1) fits better.
+# But there are 25 problematic observations...
+
+##### Step 6: Plot the results.
+
+get_variables(q2)
+
+# b_Intercept refers to global mean
+# r_huc2_id[] are the offsets from that mean for each condition
+
+(q2_fig <- mcmc_plot(q2, variable = c("b_Lat_WGS84", "b_NHD_RdDensWs", 
+                                      "b_Dam50","b_Dam80", 
+                                      "b_Dam95", "b_width_log"),
+                     #type = "intervals",
+                     point_est = "median", # default = "median"
+                     prob = 0.66, # default = 0.5
+                     prob_outer = 0.95) + # default = 0.9
+    vline_at(v = 0) +
+    labs(x = "Posterior",
+         y = "Predictors") +
+    theme_bw())
+
+# Save out this figure.
+# ggsave(q2_fig,
+#        filename = "figures/teton_fall22/brms_QcQ2.2_021623.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
 
 # End of script.
