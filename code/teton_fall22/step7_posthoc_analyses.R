@@ -828,6 +828,45 @@ get_variables(y2)
 #        height = 10,
 #        units = "cm")
 
+# Plot conditional effects of those whose intervals don't cross 0.
+# Using code from here to make them ggplots:
+# https://bookdown.org/content/4857/conditional-manatees.html#summary-bonus-conditional_effects
+
+p_t <- conditional_effects(y2, effects = "summerT")
+
+(plot_t <- plot(p_t, plot = F)[[1]] +
+  geom_smooth(color = "black") +
+  labs(x = "Summer Temperature",
+       y = "Log of Maximum Biomass Accrual") +
+  theme_bw())
+
+p_d <- conditional_effects(y2, effects = "Dam")
+
+(plot_d <- plot(p_d, plot = F)[[1]] +
+    labs(x = "Likelihood of Interference by Dams",
+         y = "Log of Maximum Biomass Accrual") +
+    theme_bw())
+  
+p_w <- conditional_effects(y2, effects = "log_width")
+
+(plot_w <- plot(p_w, plot = F)[[1]] +
+    geom_smooth(color = "black") +
+    labs(x = "Log of River Width",
+         y = "Log of Maximum Biomass Accrual") +
+    theme_bw())
+
+# Now, let's combine the above using patchwork.
+(fig_cond_yield <- (y2_fig + plot_t + plot_d + plot_w) +
+    plot_layout(nrow = 1) +
+    plot_annotation(tag_levels = 'A'))
+
+# And export.
+# ggsave(fig_cond_yield,
+#        filename = "figures/teton_fall22/brms_yield2_cond_021623.jpg",
+#        width = 40,
+#        height = 10,
+#        units = "cm") # n = 159
+
 # Also trying to figure out a way to plot histograms/density plots
 # over top of these intervals.
 
