@@ -164,8 +164,8 @@ summ_No3_oP <- full_join(summ_No3_filter, summ_oP_filter, by = c("MonitoringLoca
 #        height = 10,
 #        units = "cm")
 
-# Looks like phosphorus and nitrate may be most abundant, but Joanna suggested
-# using orthophosphate so going to move ahead with those two measures.
+# Looks like phosphorus and nitrate may be most abundant, so I've
+# updated code below to examine oP, P, and NO3.
 
 #### Orthophosphate ####
 
@@ -175,48 +175,87 @@ orthoP <- wqpNuts %>%
 
 unique(orthoP$ResultMeasure.MeasureUnitCode)  # only one code - "mg/l as P"
 
-# Note for future me - "Phosphorus" has ~4 codes, so that would make conversion
-# a little more tricky.
+unique(orthoP$ActivityMediaName) # water and other??
+
+orthoP2 <- wqpNuts %>%
+  filter(ActivityMediaName == "Water") %>%
+  filter(CharacteristicName == "Orthophosphate")
 
 # Just for another quick gut check
-length(unique(orthoP$MonitoringLocationIdentifier)) # 112 sites with oP data
+length(unique(orthoP2$MonitoringLocationIdentifier)) # 112 sites with oP data
 
 # Note, will need to remove measurements with NA as unit.
 
 # FINAL UNITS: mg/L as PO4-P
 
 #### Nitrate ####
+
 nitrate <- wqpNuts %>%
   filter(CharacteristicName == "Nitrate")
   
 unique(nitrate$ResultMeasure.MeasureUnitCode) # two codes - "mg/l asNO3", 
 # and "mg/l as N", so will need to do some conversions
-  
-# Also need to remove measurements with NA as unit.
+unique(nitrate$ActivityMediaName) # only water samples, good
 
 # Just for another quick gut check
 length(unique(nitrate$MonitoringLocationIdentifier)) # 105 sites with NO3 data
 
-# Need to convert mg/L as N to mg/L as NO3.
-# 1 mg/L No3-N = 4.43 mg/L NO3
-# 0.226 mg/L NO3-N = 1 mg/L NO3
+#### Phosphorus ####
+
+phos <- wqpNuts %>%
+  filter(CharacteristicName == "Phosphorus")
+
+unique(phos$ResultMeasure.MeasureUnitCode) # two codes - "mg/l as P", "%",
+# "mg/kg", "mg/kg as P", and "ug/l", so will need to do some conversions.
+
+# But it seems many of the kg measures were on sediment? So let's run again.
+phos2 <- wqpNuts %>%
+  filter(ActivityMediaName == "Water") %>%
+  filter(CharacteristicName == "Phosphorus")
+
+unique(phos2$ResultMeasure.MeasureUnitCode) # Ok now down to only in L or %.
+
+unique(phos2$ResultSampleFractionText) # But it seems we have measures for
+# total, dissolved, and suspended P.
+
+# % corresponds to "suspended" samples only.
+
+# Just for another quick gut check
+length(unique(phos$MonitoringLocationIdentifier)) # 115 sites with P data
+
+phos2 %>%
+  group_by(ResultSampleFractionText) %>%
+  summarize(n = n())
+
+# I think it would be best to include only dissolved P
+
 wqpNuts <- wqpNuts %>%
+  # Going to convert mg/L as NO3 to mg/L as N.
+  # 0.226 mg/L NO3-N = 1 mg/L NO3
   mutate(ResultMeasureValue_conv = case_when(CharacteristicName == "Nitrate" &
-                                               ResultMeasure.MeasureUnitCode == "mg/l asNO3" ~ ResultMeasureValue*0.226,
+                                  ResultMeasure.MeasureUnitCode == "mg/l asNO3" ~ 
+                                    ResultMeasureValue*0.226,
+                                  # Also going to convert P.
+                                  # 0.001 ug/L P = 1 mg/L P
+                                  CharacteristicName == "Phosphorus" &
+                                    ResultMeasure.MeasureUnitCode == "ug/l" ~
+                                    ResultMeasureValue*0.001,
                                              TRUE ~ ResultMeasureValue))
 
-# FINAL UNITS: mg/L as NO3-N
+# FINAL UNITS: mg/L as NO3-N, mg/L as PO4-P, and mg/L of P
 
 #### Summary by site ####
 
-# Summarize Orthophosphate and Nitrate data by site.
-wqp_oP_NO3 <- wqpNuts %>%
-  filter(CharacteristicName %in% c("Orthophosphate", "Nitrate")) %>%
+# Summarize nutrient data by site.
+wqp_all <- wqpNuts %>%
+  filter(ActivityMediaName == "Water") %>% # only include water samples
+  filter(ResultSampleFractionText == "Dissolved") %>% # only dissolved fraction
+  filter(CharacteristicName %in% c("Orthophosphate", "Phosphorus", "Nitrate")) %>%
   group_by(MonitoringLocationIdentifier, CharacteristicName) %>%
   summarize(mean_mg_L = mean(ResultMeasureValue_conv, na.rm = TRUE)) %>%
   ungroup()
 
 # And export for use in other script.
-saveRDS(wqp_oP_NO3, "data_working/USGS_WQP_nuts_aggsite_110222.rds")
+saveRDS(wqp_all, "data_working/USGS_WQP_nuts_aggsite_022322.rds")
   
 # End of script.
