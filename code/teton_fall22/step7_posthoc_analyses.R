@@ -20,20 +20,20 @@
 #### Setup ####
 
 # Load necessary packages.
-lapply(c("tidyverse", "lubridate", "data.table",
-         "GGally", "glmmTMB", "MuMIn", "effects",
-         "DHARMa", "lme4", "multcomp", "patchwork",
-         "modelsummary", "here", "nlme", "brms", "loo",
-         "bayesplot", "tidybayes"), require, character.only=T)
+lapply(c("tidybayes", "brms", "tidyverse", "lubridate", 
+         "data.table", "GGally",
+         "multcomp", "patchwork", "bayesplot",
+         "modelsummary", "here", "nlme","loo"), 
+       require, character.only=T)
 
 #### Data ####
 
 # Import necessary datasets.
 
-# First, the data for the rmax lm.
+# First, the data for the rmax models.
 dat_rmax <- readRDS("data_working/rmax_filtered_159sites_113022.rds")
 
-# Next, the data for the Qc:Q2yr lm.
+# Next, the data for the Qc:Q2yr models.
 dat_Qc <- readRDS("data_working/QcQ2_filtered_141sites_113022.rds")
 
 # Also , the data for maximum algal yields.
@@ -1060,7 +1060,8 @@ dat_Qc_trim <- dat_Qc %>%
          Canal:width_med)
 
 # Join with precip data.
-dat_Qc_trim <- left_join(dat_Qc_trim, site_precip, by = c("site_name" = "SiteID"))
+dat_Qc_trim <- left_join(dat_Qc_trim, site_precip, 
+                         by = c("site_name" = "SiteID"))
 
 # Join with HUC2 data.
 dat_Qc_trim <- left_join(dat_Qc_trim, site_HUC2)
@@ -1069,8 +1070,7 @@ dat_Qc_trim <- left_join(dat_Qc_trim, site_HUC2)
 QcQ2_covs <- ggpairs(dat_Qc_trim %>% 
                        dplyr::select(-site_name) %>%
                        dplyr::select(-NHD_RdDensWs,
-                                     -NHD_PctImp2011Ws)) 
-# trim for space
+                                     -NHD_PctImp2011Ws)) # trim for space
 
 # ggsave(QcQ2_covs,
 #        filename = "figures/teton_fall22/QcQ2_covariates.jpg",
@@ -1089,20 +1089,24 @@ QcQ2_covs <- ggpairs(dat_Qc_trim %>%
 
 # (3) Remaining Pearson's correlation values are below 0.5.
 
-# Log transform necessary covariates.
+# Log transform and edit necessary covariates.
 dat_Qc_trim <- dat_Qc_trim %>%
   mutate(GPP_log = log10(meanGPP),
          area_log = log10(NHD_AREASQKM),
-         width_log = log10(width_med))
+         width_log = log10(width_med)) %>%
+  # Also creating a new categorical dam column to model by.
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential
+    Dam == "0" ~ "1", # Certain
+    TRUE ~ NA)))
 
 # Notes on model structure:
 
-# Qc:Q2yr ~ precip + size + roads + dams + 1 | HUC2
+# Qc:Q2yr ~ size + roads + dams + 1 | HUC2
 
 # I am going to include the following covariates as representatives of the
 # corresponding environmental factors:
 
-# precipitation - land and water connectivity metric
 # width - stream size
 # road density - terrestrial development
 # dam - aquatic development
@@ -1120,6 +1124,7 @@ dat_Qc_trim <- dat_Qc_trim %>%
 # % impervious land cover - too closely correlated with road density
 # canal - another metric of terr/aq development but felt duplicative
 # NO3/PO4 - not a factor for flow disturbance thresholds
+# precipitation - land and water connectivity metric but poor data availability
 
 # One on one plots for covariates of interest vs. QcQ2yr.
 hist(dat_Qc_trim$Qc_Q2yr)
@@ -1130,70 +1135,66 @@ dat_Qc_trim <- dat_Qc_trim %>%
 
 plot(logQcQ2 ~ width_log, data = dat_Qc_trim)
 plot(logQcQ2 ~ NHD_RdDensWs, data = dat_Qc_trim)
-plot(logQcQ2 ~ Dam, data = dat_Qc_trim)
-plot(logQcQ2 ~ pre_mm_cyr, data = dat_Qc_trim)
+plot(logQcQ2 ~ Dam_binary, data = dat_Qc_trim)
 plot(logQcQ2 ~ huc2_id, data = dat_Qc_trim)
-hist(dat_Qc_trim$logQcQ2max)
+hist(dat_Qc_trim$logQcQ2)
 
 # Ok, and making the final dataset with which to build models.
 dat_Qc_brms <- dat_Qc_trim %>%
-  dplyr::select(logQcQ2, pre_mm_cyr, width_log, 
-                NHD_RdDensWs, Dam, huc2_id)
+  dplyr::select(logQcQ2, width_log, NHD_RdDensWs, Dam_binary, huc2_id)
 
 ##### Step 1: Create multi-level model.
 
-q1 <- brm(logQcQ2 ~ pre_mm_cyr + NHD_RdDensWs +
-            Dam + width_log + (1|huc2_id), 
-          data = dat_Qc_brms, family = gaussian())
+# Remove NAs since STAN doesn't play nicely with them.
+mq1 <- dat_Qc_brms %>%
+  drop_na(NHD_RdDensWs, Dam_binary, width_log, huc2_id)
+
+q1 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + width_log + (1|huc2_id), 
+          data = mq1, family = gaussian())
 # assumes 4 chains and 2000 iterations (1000 warm-up)
-# started at 2:27pm - finished at 2:40pm :)
+# started at 12:43pm - finished at 12:??pm 
 
 ##### Step 2: Examine model outputs.
 
 summary(q1)
 
-#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept        0.08      0.34    -0.56     0.74 1.00     3029     3082
-# pre_mm_cyr      -0.00      0.00    -0.00     0.00 1.00     4246     3365
-# NHD_RdDensWs    -0.01      0.02    -0.05     0.03 1.00     3927     2886
-# Dam50            0.29      0.22    -0.13     0.73 1.00     4381     3451
-# Dam80           -0.01      0.18    -0.36     0.36 1.00     4395     2695
-# Dam95           -0.08      0.11    -0.31     0.14 1.00     3269     3104
-# width_log       -0.06      0.12    -0.30     0.18 1.00     3042     2773
+#             Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+#Intercept       -0.24      0.17    -0.56     0.11 1.00     2904     2118
+#NHD_RdDensWs    -0.01      0.02    -0.05     0.02 1.00     3120     2757
+#Dam_binary1     -0.06      0.09    -0.23     0.12 1.00     4173     2815
+#width_log        0.02      0.11    -0.19     0.23 1.00     3039     2417
 
-# Well, great convergence, but nothing looks significant.
+# Well, great convergence still, but nothing looks significant.
 
 ##### Step 3: Examine model diagnostics.
 
 # Everything appears to have converged well, so let's look at chain
 # mixing and posterior distributions.
-plot(q1, variable = c("b_pre_mm_cyr", "b_NHD_RdDensWs",
-                      "b_Dam50", "b_Dam80", "b_Dam95", "b_width_log"))
+plot(q1)
 
 # Chains all appear well-mixed, but let's also check things in shinystan.
 launch_shinystan(q1)
 
 # No divergent transitions :)
 
-# Finally, examine to be sure no n_eff are < 0.1
+# Finally, examine to be sure no n_eff are < 0.1 or 10%
 mcmc_plot(q1, type = "neff")
 
 ##### Step 4: Examine model relationships for each predictor.
 
-plot(conditional_effects(q1, effects = "pre_mm_cyr"))
 plot(conditional_effects(q1, effects = "NHD_RdDensWs"))
-plot(conditional_effects(q1, effects = "Dam"))
+plot(conditional_effects(q1, effects = "Dam_binary"))
 plot(conditional_effects(q1, effects = "width_log"))
 
 ##### Step 5: Investigate possible overdispersion.
 
 # Add column denoting number of observations.
-dat_Qc_brms$obs <- c(1:length(dat_Qc_brms$logQcQ2))
+mq1$obs <- c(1:length(mq1$logQcQ2))
 
-q1.1 <- brm(logQcQ2 ~ pre_mm_cyr + NHD_RdDensWs +
-              Dam + width_log + (1|huc2_id) + (1|obs), 
-            data = dat_Qc_brms, family = gaussian())
-# 69 divergent transitions EEE!
+q1.1 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + width_log + 
+              (1|huc2_id) + (1|obs), 
+            data = mq1, family = gaussian())
+# 93 divergent transitions EEE!
 
 # Compare with original model using leave-one-out approximation.
 loo(q1, q1.1)
@@ -1201,12 +1202,12 @@ loo(q1, q1.1)
 # Model comparisons:
 #     elpd_diff se_diff
 # q1.1   0.0       0.0  
-# q1    -8.1       1.0 
+# q1   -10.9       1.4 
 
 # Higher expected log posterior density (elpd) values = better fit.
 
 # So, in this case model accounting for overdispersion (q1.1) fits better.
-# But there are 53 problematic observations...
+# But there are 67 problematic observations...
 
 ##### Step 6: Plot the results.
 
@@ -1215,17 +1216,89 @@ get_variables(q1)
 # b_Intercept refers to global mean
 # r_huc2_id[] are the offsets from that mean for each condition
 
-(q_fig <- mcmc_plot(q1, variable = c("b_pre_mm_cyr",
-                                     "b_NHD_RdDensWs", "b_Dam50", 
-                                     "b_Dam80", "b_Dam95", "b_width_log"),
+(q_fig <- mcmc_plot(q1, variable = c("b_NHD_RdDensWs", "b_Dam_binary1", 
+                                     "b_width_log"),
                     #type = "intervals",
                     point_est = "median", # default = "median"
                     prob = 0.66, # default = 0.5
                     prob_outer = 0.95) + # default = 0.9
     vline_at(v = 0) +
-    labs(x = "Posterior",
+    labs(x = "Posterior Estimates",
          y = "Predictors") +
+    scale_y_discrete(labels = c("b_NHD_RdDensWs" = "Road Density",
+                                "b_Dam_binary1" = "Dam",
+                                "b_width_log" = "log(Width)")) +
     theme_bw())
+
+# Plot conditional effects of all covariates.
+# Using code from here to make them ggplots:
+# https://bookdown.org/content/4857/conditional-manatees.html#summary-bonus-conditional_effects
+
+q_r <- conditional_effects(q1, effects = "NHD_RdDensWs")
+
+# Create new dataframe
+qr_df <- q_r$NHD_RdDensWs %>%
+  # and calculate true Qc:Q2yr values
+  mutate(QcQ2 = 10^`estimate__`,
+         lowerQcQ2 = 10^`lower__`,
+         upperQcQ2 = 10^`upper__`)
+
+(plot_qr <- ggplot(qr_df, aes(x = NHD_RdDensWs, y = QcQ2)) +
+    geom_line(color = "black", linewidth = 1) +
+    geom_ribbon(aes(ymin = lowerQcQ2, ymax = upperQcQ2),
+                alpha = 0.25) +
+    labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
+         y = expression(Q[c]:Q[2~yr])) +
+    ylim(0, 1.2) +
+    theme_bw())
+
+q_d <- conditional_effects(q1, effects = "Dam_binary")
+
+# Create new dataframe
+qd_df <- q_d$Dam_binary %>%
+  # and calculate true Qc:Q2yr values
+  mutate(QcQ2 = 10^`estimate__`,
+         lowerQcQ2 = 10^`lower__`,
+         upperQcQ2 = 10^`upper__`)
+
+(plot_qd <- ggplot(qd_df, aes(x = Dam_binary, y = QcQ2)) +
+    geom_point(size = 3) +
+    geom_errorbar(aes(ymin = lowerQcQ2, ymax = upperQcQ2), width = 0.2) +
+    labs(x = "Likelihood of Interference by Dams",
+         y = expression(Q[c]:Q[2~yr])) +
+    ylim(0, 1.2) +
+    theme_bw())
+
+q_w <- conditional_effects(q1, effects = "width_log")
+
+# Create new dataframe
+qw_df <- q_w$width_log %>%
+  # and calculate true Qc:Q2yr values
+  mutate(QcQ2 = 10^`estimate__`,
+         lowerQcQ2 = 10^`lower__`,
+         upperQcQ2 = 10^`upper__`)
+
+(plot_qw <- ggplot(qw_df, aes(x = 10^width_log, y = QcQ2)) +
+    geom_line(color = "black", linewidth = 1) +
+    geom_ribbon(aes(ymin = lowerQcQ2, ymax = upperQcQ2),
+                alpha = 0.25) +
+    scale_x_log10()+
+    labs(x = "River Width",
+         y = expression(Q[c]:Q[2~yr])) +
+    ylim(0, 1.2) +
+    theme_bw())
+
+# Now, let's combine the above using patchwork.
+(fig_cond_Qc <- (q_fig + plot_qr + plot_qd + plot_qw) +
+    plot_layout(nrow = 1) +
+    plot_annotation(tag_levels = 'A'))
+
+# And export.
+# ggsave(fig_cond_Qc,
+#        filename = "figures/teton_fall22/brms_Qc_cond_022423.jpg",
+#        width = 40,
+#        height = 10,
+#        units = "cm")
 
 # Save out this figure.
 # ggsave(q_fig,
