@@ -1433,6 +1433,8 @@ nRMSE_8site <- mapply(nRMSE_fxn, rmse8, dat_in8)
 
 # As of 02/10/23, calculating/exporting RMSE values for 5
 # additional sites that Jud requested.
+# Note, need to run data_in_df/data_out_df and 
+# Ricker/NRMSE functions above for the below to work.
 
 my5sites <- c("nwis_05524500", "nwis_05515500",
               "nwis_05451210", "nwis_01645704",
@@ -1470,7 +1472,7 @@ pred_gpp5 <- lapply(data_5site_gpp,
                                       apply(x, 1, quantile975)))
 
 # Pull out original GPP values and sequence numbers used
-orig_gpp_date5 <- lapply(dat_in5, function(x) x %>% select(date, GPP, seq))
+orig_gpp_date5 <- lapply(dat_in5, function(x) x %>% select(date, GPP, Q, seq))
 
 # Add names to confidence interval lists
 # be sure that these are in the correct order given output above
@@ -1500,10 +1502,13 @@ nRMSE_5site <- mapply(nRMSE_fxn, rmse5, dat_in5)
 (gpp_plot8.9 <- ggplot(df_pred5$nwis_05524500, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median), 
-              color = "#609048", size = 1.2) +
+              color = "#609048", linewidth = 1.2) +
+    geom_line(aes(date,Q/10),
+              color = "blue", linewidth = 1) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Iroquois River, IN") +
+         title = "Iroquois River, IN",
+         subtitle = "Blue line denotes Q/10 (Qmax = 141 cms)") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5),
@@ -1524,9 +1529,12 @@ nRMSE_5site <- mapply(nRMSE_fxn, rmse5, dat_in5)
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median), 
               color = "#609048", size = 1.2) +
+    geom_line(aes(date,Q/10),
+              color = "blue", linewidth = 1) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Kankakee River, IN") +
+         title = "Kankakee River, IN",
+         subtitle = "Blue line denotes Q/10 (Qmax = 51 cms)") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5),
@@ -1543,17 +1551,22 @@ nRMSE_5site <- mapply(nRMSE_fxn, rmse5, dat_in5)
           axis.title.y = element_text(size=20)))
 
 # South Fork Iowa River, IA
-(gpp_plot8.11 <- ggplot(df_pred5$nwis_05451210, aes(date, GPP)) +
+(gpp_plot8.11 <- ggplot(df_pred5$nwis_05451210 %>%
+                          filter(date < "2009-01-01"), 
+                        aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
               color = "#609048", size = 1.2) +
+    geom_line(aes(date,Q/10),
+              color = "blue", linewidth = 1) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "S. Fork Iowa River, IA") +
+         title = "S. Fork Iowa River, IA",
+         subtitle = "Blue line denotes Q/10 (Qmax = 156 cms)") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2009-06-01"), y = 15,
+    annotate(geom = "text", x = date("2008-09-01"), y = 15,
              label = paste("nRMSE = ",round(nRMSE_5site[3], 
                                             digits = 2)), size = 8) + 
     theme_bw() +
@@ -1565,17 +1578,21 @@ nRMSE_5site <- mapply(nRMSE_fxn, rmse5, dat_in5)
           axis.title.y = element_text(size=20)))
 
 # Difficult Run, VA
-(gpp_plot8.12 <- ggplot(df_pred5$nwis_01645704, aes(date, GPP)) +
+(gpp_plot8.12 <- ggplot(df_pred5$nwis_01645704 %>%
+                          filter(date > "2014-01-01"), aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
               color = "#609048", size = 1.2) +
+    geom_line(aes(date,Q),
+              color = "blue", linewidth = 1) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Difficult Run, VA") +
+         title = "Difficult Run, VA",
+         subtitle = "Blue line denotes Q (cms)") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2015-01-01"), y = 6,
+    annotate(geom = "text", x = date("2016-07-01"), y = 6,
              label = paste("nRMSE = ",round(nRMSE_5site[1], 
                                             digits = 2)), size = 8) + 
     theme_bw() +
@@ -1591,9 +1608,12 @@ nRMSE_5site <- mapply(nRMSE_fxn, rmse5, dat_in5)
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median), 
               color = "#609048", size = 1.2) +
+    geom_line(aes(date,Q),
+              color = "blue", linewidth = 1) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Accotink Creek, VA") +
+         title = "Accotink Creek, VA",
+         subtitle = "Blue line denotes Q (cms)") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5),
@@ -1616,10 +1636,10 @@ nRMSE_5site <- mapply(nRMSE_fxn, rmse5, dat_in5)
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 3))
 
-ggsave(fig_nRMSE5,
-       filename = "figures/teton_fall22/nRMSE_5panel_021023.jpg",
-       width = 40,
-       height = 40,
-       units = "cm")
+# ggsave(fig_nRMSE5,
+#        filename = "figures/teton_fall22/nRMSE_5panel_022423.jpg",
+#        width = 50,
+#        height = 40,
+#        units = "cm")
 
 # End of script.
