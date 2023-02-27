@@ -529,11 +529,9 @@ may_covs <- ggpairs(dat_yield_combo %>%
 
 # Proposed starting model structure:
 
-# max algal yield ~ temp + precip + roads + dams + width + 1 | HUC2
+# max algal yield ~ size + roads + dams + temperature + 1 | HUC2
 
-# Choosing precip over latitude for now, since they're highly
-# correlated, but precip seems less skewed than the obvious geographic
-# NE bias of these USGS gauges.
+# Removed latitude/precip following conversations with Joanna.
 
 # Wil create a separate model adding in nutrients based on best model
 # fit here (since records are far fewer).
@@ -545,57 +543,55 @@ hist(dat_yield_combo$yield_med2)
 # Going to log transform yield too.
 dat_yield_combo <- dat_yield_combo %>%
   mutate(log_yield = log10(yield_med2)) %>%
-  mutate(log_width = log10(width_med))
+  mutate(log_width = log10(width_med)) %>%
+  # Also creating a new categorical dam column to model by.
+  # same metric used in QC:Q2yr model below.
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential
+    Dam == "0" ~ "1", # Certain
+    TRUE ~ NA)))
 
 plot(log_yield ~ summerT, data = dat_yield_combo)
-plot(log_yield ~ pre_mm_cyr, data = dat_yield_combo)
 plot(log_yield ~ NHD_RdDensWs, data = dat_yield_combo)
-plot(log_yield ~ Dam, data = dat_yield_combo)
+plot(log_yield ~ Dam_binary, data = dat_yield_combo)
 plot(log_yield ~ log_width, data = dat_yield_combo)
 plot(log_yield ~ huc2_id, data = dat_yield_combo)
 hist(dat_yield_combo$log_yield)
 
 # Ok, and making the final dataset with which to build models
 dat_yield_brms <- dat_yield_combo %>%
-  dplyr::select(log_yield, summerT, pre_mm_cyr,
-                NHD_RdDensWs, Dam, log_width,
-                huc2_id)
+  dplyr::select(log_yield, summerT, NHD_RdDensWs, 
+                Dam_binary, log_width, huc2_id)
 
 ##### Step 1: Create multi-level model.
 
-y1 <- brm(log_yield ~ summerT + pre_mm_cyr + NHD_RdDensWs +
-            Dam + log_width + (1|huc2_id), 
+y1 <- brm(log_yield ~ log_width + NHD_RdDensWs +
+            Dam_binary + summerT + (1|huc2_id), 
          data = dat_yield_brms, family = gaussian())
 # assumes 4 chains and 2000 iterations (1000 warm-up)
-# started at 10:39am - finished at 10:40am :)
-
-# Warning message:
-# Rows containing NAs were excluded from the model. 
+# started at 10:39am - finished at 10:40am on the server :)
 
 ##### Step 2: Examine model outputs.
 
 summary(y1)
 
-#              Estimate Est.Error l-95% CI u-95% CI Rhat
-# Intercept        0.55      0.37    -0.16     1.25 1.00
-# summerT         -0.03      0.01    -0.05    -0.01 1.00
-# pre_mm_cyr      -0.00      0.00    -0.00    -0.00 1.00
-# NHD_RdDensWs     0.02      0.02    -0.01     0.05 1.00
-# Dam50            0.10      0.16    -0.22     0.41 1.00
-# Dam80            0.10      0.13    -0.16     0.36 1.00
-# Dam95            0.19      0.09     0.02     0.37 1.00
-# log_width        0.50      0.10     0.30     0.71 1.00
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.51      0.29    -0.07     1.07 1.00     4588     2930
+# log_width        0.47      0.09     0.29     0.65 1.00     3592     3012
+# NHD_RdDensWs     0.02      0.02    -0.01     0.05 1.00     3768     3176
+# Dam_binary1     -0.14      0.07    -0.28    -0.00 1.00     5550     3036
+# summerT         -0.03      0.01    -0.06    -0.01 1.00     4101     3062
 
 # Well, for one, this is great convergence! All Rhat < 1.05.
-# And at first glance, temperature, dam95, and stream width jump out
+# And at first glance, temperature, dam_binary1, and stream width jump out
 # as important.
 
 ##### Step 3: Examine model diagnostics.
 
 # Everything appears to have converged well, so let's look at chain
 # mixing and posterior distributions.
-plot(y1, variable = c("b_summerT", "b_pre_mm_cyr", "b_NHD_RdDensWs",
-                      "b_Dam50", "b_Dam80", "b_Dam95", "b_log_width"))
+plot(y1, variable = c("b_summerT", "b_NHD_RdDensWs",
+                      "b_Dam_binary1", "b_log_width"))
 
 # Chains all appear well-mixed, but let's also check things in shinystan.
 launch_shinystan(y1)
@@ -608,11 +604,10 @@ mcmc_plot(y1, type = "neff")
 
 ##### Step 4: Examine model relationships for each predictor.
 
-plot(conditional_effects(y1, effects = "summerT"))
-plot(conditional_effects(y1, effects = "pre_mm_cyr"))
-plot(conditional_effects(y1, effects = "NHD_RdDensWs"))
-plot(conditional_effects(y1, effects = "Dam"))
 plot(conditional_effects(y1, effects = "log_width"))
+plot(conditional_effects(y1, effects = "NHD_RdDensWs"))
+plot(conditional_effects(y1, effects = "Dam_binary"))
+plot(conditional_effects(y1, effects = "summerT"))
 
 # Note, can investigate scenarios like effect1:effect2 here
 # and it will automatically choose percentiles to predict.
@@ -622,10 +617,10 @@ plot(conditional_effects(y1, effects = "log_width"))
 # Add column denoting number of observations.
 dat_yield_brms$obs <- c(1:length(dat_yield_brms$log_yield))
 
-y1.1 <- brm(log_yield ~ summerT + pre_mm_cyr + NHD_RdDensWs +
-            Dam + log_width + (1|huc2_id) + (1|obs), 
+y1.1 <- brm(log_yield ~ log_width + NHD_RdDensWs +
+            Dam_binary + summerT + (1|huc2_id) + (1|obs), 
           data = dat_yield_brms, family = gaussian())
-# 603 divergent transitions EEK!
+# 844 divergent transitions EEK!
 
 # Compare with original model using leave-one-out approximation.
 loo(y1, y1.1)
@@ -633,22 +628,12 @@ loo(y1, y1.1)
 # Model comparisons:
 #     elpd_diff se_diff
 # y1.1   0.0       0.0  
-# y1   -14.9       1.7 
+# y1    -7.9       2.3 
 
 # Higher expected log posterior density (elpd) values = better fit.
 
 # So, in this case model accounting for overdispersion (y1.1) fits better.
-# But there are 40 problematic observations...
-
-# Compare with WAIC instead.
-waic1 <- waic(y1)
-waic2 <- waic(y1.1)
-loo_compare(waic1, waic2)
-
-# Same output as above.
-#      elpd_diff se_diff
-# y1.1   0.0       0.0  
-# y1   -17.4       1.2
+# But there are 54 problematic observations...
 
 ##### Step 6: Plot the results.
 
@@ -657,21 +642,24 @@ get_variables(y1)
 # b_Intercept refers to global mean
 # r_huc2_id[] are the offsets from that mean for each condition
 
-(y_fig <- mcmc_plot(y1, variable = c("b_summerT", "b_pre_mm_cyr",
-                                    "b_NHD_RdDensWs", "b_Dam50", 
-                                    "b_Dam80", "b_Dam95", "b_log_width"),
+(y_fig <- mcmc_plot(y1, variable = c("b_log_width", "b_NHD_RdDensWs",
+                                     "b_Dam_binary1", "b_summerT"),
       #type = "intervals",
       point_est = "median", # default = "median"
       prob = 0.66, # default = 0.5
       prob_outer = 0.95) + # default = 0.9
     vline_at(v = 0) +
-    labs(x = "Posterior",
-         y = "Coefficients") +
+    labs(x = "Posterior Estimates",
+         y = "Predictors") +
+    scale_y_discrete(labels = c("b_log_width" = "log(Width)",
+                                "b_Dam_binary1" = "Dam",
+                                "b_NHD_RdDensWs" = "Road Density",
+                                "b_summerT" = "Temperature")) +
     theme_bw())
 
 # Save out this figure.
 # ggsave(y_fig,
-#        filename = "figures/teton_fall22/brms_yield_021423.jpg",
+#        filename = "figures/teton_fall22/brms_yield_022723.jpg",
 #        width = 15,
 #        height = 10,
 #        units = "cm")
@@ -681,213 +669,74 @@ get_variables(y1)
 
 # Default is type = "intervals".
 
-# Also trying to figure out a way to plot histograms/density plots
-# over top of these intervals.
-
-my_posterior <- as.matrix(y1)
-
-(y_fig2 <- mcmc_areas(my_posterior,
-           # removed precip bc it was flattening everything
-           # then removed all but "significant" covariates
-           pars = c("b_summerT", "b_Dam95", "b_log_width"),
-           prob = 0.95) +
-  ggtitle("Posterior distributions",
-          "with 95% credible intervals not crossing zero") +
-  vline_at(v = 0) +
-  labs(x = "Posterior",
-       y = "Coefficients") +
-  theme_bw())
-
-# Save out this figure.
-# ggsave(y_fig2,
-#        filename = "figures/teton_fall22/brms_yield_sig_021423.jpg",
-#        width = 15,
-#        height = 10,
-#        units = "cm")
-
-##### Latitude #####
-
-# Proposed starting model structure:
-
-# max algal yield ~ temp + lat + roads + dams + width + 1 | HUC2
-
-# Choosing latitude here, since it drops less observations.
-
-# One on one plots for covariates of interest vs. may.
-
-hist(dat_yield_combo$yield_med2)
-plot(log_yield ~ Lat_WGS84, data = dat_yield_combo)
-
-# Ok, and making the final dataset with which to build models
-dat_yield_brms2 <- dat_yield_combo %>%
-  dplyr::select(log_yield, summerT, Lat_WGS84,
-                NHD_RdDensWs, Dam, log_width,
-                huc2_id)
-
-##### Step 1: Create multi-level model.
-
-y2 <- brm(log_yield ~ summerT + Lat_WGS84 + NHD_RdDensWs +
-            Dam + log_width + (1|huc2_id), 
-          data = dat_yield_brms2, family = gaussian())
-# assumes 4 chains and 2000 iterations (1000 warm-up)
-# started at 10:53am - finished at 10:54am :)
-
-# Warning message:
-# Rows containing NAs were excluded from the model. 
-
-##### Step 2: Examine model outputs.
-
-summary(y2)
-
-#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept        0.38      0.84    -1.29     2.05 1.00     3285     2745
-# summerT         -0.03      0.02    -0.06    -0.00 1.00     4034     3519
-# Lat_WGS84       -0.00      0.02    -0.03     0.03 1.00     3104     2767
-# NHD_RdDensWs     0.02      0.02    -0.01     0.05 1.00     3543     2774
-# Dam50           -0.04      0.13    -0.30     0.21 1.00     5807     3232
-# Dam80            0.17      0.11    -0.05     0.40 1.00     5305     2545
-# Dam95            0.18      0.08     0.02     0.34 1.00     4559     3233
-# log_width        0.50      0.10     0.31     0.69 1.00     3431     3238
-
-# Well, great convergence again! All Rhat < 1.05.
-# And temperature, dam95, and stream width again jump out.
-
-##### Step 3: Examine model diagnostics.
-
-# Everything appears to have converged well, so let's look at chain
-# mixing and posterior distributions.
-plot(y2, variable = c("b_summerT", "b_Lat_WGS84", "b_NHD_RdDensWs",
-                      "b_Dam50", "b_Dam80", "b_Dam95", "b_log_width"))
-
-# Chains all appear well-mixed, but let's also check things in shinystan.
-launch_shinystan(y2)
-
-# No divergent transitions appear in the log posterior plots for any
-# of the parameters.
-
-# Finally, examine to be sure no n_eff are < 0.1
-mcmc_plot(y2, type = "neff")
-
-##### Step 4: Examine model relationships for each predictor.
-
-plot(conditional_effects(y2, effects = "summerT"))
-plot(conditional_effects(y2, effects = "Lat_WGS84"))
-plot(conditional_effects(y2, effects = "NHD_RdDensWs"))
-plot(conditional_effects(y2, effects = "Dam"))
-plot(conditional_effects(y2, effects = "log_width"))
-
-# Note, can investigate scenarios like effect1:effect2 here
-# and it will automatically choose percentiles to predict.
-
-##### Step 5: Investigate possible overdispersion.
-
-# Add column denoting number of observations.
-dat_yield_brms2$obs <- c(1:length(dat_yield_brms2$log_yield))
-
-y2.1 <- brm(log_yield ~ summerT + Lat_WGS84 + NHD_RdDensWs +
-              Dam + log_width + (1|huc2_id) + (1|obs), 
-            data = dat_yield_brms2, family = gaussian())
-# 76 divergent transitions
-
-# Compare with original model using leave-one-out approximation.
-loo(y2, y2.1)
-
-# Model comparisons:
-#     elpd_diff se_diff
-# y2.1   0.0       0.0  
-# y2    -4.4       0.7 
-
-# Higher expected log posterior density (elpd) values = better fit.
-
-# So, in this case model accounting for overdispersion (y2.1) fits better.
-# But there are 22 problematic observations...
-
-##### Step 6: Plot the results.
-
-get_variables(y2)
-
-# b_Intercept refers to global mean
-# r_huc2_id[] are the offsets from that mean for each condition
-
-(y2_fig <- mcmc_plot(y2, variable = c("b_summerT", "b_Lat_WGS84",
-                                     "b_NHD_RdDensWs", "b_Dam50", 
-                                     "b_Dam80", "b_Dam95", "b_log_width"),
-                    #type = "intervals",
-                    point_est = "median", # default = "median"
-                    prob = 0.66, # default = 0.5
-                    prob_outer = 0.95) + # default = 0.9
-    vline_at(v = 0) +
-    labs(x = "Posterior",
-         y = "Predictors") +
-    theme_bw())
-
-# Save out this figure.
-# ggsave(y2_fig,
-#        filename = "figures/teton_fall22/brms_yield2_021623.jpg",
-#        width = 15,
-#        height = 10,
-#        units = "cm")
-
-# Plot conditional effects of those whose intervals don't cross 0.
+# Also create conditional plots for each significant parameter.
+# Plot conditional effects of all covariates.
 # Using code from here to make them ggplots:
 # https://bookdown.org/content/4857/conditional-manatees.html#summary-bonus-conditional_effects
 
-p_t <- conditional_effects(y2, effects = "summerT")
+y_t <- conditional_effects(y1, effects = "summerT")
 
-(plot_t <- plot(p_t, plot = F)[[1]] +
-  geom_smooth(color = "black") +
-  labs(x = "Summer Temperature",
-       y = "Log of Predicted Accrual") +
-  theme_bw())
+# Create new dataframe
+yt_df <- y_t$summerT %>%
+  # and calculate true Qc:Q2yr values
+  mutate(yield = 10^`estimate__`,
+         loweryield = 10^`lower__`,
+         upperyield = 10^`upper__`)
 
-p_d <- conditional_effects(y2, effects = "Dam")
-
-(plot_d <- plot(p_d, plot = F)[[1]] +
-    labs(x = "Likelihood of Interference by Dams",
-         y = "Log of Predicted Accrual") +
+(plot_yt <- ggplot(yt_df, aes(x = summerT, y = yield)) +
+    geom_line(color = "black", linewidth = 1) +
+    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
+                alpha = 0.25) +
+    labs(x = expression(Mean~Summer~Temperature~(degree~C)),
+         y = expression(Biomass~Accrual)) +
+    ylim(0, 17) +
     theme_bw())
-  
-p_w <- conditional_effects(y2, effects = "log_width")
 
-(plot_w <- plot(p_w, plot = F)[[1]] +
-    geom_smooth(color = "black") +
-    labs(x = "Log of River Width",
-         y = "Log of Predicted Accrual") +
+y_d <- conditional_effects(y1, effects = "Dam_binary")
+
+# Create new dataframe
+yd_df <- y_d$Dam_binary %>%
+  # and calculate true Qc:Q2yr values
+  mutate(yield = 10^`estimate__`,
+         loweryield = 10^`lower__`,
+         upperyield = 10^`upper__`)
+
+(plot_yd <- ggplot(yd_df, aes(x = Dam_binary, y = yield)) +
+    geom_point(size = 3) +
+    geom_errorbar(aes(ymin = loweryield, ymax = upperyield), width = 0.2) +
+    labs(x = "Likelihood of Interference by Dams",
+         y = expression(Biomass~Accrual)) +
+    ylim(0, 17) +
+    theme_bw())
+
+y_w <- conditional_effects(y1, effects = "log_width")
+
+# Create new dataframe
+yw_df <- y_w$log_width %>%
+  # and calculate true Qc:Q2yr values
+  mutate(yield = 10^`estimate__`,
+         loweryield = 10^`lower__`,
+         upperyield = 10^`upper__`)
+
+(plot_yw <- ggplot(yw_df, aes(x = 10^log_width, y = yield)) +
+    geom_line(color = "black", linewidth = 1) +
+    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
+                alpha = 0.25) +
+    scale_x_log10()+
+    labs(x = "River Width",
+         y = expression(Biomass~Accrual)) +
+    ylim(0, 17) +
     theme_bw())
 
 # Now, let's combine the above using patchwork.
-(fig_cond_yield <- (y2_fig + plot_t + plot_d + plot_w) +
+(fig_cond_yield <- (y_fig + plot_yt + plot_yd + plot_yw) +
     plot_layout(nrow = 1) +
     plot_annotation(tag_levels = 'A'))
 
 # And export.
 # ggsave(fig_cond_yield,
-#        filename = "figures/teton_fall22/brms_yield2_cond_021623.jpg",
+#        filename = "figures/teton_fall22/brms_yield_cond_022723.jpg",
 #        width = 40,
-#        height = 10,
-#        units = "cm") # n = 159
-
-# Also trying to figure out a way to plot histograms/density plots
-# over top of these intervals.
-
-my_posterior2 <- as.matrix(y2)
-
-(y2_fig2 <- mcmc_areas(my_posterior2,
-                      # removed lat bc it was flattening everything
-                      # then removed all but "significant" covariates
-                      pars = c("b_summerT", "b_Dam95", "b_log_width"),
-                      prob = 0.95) +
-    ggtitle("Posterior distributions",
-            "with 95% credible intervals not crossing zero") +
-    vline_at(v = 0) +
-    labs(x = "Posterior",
-         y = "Coefficients") +
-    theme_bw())
-
-# Save out this figure.
-# ggsave(y2_fig2,
-#        filename = "figures/teton_fall22/brms_yield2_sig_021623.jpg",
-#        width = 15,
 #        height = 10,
 #        units = "cm")
 
@@ -1303,117 +1152,6 @@ qw_df <- q_w$width_log %>%
 # Save out this figure.
 # ggsave(q_fig,
 #        filename = "figures/teton_fall22/brms_QcQ2_021623.jpg",
-#        width = 15,
-#        height = 10,
-#        units = "cm")
-
-##### Latitude #####
-
-# Proposed starting model structure:
-
-# Qc:Q2 ~ lat + size + roads + dams + 1 | HUC2
-
-# Choosing latitude here, since it drops less observations.
-
-# One on one plots for covariates of interest vs. Qc.
-plot(logQcQ2 ~ Lat_WGS84, data = dat_Qc_trim)
-
-# Ok, and making the final dataset with which to build models
-dat_Qc_brms2 <- dat_Qc_trim %>%
-  dplyr::select(logQcQ2, Lat_WGS84, width_log, 
-                NHD_RdDensWs, Dam, huc2_id)
-
-##### Step 1: Create multi-level model.
-
-q2 <- brm(logQcQ2 ~ Lat_WGS84 + NHD_RdDensWs +
-            Dam + width_log + (1|huc2_id), 
-          data = dat_Qc_brms2, family = gaussian())
-# assumes 4 chains and 2000 iterations (1000 warm-up)
-# started at 2:43pm - finished at 2:44pm :)
-
-# 4 divergent transitions.
-
-##### Step 2: Examine model outputs.
-
-summary(q2)
-
-#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept       -0.25      0.56    -1.42     0.79 1.01     1527      911
-# Lat_WGS84        0.00      0.01    -0.02     0.03 1.00     1491      963
-# NHD_RdDensWs    -0.02      0.02    -0.06     0.02 1.00     2860     2376
-# Dam50            0.28      0.20    -0.10     0.67 1.00     3792     2764
-# Dam80            0.06      0.15    -0.23     0.35 1.00     3617     2510
-# Dam95            0.02      0.10    -0.17     0.21 1.00     3204     2736
-# width_log       -0.01      0.11    -0.23     0.21 1.00     2718     2870
-
-# Well, great convergence but nothing jumps out again.
-
-##### Step 3: Examine model diagnostics.
-
-# Everything appears to have converged well, so let's look at chain
-# mixing and posterior distributions.
-plot(q2, variable = c("b_Lat_WGS84", "b_NHD_RdDensWs",
-                      "b_Dam50", "b_Dam80", "b_Dam95", "b_width_log"))
-
-# Chains all appear well-mixed, but let's also check things in shinystan.
-launch_shinystan(q2)
-
-# 4 divergent transitions appear.
-
-# Finally, examine to be sure no n_eff are < 0.1
-mcmc_plot(q2, type = "neff")
-
-##### Step 4: Examine model relationships for each predictor.
-
-plot(conditional_effects(q2, effects = "Lat_WGS84"))
-plot(conditional_effects(q2, effects = "NHD_RdDensWs"))
-plot(conditional_effects(q2, effects = "Dam"))
-plot(conditional_effects(q2, effects = "width_log"))
-
-##### Step 5: Investigate possible overdispersion.
-
-# Add column denoting number of observations.
-dat_Qc_brms2$obs <- c(1:length(dat_Qc_brms2$logQcQ2))
-
-q2.1 <- brm(logQcQ2 ~ Lat_WGS84 + NHD_RdDensWs +
-              Dam + width_log + (1|huc2_id) + (1|obs), 
-            data = dat_Qc_brms2, family = gaussian())
-# 95 divergent transitions
-
-# Compare with original model using leave-one-out approximation.
-loo(q2, q2.1)
-
-# Model comparisons:
-#     elpd_diff se_diff
-# q2.1   0.0       0.0  
-# q2    -4.1       0.7 
-
-# Higher expected log posterior density (elpd) values = better fit.
-# So, in this case model accounting for overdispersion (q2.1) fits better.
-# But there are 25 problematic observations...
-
-##### Step 6: Plot the results.
-
-get_variables(q2)
-
-# b_Intercept refers to global mean
-# r_huc2_id[] are the offsets from that mean for each condition
-
-(q2_fig <- mcmc_plot(q2, variable = c("b_Lat_WGS84", "b_NHD_RdDensWs", 
-                                      "b_Dam50","b_Dam80", 
-                                      "b_Dam95", "b_width_log"),
-                     #type = "intervals",
-                     point_est = "median", # default = "median"
-                     prob = 0.66, # default = 0.5
-                     prob_outer = 0.95) + # default = 0.9
-    vline_at(v = 0) +
-    labs(x = "Posterior",
-         y = "Predictors") +
-    theme_bw())
-
-# Save out this figure.
-# ggsave(q2_fig,
-#        filename = "figures/teton_fall22/brms_QcQ2.2_021623.jpg",
 #        width = 15,
 #        height = 10,
 #        units = "cm")
