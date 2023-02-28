@@ -43,6 +43,9 @@ dat_2yr <- read_csv("data_working/RI_2yr_flood_182riv.csv")
 # Load in nutrient data downloaded from USGS.
 dat_nuts <- readRDS("data_working/USGS_WQP_nuts_aggsite_110222.rds")
 
+# And the dataset with all HUC delineations.
+site_HUC <- readRDS("data_working/HUC12_159sites_120922.rds")
+
 #### Data Prep ####
 
 # Take list containing all input data and make into a df.
@@ -50,6 +53,10 @@ dat_in_df <- map_df(dat_in, ~as.data.frame(.x), .id="site_name")
 
 # Take list containing all iterations of parameters and make into a df.
 dat_out_df <- map_df(dat_out, ~as.data.frame(.x), .id="site_name")
+
+# Trim HUC dataset.
+site_HUC2 <- site_HUC %>%
+  dplyr::select(site_name, huc2_id)
 
 #### Value filter for rmax ####
 
@@ -648,10 +655,18 @@ dat_out_full_141_1 <- left_join(dat_out_yas2, dat_site_info,
 
 dat_out_full_141_2 <- left_join(dat_out_full_141_1, dat_site)
 dat_out_full_141_3 <- left_join(dat_out_full_141_2, med_width)
-dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
+dat_out_full_141_4 <- left_join(dat_out_full_141_3, site_HUC2)
+dat_out_full_141 <- left_join(dat_out_full_141_4, dat_nuts_w)
+
+dat_out_full_141 <- dat_out_full_141 %>%
+# Also creating a new categorical dam column to model by.
+mutate(Dam_binary = factor(case_when(
+  Dam %in% c("50", "80", "95") ~ "0", # Potential
+  Dam == "0" ~ "1", # Certain
+  TRUE ~ NA)))
 
 # Export for future use.
-#saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_113022.rds")
+#saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_022823.rds")
 
 # Distribution of c values:
 (fig0c <- ggplot(dat_out_full_141, aes(x = c_med)) +
@@ -670,12 +685,12 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
          y = "Count") +
     theme_bw())
 
-# CV of Discharge vs. c: note, x axis on LOG SCALE
+# CV of Discharge vs. Qc:Q2: note, x axis on LOG SCALE
 (fig2qcq2 <- ggplot(dat_out_full_141, aes(x = cvQ, y = Qc_Q2yr)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#5792CC") +
+               color = "#405F8A") +
     geom_linerange(alpha = 0.8, 
-                   color = "#5792CC",
+                   color = "#405F8A",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() +
@@ -705,9 +720,9 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 
 # Stream Width vs. c: note, x axis LOG SCALED
 (fig4.1qcq2 <- ggplot(dat_out_full_141, aes(x = width_med, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#3B7D6E") +
+    geom_point(alpha = 0.6, size = 3, color = "#1E2F46") +
     geom_linerange(alpha = 0.8, 
-                   color = "#3B7D6E",
+                   color = "#1E2F46",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() + 
@@ -767,12 +782,12 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
-# Mean daily GPP vs. c: X axis LOG SCALED
+# Mean daily GPP vs. Qc:Q2: X axis LOG SCALED
 (fig9qcq2 <- ggplot(dat_out_full_141, aes(x = meanGPP, y = Qc_Q2yr)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#4D5B75") +
+               color = "#486999") +
     geom_linerange(alpha = 0.8, 
-                   color = "#4D5B75",
+                   color = "#486999",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() +
@@ -794,9 +809,9 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
     theme_bw())
 
 (fig11qcq2 <- ggplot(dat_out_full_141, aes(x = NHD_RdDensWs, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#5F5C29") +
+    geom_point(alpha = 0.6, size = 3, color = "#304969") +
     geom_linerange(alpha = 0.8, 
-                   color = "#5F5C29",
+                   color = "#304969",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_y_log10() + 
@@ -826,17 +841,13 @@ dat_out_full_141 <- left_join(dat_out_full_141_3, dat_nuts_w)
 # Effect of Dams
 # "95 indicates the least probable interference from a structure of a given type"
 (fig14qcq2 <- ggplot(dat_out_full_141 %>%
-                       na.omit(Dam) %>%
-                       mutate(DamReOrder = factor(case_when(Dam == "0" ~ "100",
-                                                            Dam == "50" ~ "50",
-                                                            Dam == "80" ~ "20",
-                                                            Dam == "95" ~ "5"),
-                                                  levels = c("5", "20", "50", "100"))), 
-                     aes(x = DamReOrder, y = Qc_Q2yr)) +
+                       drop_na(Dam_binary), 
+                     aes(x = Dam_binary, y = Qc_Q2yr)) +
     geom_boxplot(alpha = 0.6, 
-                 fill = "#BD973D", color = "black") +
+                 fill = "#273C57", color = "black") +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_y_log10() + 
+    scale_x_discrete(labels = c("5-50%", "100%")) +
     labs(x = expression(Likelihood~of~Influence~by~Dams),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
@@ -865,26 +876,23 @@ df_precip_Qc_141 <- left_join(dat_out_full_141, site_precip, by = c("site_name" 
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
-# Combine figures above.
-(fig_qcq2 <- fig1qcq2 + fig9qcq2 + fig2qcq2 + 
-    fig4.1qcq2 + fig11qcq2 + fig14qcq2 +
-    plot_annotation(tag_levels = 'A') +
-    plot_layout(nrow = 2))
+# HUC vs. Qc:Q2: 
+(fig17qcq2 <- ggplot(dat_out_full_141, aes(x = huc2_id, y = Qc_Q2yr)) +
+    geom_boxplot(alpha = 0.6, color = "black", fill = "#38557A") +
+    geom_hline(yintercept = 1, linetype = "dashed") +
+    scale_y_log10() +
+    labs(x = expression(Regional~Hydrological~Unit~Code),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
 
-# And export for use in RMarkdown.
-# ggsave(fig_qcq2,
-#        filename = "figures/teton_fall22/QcQ2_6panel_log_121522.jpg",
-#        width = 30,
-#        height = 20,
-#        units = "cm")
-
-(fig_qcq2_supp <- fig0c + fig16qcq2 + 
-    fig4qcq2 + fig7qcq2 +
+# Combine figures above and export for supplemental figure.
+(fig_qcq2_supp <- fig9qcq2 + fig2qcq2 + fig17qcq2 +
+    fig11qcq2 + fig14qcq2 + fig4.1qcq2 +
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 2))
 
 # ggsave(fig_qcq2_supp,
-#        filename = "figures/teton_fall22/QcQ2_4panel_121522.jpg",
+#        filename = "figures/teton_fall22/QcQ2_6panel_022823.jpg",
 #        width = 20,
 #        height = 20,
 #        units = "cm") # n = 141
