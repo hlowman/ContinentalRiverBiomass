@@ -893,7 +893,7 @@ df_precip_Qc_141 <- left_join(dat_out_full_141, site_precip, by = c("site_name" 
 
 # ggsave(fig_qcq2_supp,
 #        filename = "figures/teton_fall22/QcQ2_6panel_022823.jpg",
-#        width = 20,
+#        width = 30,
 #        height = 20,
 #        units = "cm") # n = 141
 
