@@ -727,7 +727,7 @@ mutate(Dam_binary = factor(case_when(
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() + 
     scale_y_log10() + 
-    labs(x = expression(Stream~Width~(m)),
+    labs(x = expression(River~Width~(m)),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
