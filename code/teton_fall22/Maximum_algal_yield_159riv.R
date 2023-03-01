@@ -28,8 +28,23 @@ dat_out <- readRDS("data_working/teton_182rivers_model_params_all_iterations_101
 # And remaining covariate data for plotting.
 dat_rmax <- readRDS("data_working/rmax_filtered_159sites_113022.rds")
 
+# And the dataset with all HUC delineations.
+site_HUC <- readRDS("data_working/HUC12_159sites_120922.rds")
+
+# And the updated dataset with nutrient data.
+nuts <- readRDS("data_working/USGS_WQP_nuts_aggsite_022322.rds")
+
 # Take list containing all iterations of parameters and make into a df.
 dat_out_df <- map_df(dat_out, ~as.data.frame(.x), .id="site_name")
+
+# Trim HUC dataset.
+site_HUC2 <- site_HUC %>%
+  dplyr::select(site_name, huc2_id)
+
+# Trim nutrient dataset only for P.
+nuts_P <- nuts %>%
+  filter(CharacteristicName == "Phosphorus") %>%
+  rename(Phosphorus = "mean_mg_L")
 
 #### Yield Formulas ####
 
@@ -57,9 +72,15 @@ dat_out_yield_med <- dat_out_df %>%
   group_by(site_name) %>%
   summarize(yield_med1 = median(yield_1),
             yield_med2 = median(yield_2),
+            yield_2.5_2 = quantile(yield_2, probs = 0.025),
+            yield_97.5_2 = quantile(yield_2, probs = 0.975),
             yield_med3 = median(yield_3),
             lambda_med = median(lambda)) %>%
-  ungroup()
+  ungroup() %>%
+  # Some lower quantiles of yield were negative, so need to
+  # filter those to become 0 instead so they plot.
+  mutate(yield_2.5_2ed = case_when(yield_2.5_2 < 0 ~ 0,
+                                   TRUE ~ yield_2.5_2))
 
 # Quick plots.
 hist(dat_out_yield_med$yield_med1)
@@ -70,10 +91,23 @@ hist(dat_out_yield_med$yield_med3) # seems similar to formula 1 but x100
 
 # Combine with rmax dataset.
 # Note, this will trim down from 182 to 159 sites due to model diagnostics.
-dat_yield_rmax <- left_join(dat_rmax, dat_out_yield_med)
+dat_yield_rmax_1 <- left_join(dat_rmax, dat_out_yield_med)
+# Combine with HUC dataset
+dat_yield_rmax_2 <- left_join(dat_yield_rmax_1, site_HUC2)
+# Edit nutrient dataset so it has a matching sitename column
+nuts_P$site_name <- str_replace_all(nuts_P$MonitoringLocationIdentifier, 'USGS-', 'nwis_')
+# And combine primary df with nutrient data
+dat_yield_rmax_3 <- left_join(dat_yield_rmax_2, nuts_P)
+
+dat_yield_rmax <- dat_yield_rmax_3 %>%
+  # Also creating a new categorical dam column to model by.
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential
+    Dam == "0" ~ "1", # Certain
+    TRUE ~ NA)))
 
 # Export for future use.
-saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
+#saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_030123.rds")
 
 #### Figures ####
 
@@ -258,41 +292,53 @@ saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
 
 # MAY vs. GPP:
 (fig2.3 <- ggplot(dat_yield_rmax, aes(x = meanGPP, y = yield_med2)) +
-    geom_point(alpha = 1, size = 3,
-               color = "#EEDCB4") +
+    geom_point(alpha = 0.9, size = 3,
+               color = "#96AA8B") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#96AA8B",
+                   aes(ymin = yield_2.5_2ed, ymax = yield_97.5_2)) +
     scale_x_log10() +
     scale_y_log10() +
-    labs(y = expression(Maximum~Algal~Yield~(Scheuerell)),
+    labs(y = expression(a[max]),
          x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
     theme_bw())
 
 # MAY vs. cvQ:
 (fig2.4 <- ggplot(dat_yield_rmax, aes(x = cvQ, y = yield_med2)) +
     geom_point(alpha = 0.9, size = 3,
-               color = "#E6CFA6") +
+               color = "#8A9C7E") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#8A9C7E",
+                   aes(ymin = yield_2.5_2ed, ymax = yield_97.5_2)) +
     scale_x_log10() +
     scale_y_log10() +
     labs(x = expression(CV[Q]),
-         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+         y = expression(a[max])) +
     theme_bw())
 
 # MAY vs. summer light:
 (fig2.5 <- ggplot(dat_yield_rmax, aes(x = summerL, y = yield_med2)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#D0B692") +
+               color = "#7B8B6E") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#7B8B6E",
+                   aes(ymin = yield_2.5_2ed, ymax = yield_97.5_2)) +
     scale_x_log10() +
     scale_y_log10() +
     labs(x = expression(Cumulative~Summer~PAR~(mol~m^-2~d^-1)),
-         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+         y = expression(a[max])) +
     theme_bw())
 
 # MAY vs. stream width:
 (fig2.6 <- ggplot(dat_yield_rmax, aes(x = width_med, y = yield_med2)) +
-    geom_point(alpha = 0.8, size = 3, color = "#BA9D7E") +
+    geom_point(alpha = 0.8, size = 3, color = "#454F34") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#454F34",
+                   aes(ymin = yield_2.5_2ed, ymax = yield_97.5_2)) +
     scale_x_log10() + 
     scale_y_log10() +
     labs(x = expression(Stream~Width~(m)),
-         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+         y = expression(a[max])) +
     theme_bw())
 
 # MAY vs. longitude:
@@ -305,42 +351,55 @@ saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
     theme_bw())
 
 # MAY vs. Road density:
-(fig2.8 <- ggplot(dat_yield_rmax, aes(x = NHD_RdDensCat, y = yield_med2)) +
+(fig2.8 <- ggplot(dat_yield_rmax, 
+                  aes(x = NHD_RdDensWs, y = yield_med2)) +
     geom_point(alpha = 0.8, size = 3, 
-               color = "#865A46") +
+               color = "#3A422D") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#3A422D",
+                   aes(ymin = yield_2.5_2ed, ymax = yield_97.5_2)) +
     #scale_x_log10() +
     scale_y_log10() +
-    labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
-         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
+         y = expression(a[max])) +
     theme_bw())
 
 # MAY vs. NO3:
 (fig2.9 <- ggplot(dat_yield_rmax, aes(x = Nitrate, y = yield_med2)) +
-    geom_point(alpha = 0.8, size = 3, color = "#693626") +
+    geom_point(alpha = 0.8, size = 3, color = "#343B29") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#343B29",
+                   aes(ymin = yield_2.5_2ed, ymax = yield_97.5_2)) +
     scale_x_log10() +
     scale_y_log10() +
     labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
-         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+         y = expression(a[max])) +
     theme_bw())
 
-# MAY vs. PO4:
-(fig2.10 <- ggplot(dat_yield_rmax, aes(x = Orthophosphate, 
+# MAY vs. P:
+(fig2.10 <- ggplot(dat_yield_rmax, aes(x = Phosphorus, 
                                        y = yield_med2)) +
     geom_point(alpha = 0.8, size = 3, 
-               color = "#53261B") +
+               color = "#2F3525") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#2F3525",
+                   aes(ymin = yield_2.5_2ed, ymax = yield_97.5_2)) +
     scale_x_log10() +
     scale_y_log10() +
-    labs(x = expression(Mean~OrthoPhosphate~(mg/L~PO[4]-P)),
-         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+    labs(x = expression(Mean~Dissolved~Phosphorus~(mg/L~P)),
+         y = expression(a[max])) +
     theme_bw())
 
 # MAY vs. dams:
-(fig2.11 <- ggplot(dat_yield_rmax, aes(x = Dam, y = yield_med2)) +
+(fig2.11 <- ggplot(dat_yield_rmax %>%
+                     drop_na(Dam_binary), 
+                   aes(x = Dam_binary, y = yield_med2)) +
     geom_boxplot(alpha = 0.6, 
-                 fill = "#3E1E16", color = "#3E1E16") +
+                 fill = "#4D583C", color = "black") +
     scale_y_log10() +
+    scale_x_discrete(labels = c("5-50%", "100%")) +
     labs(x = expression(Likelihood~of~Influence~by~Dams),
-         y = expression(Maximum~Algal~Yield~(Scheuerell))) +
+         y = expression(a[max])) +
     theme_bw())
 
 # MAY vs. canals:
@@ -352,19 +411,38 @@ saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_021323.rds")
          y = expression(Maximum~Algal~Yield~(Scheuerell))) +
     theme_bw())
 
+# MAY vs. summer temp:
+(fig2.13 <- ggplot(dat_yield_rmax, aes(x = summerT, y = yield_med2)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#5C694C") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#5C694C",
+                   aes(ymin = yield_2.5_2ed, ymax = yield_97.5_2)) +
+    scale_y_log10() +
+    labs(x = expression(Mean~Summer~Temperature~(degree~C)),
+         y = expression(a[max])) +
+    theme_bw())
+
+# MAY vs. HUC: 
+(fig2.14 <- ggplot(dat_yield_rmax, aes(x = huc2_id, y = yield_med2)) +
+    geom_boxplot(alpha = 0.6, color = "black", fill = "#6C7A5D") +
+    scale_y_log10() +
+    labs(x = expression(Regional~Hydrological~Unit~Code),
+         y = expression(a[max])) +
+    theme_bw())
+
 # Combine figures above.
-(fig_yield_med2 <- fig2.1 + fig2.2 + fig2.3 +
-    fig2.4 + fig2.5 + fig2.6 +
-    fig2.7 + fig2.8 + fig2.9 +
-    fig2.10 + fig2.11 + fig2.12 +
+(fig_yield_med2 <- fig2.3 + fig2.4 + fig2.5 + fig2.14 +
+    fig2.13 + fig2.11 + fig2.6 + fig2.8 +
+    fig2.9 + fig2.10 +
     plot_annotation(tag_levels = 'A') +
-    plot_layout(nrow = 4))
+    plot_layout(nrow = 3))
 
 # And export for use in the Rmarkdown file.
 # ggsave(fig_yield_med2,
-#        filename = "figures/teton_fall22/maxalgyield2_12panel_021323.jpg",
-#        width = 30,
-#        height = 40,
+#        filename = "figures/teton_fall22/maxalgyield2_10panel_030123.jpg",
+#        width = 40,
+#        height = 30,
 #        units = "cm") # n = 159
 
 # And combine and export tiny figure as well.
