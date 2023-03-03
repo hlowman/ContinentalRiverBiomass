@@ -30,6 +30,7 @@ vignettes/*.pdf
 data_raw
 data_working
 data_teton
+data_posthoc_modelfits
 # Thumbnail files created by Windows
 figures/teton_fall22/Thumbs.db
 figures/teton_summer22/Thumbs.db
