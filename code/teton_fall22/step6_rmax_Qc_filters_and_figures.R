@@ -197,6 +197,14 @@ dat_out_full <- dat_out_full %>%
          x = expression(Mean~Daily~GPP~(g~O[2]~m^-2~d^-1))) +
     theme_bw())
 
+# Also, investigating mean daily GPP vs. dams
+(fig1.dam <- ggplot(dat_out_full, aes(x = Dam, y = meanGPP)) +
+    geom_jitter(alpha = 0.8, size = 3, width = 0.1,
+               color = "#285B50") +
+    labs(x = "Likelihood of Influence by Dams (%)",
+         y = expression(Mean~Daily~GPP~(g~O[2]~m^-2~d^-1))) +
+    theme_bw())
+
 # CV of Discharge vs. rmax:
 (fig2 <- ggplot(dat_out_full, aes(x = cvQ, y = r_med)) +
     geom_point(alpha = 0.8, size = 3,
@@ -263,6 +271,15 @@ dat_out_full <- dat_out_full %>%
     scale_x_log10() + 
     labs(x = expression(Stream~Width~(m)),
          y = expression(r[max])) +
+    theme_bw())
+
+# Also, investigating width vs. dams
+(fig4.dam <- ggplot(dat_out_full, aes(x = Dam, y = width_med)) +
+    geom_jitter(alpha = 0.9, size = 3, width = 0.1,
+                color = "#C9B7D9") +
+    scale_y_log10() +
+    labs(x = "Likelihood of Influence by Dams (%)",
+         y = expression(Stream~Width~(m))) +
     theme_bw())
 
 # Also did a quick gut check of order vs. width
@@ -372,6 +389,17 @@ plot(dat_out_full$Lon_WGS84, dat_out_full$cvQ)
                           aes(x = DamReOrder, y = r_med)) +
     geom_boxplot(alpha = 0.8, 
                  fill = "#E4DECE", color = "black") +
+    labs(x = expression(Likelihood~of~Influence~by~Dams~(`%`)),
+         y = expression(r[max])) +
+    theme_bw())
+
+# An additional figure as I investigate the "dams" category.
+(fig14.2 <- ggplot(dat_out_full, aes(x = Dam, y = r_med)) +
+    # geom_jitter(alpha = 0.8,
+    #             fill = "#0B4229") +
+    geom_linerange(alpha = 0.8, position = position_jitter(width = 0.15),
+                   color = "#0B4229",
+                   aes(ymin = minCI, ymax = `97.5%`)) +
     labs(x = expression(Likelihood~of~Influence~by~Dams~(`%`)),
          y = expression(r[max])) +
     theme_bw())
@@ -852,6 +880,17 @@ mutate(Dam_binary = factor(case_when(
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
+# Exploring uncertainty in Qc estimates by dam categories
+(fig14qcq2.2 <- ggplot(dat_out_full_141, aes(x = Dam, y = Qc_Q2yr)) +
+    geom_linerange(alpha = 0.8, position = position_jitter(width = 0.15),
+                   color = "#4D5B90",
+                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+    geom_hline(yintercept = 1, linetype = "dashed") +
+    scale_y_log10() + 
+    labs(x = expression(Likelihood~of~Influence~by~Dams),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
 # Effect of Canals
 # "95 indicates the least probable interference from a structure of a given type"
 (fig15qcq2 <- ggplot(dat_out_full_141, aes(x = Canal, y = Qc_Q2yr)) +
@@ -896,6 +935,21 @@ df_precip_Qc_141 <- left_join(dat_out_full_141, site_precip, by = c("site_name" 
 #        width = 30,
 #        height = 20,
 #        units = "cm") # n = 141
+
+#### Dam figure ####
+
+# Combining a few of the figures above to examine the effect of/presence
+# of Dams.
+(fig_dam <- fig14.2 + fig14qcq2.2 +
+   fig1.dam + fig4.dam +
+   plot_annotation(tag_levels = 'A') +
+   plot_layout(nrow = 2))
+
+# ggsave(fig_dam,
+#        filename = "figures/teton_fall22/Dams_4panel_031623.jpg",
+#        width = 25,
+#        height = 20,
+#        units = "cm")
 
 #### GPP and NRMSE figures ####
 
