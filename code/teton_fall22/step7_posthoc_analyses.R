@@ -942,6 +942,9 @@ y3n_df <- y3_n$no3_log %>%
     geom_line(color = "black", linewidth = 1) +
     geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
                 alpha = 0.25) +
+    geom_point(data = dat_yield_brms3, 
+               aes(x = 10^no3_log, y = 10^log_yield),
+               alpha = 0.2) +
     labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
          y = expression(a[max])) +
     scale_x_log10() +
@@ -962,6 +965,9 @@ y3p_df <- y3_p$p_log %>%
     geom_line(color = "black", linewidth = 1) +
     geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
                 alpha = 0.25) +
+    geom_point(data = dat_yield_brms3, 
+               aes(x = 10^p_log, y = 10^log_yield),
+               alpha = 0.2) +
     labs(x = expression(Mean~Dissolved~Phosphorus~(mg/L~P)),
          y = expression(a[max])) +
     scale_x_log10() +
@@ -981,22 +987,88 @@ y3w_df <- y3_w$log_width %>%
     geom_line(color = "black", linewidth = 1) +
     geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
                 alpha = 0.25) +
+    geom_point(data = dat_yield_brms3, 
+               aes(x = 10^log_width, y = 10^log_yield),
+               alpha = 0.2) +
     scale_x_log10()+
-    labs(x = "River Width",
+    labs(x = "River Width (m)",
          y = expression(a[max])) +
     ylim(0, 17) +
     theme_bw())
 
+y3_t <- conditional_effects(y3, effects = "summerT")
+
+# Create new dataframe
+y3t_df <- y3_t$summerT %>%
+  # and calculate true Qc:Q2yr values
+  mutate(yield = 10^`estimate__`,
+         loweryield = 10^`lower__`,
+         upperyield = 10^`upper__`)
+
+(plot_y3t <- ggplot(y3t_df, aes(x = summerT, y = yield)) +
+    geom_line(color = "black", linewidth = 1) +
+    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
+                alpha = 0.25) +
+    geom_point(data = dat_yield_brms3, 
+               aes(x = summerT, y = 10^log_yield),
+               alpha = 0.2) +
+    #scale_x_log10()+
+    labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
+         y = expression(a[max])) +
+    ylim(0, 17) +
+    theme_bw())
+
+y3_rd <- conditional_effects(y3, effects = "NHD_RdDensWs")
+
+# Create new dataframe
+y3rd_df <- y3_rd$NHD_RdDensWs %>%
+  # and calculate true Qc:Q2yr values
+  mutate(yield = 10^`estimate__`,
+         loweryield = 10^`lower__`,
+         upperyield = 10^`upper__`)
+
+(plot_y3rd <- ggplot(y3rd_df, aes(x = NHD_RdDensWs, y = yield)) +
+    geom_line(color = "black", linewidth = 1) +
+    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
+                alpha = 0.25) +
+    geom_point(data = dat_yield_brms3, 
+               aes(x = NHD_RdDensWs, y = 10^log_yield),
+               alpha = 0.2) +
+    #scale_x_log10()+
+    labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
+         y = expression(a[max])) +
+    ylim(0, 17) +
+    theme_bw())
+
+y3_d <- conditional_effects(y3, effects = "Dam_binary")
+
+# Create new dataframe
+y3d_df <- y3_d$Dam_binary %>%
+  # and calculate true yield values
+  mutate(yield = 10^`estimate__`,
+         loweryield = 10^`lower__`,
+         upperyield = 10^`upper__`)
+
+(plot_y3d <- ggplot(y3d_df, aes(x = Dam_binary, y = yield)) +
+    geom_point(size = 3) +
+    geom_errorbar(aes(ymin = loweryield, ymax = upperyield), width = 0.2) +
+    geom_jitter(data = dat_yield_brms3, aes(x = Dam_binary, y = 10^log_yield),
+                alpha = 0.1, width = 0.1) +
+    labs(x = "Likelihood of Interference by Dams",
+         y = expression(a[max])) +
+    scale_x_discrete(labels = c("5-50%", "100%")) +
+    ylim(0, 17) +
+    theme_bw())
+
 # Now, let's combine the above using patchwork.
-(fig_cond_yield_nuts <- (y3_fig + plot_y3n + plot_y3p + plot_y3w) +
-    plot_layout(nrow = 1) +
+(fig_cond_yield_nuts <- (y3_fig | (plot_y3d / plot_y3t) | (plot_y3n / plot_y3p) | (plot_y3rd / plot_y3w)) +
     plot_annotation(tag_levels = 'A'))
 
 # And export.
 # ggsave(fig_cond_yield_nuts,
-#        filename = "figures/teton_fall22/brms_yield_cond_nuts_030123.jpg",
+#        filename = "figures/teton_fall22/brms_yield_cond_nuts_032323.jpg",
 #        width = 40,
-#        height = 10,
+#        height = 20,
 #        units = "cm")
 
 # Also trying to figure out a way to plot histograms/density plots
