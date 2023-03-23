@@ -169,6 +169,41 @@ dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
 # Export for future use.
 #saveRDS(dat_out_full, "data_working/rmax_filtered_159sites_113022.rds")
 
+
+#### rmax quantiles ####
+median(dat_out_full$r_med) # nwis_03183500
+
+# 95th %tile and above
+quantile(dat_out_full$r_med, probs = c(0.95)) # 0.3127879
+r95above <- dat_out_full %>%
+  filter(r_med >= 0.3127879) # 8 sites
+r95above_sites <- site %>%
+  filter(site_name %in% r95above$site_name)
+
+# 5th %tile and below
+quantile(dat_out_full$r_med, probs = c(0.05)) # 0.02630729
+r5below <- dat_out_full %>%
+  filter(r_med <= 0.02630729) # 8 sites
+r5below_sites <- site %>%
+  filter(site_name %in% r5below$site_name)
+
+# Exploring commonalities
+# GPP
+mean(r95above$meanGPP) # 8.507373
+mean(r5below$meanGPP) # 0.5603639
+
+# Mean Summer Temp
+mean(r95above$summerT) # 21.6702
+mean(r5below$summerT) # 24.49389
+
+# Order
+mean(as.numeric(r95above$Order)) # 5.25
+mean(as.numeric(na.omit(r5below$Order))) # 3.14
+
+# Size
+mean(r95above$width_med) # 58.10221
+mean(r5below$width_med) # 12.4077
+
 #### rmax Figures ####
 
 # Adding column where the minimum confidence interval of rmax
