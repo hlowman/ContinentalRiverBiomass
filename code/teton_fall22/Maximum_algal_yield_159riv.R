@@ -31,6 +31,9 @@ dat_rmax <- readRDS("data_working/rmax_filtered_159sites_113022.rds")
 # And the dataset with all HUC delineations.
 site_HUC <- readRDS("data_working/HUC12_159sites_120922.rds")
 
+# And the dataset with site metadata.
+site <- fread("data_raw/site_data.tsv")
+
 # And the updated dataset with nutrient data.
 nuts <- readRDS("data_working/USGS_WQP_nuts_aggsite_022322.rds")
 
@@ -604,5 +607,33 @@ dat_yield_rmax <- dat_yield_rmax_3 %>%
 #        width = 30,
 #        height = 10,
 #        units = "cm") # n = 159
+
+#### accrual quantiles ####
+# 95th %tile and above
+quantile(dat_yield_rmax$yield_med2, probs = c(0.95)) # 10.91745
+a95above <- dat_yield_rmax %>%
+  filter(yield_med2 >= 10.91745) # 8 sites
+a95above_sites <- site %>%
+  filter(site_name %in% a95above$site_name) # shares 5 of 8 sites with rmax
+
+# 5th %tile and below
+quantile(dat_yield_rmax$yield_med2, probs = c(0.05)) # 0.353083
+a5below <- dat_yield_rmax %>%
+  filter(yield_med2 <= 0.353083) # 8 sites
+a5below_sites <- site %>%
+  filter(site_name %in% a5below$site_name) # shares 3 of 8 sites with rmax
+
+# Exploring commonalities
+# GPP
+mean(a95above$meanGPP) # 8.098374
+mean(a5below$meanGPP) # 0.3311079
+
+# Size
+mean(a95above$width_med) # 51.33848
+mean(a5below$width_med) # 7.801826
+
+# Discharge
+mean(a95above$cvQ) # 1.100216
+mean(a5below$cvQ) # 1.83351
 
 # End of script.

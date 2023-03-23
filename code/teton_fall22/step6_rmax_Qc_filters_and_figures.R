@@ -196,6 +196,10 @@ mean(r5below$meanGPP) # 0.5603639
 mean(r95above$summerT) # 21.6702
 mean(r5below$summerT) # 24.49389
 
+# Mean Summer Light
+mean(r95above$summerL) # 53768.61
+mean(r5below$summerL) # 49930.82
+
 # Order
 mean(as.numeric(r95above$Order)) # 5.25
 mean(as.numeric(na.omit(r5below$Order))) # 3.14
@@ -203,6 +207,14 @@ mean(as.numeric(na.omit(r5below$Order))) # 3.14
 # Size
 mean(r95above$width_med) # 58.10221
 mean(r5below$width_med) # 12.4077
+
+# Road Density
+mean(r95above$NHD_RdDensWs) # 2.36892
+mean(na.omit(r5below$NHD_RdDensWs)) # 2.739223
+
+# Discharge
+mean(r95above$cvQ) # 1.037317
+mean(r5below$cvQ) # 1.863781
 
 #### rmax Figures ####
 
