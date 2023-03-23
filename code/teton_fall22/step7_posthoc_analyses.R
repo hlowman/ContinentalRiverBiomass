@@ -672,7 +672,8 @@ get_variables(y1)
                                 "b_NHD_RdDensWs" = "Road Density",
                                 "b_Dam_binary1" = "Dam",
                                 "b_summerT" = "Temperature")) +
-    theme_bw())
+    theme_bw() +
+    theme(text = element_text(size = 16)))
 
 # Save out this figure.
 # ggsave(y_fig,
@@ -686,7 +687,7 @@ get_variables(y1)
 
 # Default is type = "intervals".
 
-# Also create conditional plots for each significant parameter.
+# Also create conditional plots for each parameter.
 # Plot conditional effects of all covariates.
 # Using code from here to make them ggplots:
 # https://bookdown.org/content/4857/conditional-manatees.html#summary-bonus-conditional_effects
@@ -705,7 +706,9 @@ yt_df <- y_t$summerT %>%
     geom_line(color = "black", linewidth = 1) +
     geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
                 alpha = 0.25) +
-    labs(x = expression(Mean~Summer~Temperature~(degree~C)),
+    geom_point(data = dat_yield_brms, aes(x = summerT, y = 10^log_yield),
+               alpha = 0.2) +
+    labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
     ylim(0, 17) +
     theme_bw())
@@ -722,6 +725,8 @@ yd_df <- y_d$Dam_binary %>%
 (plot_yd <- ggplot(yd_df, aes(x = Dam_binary, y = yield)) +
     geom_point(size = 3) +
     geom_errorbar(aes(ymin = loweryield, ymax = upperyield), width = 0.2) +
+    geom_jitter(data = dat_yield_brms, aes(x = Dam_binary, y = 10^log_yield),
+               alpha = 0.1, width = 0.1) +
     labs(x = "Likelihood of Interference by Dams",
          y = expression(a[max])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
@@ -741,22 +746,46 @@ yw_df <- y_w$log_width %>%
     geom_line(color = "black", linewidth = 1) +
     geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
                 alpha = 0.25) +
+    geom_point(data = dat_yield_brms, 
+               aes(x = 10^log_width, y = 10^log_yield),
+               alpha = 0.2) +
     scale_x_log10()+
-    labs(x = "River Width",
+    labs(x = "River Width (m)",
+         y = expression(a[max])) +
+    ylim(0, 17) +
+    theme_bw())
+
+y_rd <- conditional_effects(y1, effects = "NHD_RdDensWs")
+
+# Create new dataframe
+yrd_df <- y_rd$NHD_RdDensWs %>%
+  # and calculate true yield values
+  mutate(yield = 10^`estimate__`,
+         loweryield = 10^`lower__`,
+         upperyield = 10^`upper__`)
+
+(plot_yrd <- ggplot(yrd_df, aes(x = NHD_RdDensWs, y = yield)) +
+    geom_line(color = "black", linewidth = 1) +
+    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
+                alpha = 0.25) +
+    geom_point(data = dat_yield_brms, 
+               aes(x = NHD_RdDensWs, y = 10^log_yield),
+               alpha = 0.2) +
+    #scale_x_log10()+
+    labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
          y = expression(a[max])) +
     ylim(0, 17) +
     theme_bw())
 
 # Now, let's combine the above using patchwork.
-(fig_cond_yield <- (y_fig + plot_yt + plot_yd + plot_yw) +
-    plot_layout(nrow = 1) +
+(fig_cond_yield <- (y_fig | (plot_yt + plot_yd) / (plot_yrd + plot_yw)) +
     plot_annotation(tag_levels = 'A'))
 
 # And export.
 # ggsave(fig_cond_yield,
-#        filename = "figures/teton_fall22/brms_yield_cond_030123.jpg",
+#        filename = "figures/teton_fall22/brms_yield_cond_032323.jpg",
 #        width = 40,
-#        height = 10,
+#        height = 20,
 #        units = "cm")
 
 ##### Nutrients #####
