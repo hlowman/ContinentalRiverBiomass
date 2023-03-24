@@ -1294,6 +1294,8 @@ qr_df <- q_r$NHD_RdDensWs %>%
     geom_line(color = "black", linewidth = 1) +
     geom_ribbon(aes(ymin = lowerQcQ2, ymax = upperQcQ2),
                 alpha = 0.25) +
+    geom_point(data = dat_Qc_trim, aes(x = NHD_RdDensWs, y = Qc_Q2yr),
+                alpha = 0.2) +
     labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
          y = expression(Q[c]:Q[2~yr])) +
     ylim(0, 1.2) +
@@ -1312,6 +1314,8 @@ qd_df <- q_d$Dam_binary %>%
     geom_point(size = 3) +
     geom_errorbar(aes(ymin = lowerQcQ2, ymax = upperQcQ2), 
                   width = 0.2) +
+    geom_jitter(data = dat_Qc_trim, aes(x = Dam_binary, y = Qc_Q2yr),
+                alpha = 0.1, width = 0.1) +
     labs(x = "Likelihood of Interference by Dams",
          y = expression(Q[c]:Q[2~yr])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
@@ -1331,8 +1335,10 @@ qw_df <- q_w$width_log %>%
     geom_line(color = "black", linewidth = 1) +
     geom_ribbon(aes(ymin = lowerQcQ2, ymax = upperQcQ2),
                 alpha = 0.25) +
+    geom_point(data = dat_Qc_trim, aes(x = 10^width_log, y = Qc_Q2yr),
+               alpha = 0.2) +
     scale_x_log10()+
-    labs(x = "River Width",
+    labs(x = "River Width (m)",
          y = expression(Q[c]:Q[2~yr])) +
     ylim(0, 1.2) +
     theme_bw())
@@ -1344,7 +1350,7 @@ qw_df <- q_w$width_log %>%
 
 # And export.
 # ggsave(fig_cond_Qc,
-#        filename = "figures/teton_fall22/brms_Qc_cond_030123.jpg",
+#        filename = "figures/teton_fall22/brms_Qc_cond_032423.jpg",
 #        width = 40,
 #        height = 10,
 #        units = "cm")

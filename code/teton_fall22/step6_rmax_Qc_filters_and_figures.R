@@ -689,7 +689,7 @@ plotting_sc(data_out_141)
 # Roughly, 11 sites had R^2 > 0.5. Lots appear to have log scale relationships.
 # Removed lm and model fit print out bc it appeared a bit messy on th app.
 
-#### c Figures ####
+#### c dataset ####
 
 # Next, append the positive c values to the Rhat filter to remove
 # appropriate sites.
@@ -743,6 +743,75 @@ mutate(Dam_binary = factor(case_when(
 # Export for future use.
 #saveRDS(dat_out_full_141, "data_working/QcQ2_filtered_141sites_022823.rds")
 
+#### c quantiles ####
+
+median(dat_out_full_141$c_med) # 0.5711671
+median(dat_out_full_141$Qc_Q2yr, na.rm = TRUE) # 0.5136438
+
+# 95th %tile and above
+quantile(dat_out_full_141$c_med, probs = c(0.95)) # 1.082688
+c95above <- dat_out_full_141 %>%
+  filter(c_med >= 1.082688) # 8 sites
+c95above_sites <- site %>%
+  filter(site_name %in% c95above$site_name)
+
+quantile(dat_out_full_141$Qc_Q2yr, probs = c(0.95), na.rm = TRUE) # 2.591897
+qc95above <- dat_out_full_141 %>%
+  filter(Qc_Q2yr >= 2.591897) # 7 sites
+qc95above_sites <- site %>%
+  filter(site_name %in% qc95above$site_name)
+
+# 5th %tile and below
+quantile(dat_out_full_141$c_med, probs = c(0.05)) # 0.05541877
+c5below <- dat_out_full_141 %>%
+  filter(c_med <= 0.05541877) # 8 sites
+c5below_sites <- site %>%
+  filter(site_name %in% c5below$site_name)
+
+quantile(dat_out_full_141$Qc_Q2yr, probs = c(0.05), na.rm = TRUE) # 0.06236644
+qc5below <- dat_out_full_141 %>%
+  filter(Qc_Q2yr <= 0.06236644) # 7 sites
+qc5below_sites <- site %>%
+  filter(site_name %in% qc5below$site_name)
+
+# Exploring commonalities
+# GPP
+mean(c95above$meanGPP) # 3.020509
+mean(c5below$meanGPP) # 2.044199
+
+mean(qc95above$meanGPP) # 2.423713
+mean(qc5below$meanGPP) # 1.303188
+
+# Order
+mean(as.numeric(c95above$Order)) # 3.625
+mean(as.numeric(na.omit(c5below$Order))) # 5
+
+mean(as.numeric(qc95above$Order)) # 4.6
+mean(as.numeric(na.omit(qc5below$Order))) # 4.4
+
+# Size
+mean(c95above$width_med) # 22.33868
+mean(c5below$width_med) # 12.70919
+
+mean(qc95above$width_med) # 18.18552
+mean(na.omit(qc5below$width_med)) # 11.25018
+
+# Road Density
+mean(c95above$NHD_RdDensWs) # 3.936805
+mean(na.omit(c5below$NHD_RdDensWs)) # 2.704424
+
+mean(qc95above$NHD_RdDensWs) # 1.325061
+mean(na.omit(qc5below$NHD_RdDensWs)) # 4.381483
+
+# Discharge
+mean(c95above$cvQ) # 1.331489
+mean(c5below$cvQ) # 3.890721
+
+mean(qc95above$cvQ) # 2.14853
+mean(qc5below$cvQ) # 2.003697
+
+#### c Figures ####
+
 # Distribution of c values:
 (fig0c <- ggplot(dat_out_full_141, aes(x = c_med)) +
     geom_histogram(bins = 60, alpha = 0.8, 
@@ -772,6 +841,18 @@ mutate(Dam_binary = factor(case_when(
     scale_y_log10() + 
     labs(x = expression(CV[Q]),
          y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+(fig2c2 <- ggplot(dat_out_full_141, aes(x = cvQ, y = c_med)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#405F8A") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#405F8A",
+                   aes(ymin = `2.5%`, ymax = `97.5%`)) +
+    #scale_x_log10() +
+    #scale_y_log10() + 
+    labs(x = expression(CV[Q]),
+         y = expression(c)) +
     theme_bw())
 
 # Mean Daily Light Availability vs. c:
