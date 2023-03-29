@@ -21,8 +21,9 @@ dat_in <- readRDS("data_working/list_182sites_Qmaxnorm_allSL.rds")
 # c values estimated by our model.
 dat_Qc <- readRDS("data_working/QcQ2_159sites_120822.rds")
 
-# Finally the dataset containing rmax values for plotting purposes.
+# Finally the dataset containing rmax & amax values for plotting purposes.
 dat_rmax <- readRDS("data_working/rmax_filtered_159sites_113022.rds")
+dat_amax <- readRDS("data_working/maxalgalyield_159sites_021323.rds")
 
 # Also also, hypoxia dataset for additional info re: slope
 site_info <- read_csv("data_raw/GRDO_GEE_HA_NHD_2021_02_07.csv")
@@ -65,7 +66,7 @@ exceedFUN <- function(d){
   # calculate the difference from one day to the next - YES/NO
     
     d <- d %>%
-      mutate(exceedance = case_when(Q > Qc ~ "YES", TRUE~ "NO"))
+      mutate(exceedance = case_when(Q > Qc ~ "YES", TRUE ~ "NO"))
   
   # delineate sequenced time frames based on day to day differences
     
@@ -208,5 +209,43 @@ dat_exc_rmax_slope_QcQ2 <- left_join(dat_exc_rmax_slope, dat_Qc_trim2)
 
 # And export just the exceedance data for use in the linear models.
 saveRDS(dat_exceed_sum, "data_working/Qc_exceedances_159sites_021423.rds")
+
+# One more figure to examine accrual vs. exceedance.
+
+# Join with amax values.
+dat_exc_amax <- inner_join(dat_exceed_sum, dat_amax)
+
+(exceed_fig0a <- ggplot(dat_exc_amax, aes(x = total_exc_events, 
+                                          y = yield_med2)) +
+    geom_point(size = 3, alpha = 0.7) +
+    labs(x = expression(Total~Q[c]~Exceedance~Events),
+         y = expression(Maximum~Biomass~Accrual~(a[max]))) +
+    scale_x_log10() + 
+    #scale_y_log10() + 
+    theme_bw() +
+    theme(legend.position = "none"))
+
+# Standardize by years on record for each site.
+dat_years <- dat_in_df %>%
+  group_by(site_name) %>%
+  summarize(years = n_distinct(year)) %>%
+  ungroup()
+
+# Join with accrual dataset.
+dat_exc_amax_y <- inner_join(dat_exc_amax, dat_years)
+
+# and make a column with exceedances normalized by # of years on record.
+dat_exc_amax_y <- dat_exc_amax_y %>%
+  mutate(exc_y = total_exc_events/years)
+
+(exceed_fig0b <- ggplot(dat_exc_amax_y, aes(x = exc_y, 
+                                          y = yield_med2)) +
+    geom_point(size = 3, alpha = 0.7) +
+    labs(x = expression(Total~Q[c]~Exceedance~Events~per~Year),
+         y = expression(Maximum~Biomass~Accrual~(a[max]))) +
+    scale_x_log10() + 
+    #scale_y_log10() + 
+    theme_bw() +
+    theme(legend.position = "none"))
 
 # End of script.
