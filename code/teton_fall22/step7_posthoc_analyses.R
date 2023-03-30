@@ -51,6 +51,9 @@ site_HUC <- readRDS("data_working/HUC12_159sites_120922.rds")
 # And the newer nutrient dataset.
 new_nut <- readRDS("data_working/USGS_WQP_nuts_aggsite_022322.rds")
 
+# and the raw data used in model fitting.
+dat_in <- readRDS("data_working/list_182sites_Qmaxnorm_allSL.rds")
+
 # Select for additional variables of interest.
 
 # Annual average precip for local catchment/watershed from HydroATLAS (mm)
@@ -65,6 +68,15 @@ site_P <- new_nut %>%
   rename(Phosphorus = "mean_mg_L")
 
 site_P$site_name <- str_replace_all(site_P$MonitoringLocationIdentifier, 'USGS-', 'nwis_')
+
+# For ease, making the original list into a df.
+dat_in_df <- map_df(dat_in, ~as.data.frame(.x), .id="site_name")
+
+# And count years in each record at each site.
+dat_years <- dat_in_df %>%
+  group_by(site_name) %>%
+  summarize(years = n_distinct(year)) %>%
+  ungroup()
 
 #### Model 1: rmax LMEM  ####
 
@@ -508,18 +520,28 @@ coef(aout_pre)
 # First, need to bind yield estimates with remaining data
 # Using calculation based on eq. 7b from Scheuerell 2016 = `yield_med2`
 # Combining with datasets from above.
-dat_yield_combo <- left_join(dat_yield, site_precip, 
+dat_yield_combo1 <- left_join(dat_yield, site_precip, 
                              by = c("site_name" = "SiteID"))
 
-dat_yield_combo <- left_join(dat_yield_combo, site_HUC2)
+dat_yield_combo2 <- left_join(dat_yield_combo1, site_HUC2) # HUC2
 
-dat_yield_combo <- left_join(dat_yield_combo, site_P)
+dat_yield_combo3 <- left_join(dat_yield_combo2, site_P) # dissolved P
+
+dat_yield_combo4 <- left_join(dat_yield_combo3, dat_exc) # exceedances
+
+dat_yield_combo <- left_join(dat_yield_combo4, dat_years) # # of years
+
+# Add column to standardize exceedance events by number of years in
+# a timeseries at a given site.
+dat_yield_combo <- dat_yield_combo %>%
+  mutate(exc_ev_y = total_exc_events/years)
 
 # And visualize the relationships with median yield values.
 may_covs <- ggpairs(dat_yield_combo %>% 
                        dplyr::select(yield_med2, cvQ:Orthophosphate,
                                      Phosphorus,
-                                     pre_mm_cyr:huc2_id))
+                                     pre_mm_cyr:huc2_id,
+                                     exc_ev_y))
 
 # ggsave(may_covs,
 #        filename = "figures/teton_fall22/yield_covariates.jpg",
@@ -529,10 +551,9 @@ may_covs <- ggpairs(dat_yield_combo %>%
 
 # Some notes regarding these covariates.
 
-# (1) I think I will again log transform the following variables: 
-# width_med, Nitrate, and orthoP.
+# (1) I will transform variables to make parameter estimates comparable.
 
-# (2) Will keep in mind correlations btw covariates found earlier.
+# (2) I will keep in mind correlations btw covariates found earlier.
 
 # (3) The following jump out as potentially important (not including those
 # data used to actually generate estimates): temperature, latitude, road
@@ -542,9 +563,8 @@ may_covs <- ggpairs(dat_yield_combo %>%
 
 # Proposed starting model structure:
 
-# max algal yield/accrual ~ size + roads + dams + temperature + 1 | HUC2
-
-# Removed latitude/precip following conversations with Joanna.
+# max algal yield/accrual ~ size + roads + dams + temperature + exceedances
+# + 1 | HUC2
 
 # Wil create a separate model adding in nutrients based on best model
 # fit here (since records are far fewer).
@@ -569,45 +589,66 @@ plot(log_yield ~ NHD_RdDensWs, data = dat_yield_combo)
 plot(log_yield ~ Dam_binary, data = dat_yield_combo)
 plot(log_yield ~ log_width, data = dat_yield_combo)
 plot(log_yield ~ huc2_id, data = dat_yield_combo)
+plot(log_yield ~ exc_ev_y, data = dat_yield_combo)
 hist(dat_yield_combo$log_yield)
 
 # Ok, and making the final dataset with which to build models
-dat_yield_brms <- dat_yield_combo %>%
+# where necessary variables have already been log-transformed and
+# now just need to be scaled.
+dat_yield_brms1 <- dat_yield_combo %>%
+  # assigning sites to be rownames so that we can re-identify and add HUC2
+  # back in once we've scaled the remaining variables
+  column_to_rownames(var = "site_name") %>%
+  dplyr::select(log_yield, summerT, NHD_RdDensWs, log_width, exc_ev_y)
+  
+dat_yield_brms1 <- scale(dat_yield_brms1)
+
+# Pull sites back in so that we can match with HUC2 values.
+dat_yield_brms <- rownames_to_column(as.data.frame(dat_yield_brms1), 
+                                     var = "site_name")
+
+dat_sites_HUCs <- dat_yield_combo %>%
+  dplyr::select(site_name, Dam_binary, huc2_id)
+
+dat_yield_brms <- left_join(dat_yield_brms, dat_sites_HUCs) %>%
   dplyr::select(log_yield, summerT, NHD_RdDensWs, 
-                Dam_binary, log_width, huc2_id)
+                Dam_binary, log_width, exc_ev_y, huc2_id) %>%
+  mutate(huc2_id = factor(huc2_id))
 
 ##### Step 1: Create multi-level model.
 
 y1 <- brm(log_yield ~ log_width + NHD_RdDensWs +
-            Dam_binary + summerT + (1|huc2_id), 
+            Dam_binary + summerT + exc_ev_y + (1|huc2_id), 
          data = dat_yield_brms, family = gaussian())
 # assumes 4 chains and 2000 iterations (1000 warm-up)
-# started at 10:39am - finished at 10:40am on the server :)
+# started at 2:13pm - finished at 2:14pm on the server :)
 
 # Export for safekeeping.
-# saveRDS(y1, "data_posthoc_modelfits/accrual_brms_030123.rds")
+# saveRDS(y1, "data_posthoc_modelfits/accrual_brms_032923.rds")
 
 ##### Step 2: Examine model outputs.
 
 summary(y1)
 
 #              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept        0.51      0.29    -0.05     1.08 1.00     4481     2960
-# log_width        0.46      0.09     0.29     0.65 1.00     3972     3159
-# NHD_RdDensWs     0.02      0.02    -0.01     0.05 1.00     4094     3222
-# Dam_binary1     -0.14      0.07    -0.29     0.00 1.00     5189     3097
-# summerT         -0.03      0.01    -0.06    -0.01 1.00     4332     2907
+# Intercept        0.26      0.15    -0.03     0.57 1.00     2467     2172
+# log_width        0.51      0.10     0.33     0.70 1.00     3359     3124
+# NHD_RdDensWs     0.10      0.10    -0.10     0.28 1.00     3111     2537
+# Dam_binary1     -0.40      0.15    -0.71    -0.10 1.00     4784     2984
+# summerT         -0.25      0.08    -0.40    -0.08 1.00     3965     2565
+# exc_ev_y         0.24      0.07     0.11     0.39 1.00     5804     2903
 
 # Well, for one, this is great convergence! All Rhat < 1.05.
-# And at first glance, temperature, dam_binary1, and stream width jump out
-# as important.
+# And at first glance, exceedance events, temperature, dam_binary1, and 
+# stream width jump out as important.
 
 ##### Step 3: Examine model diagnostics.
 
 # Everything appears to have converged well, so let's look at chain
 # mixing and posterior distributions.
 plot(y1, variable = c("b_summerT", "b_NHD_RdDensWs",
-                      "b_Dam_binary1", "b_log_width"))
+                      "b_Dam_binary1", "b_log_width",
+                      "b_exc_ev_y"))
 
 # Chains all appear well-mixed, but let's also check things in shinystan.
 launch_shinystan(y1)
@@ -624,6 +665,7 @@ plot(conditional_effects(y1, effects = "log_width"))
 plot(conditional_effects(y1, effects = "NHD_RdDensWs"))
 plot(conditional_effects(y1, effects = "Dam_binary"))
 plot(conditional_effects(y1, effects = "summerT"))
+plot(conditional_effects(y1, effects = "exc_ev_y"))
 
 # Note, can investigate scenarios like effect1:effect2 here
 # and it will automatically choose percentiles to predict.
@@ -634,9 +676,9 @@ plot(conditional_effects(y1, effects = "summerT"))
 dat_yield_brms$obs <- c(1:length(dat_yield_brms$log_yield))
 
 y1.1 <- brm(log_yield ~ log_width + NHD_RdDensWs +
-            Dam_binary + summerT + (1|huc2_id) + (1|obs), 
+            Dam_binary + summerT + exc_ev_y + (1|huc2_id) + (1|obs), 
           data = dat_yield_brms, family = gaussian())
-# 316 divergent transitions EEK!
+# 353 divergent transitions EEK!
 
 # Compare with original model using leave-one-out approximation.
 loo(y1, y1.1)
@@ -644,7 +686,7 @@ loo(y1, y1.1)
 # Model comparisons:
 #     elpd_diff se_diff
 # y1.1   0.0       0.0  
-# y1   -10.4       1.0 
+# y1    -6.1       1.0 
 
 # Higher expected log posterior density (elpd) values = better fit.
 # So, in this case model accounting for overdispersion (y1.1) fits better.
@@ -659,8 +701,11 @@ get_variables(y1)
 # b_Intercept refers to global mean
 # r_huc2_id[] are the offsets from that mean for each condition
 
-(y_fig <- mcmc_plot(y1, variable = c("b_log_width", "b_NHD_RdDensWs",
-                                     "b_Dam_binary1", "b_summerT"),
+##### Figures #####
+
+(y_fig <- mcmc_plot(y1, variable = c("b_log_width", "b_exc_ev_y",
+                                     "b_NHD_RdDensWs",
+                                     "b_summerT", "b_Dam_binary1"),
       #type = "intervals",
       point_est = "median", # default = "median"
       prob = 0.66, # default = 0.5
@@ -669,15 +714,15 @@ get_variables(y1)
     labs(x = "Posterior Estimates",
          y = "Predictors") +
     scale_y_discrete(labels = c("b_log_width" = "log(Width)",
-                                "b_NHD_RdDensWs" = "Road Density",
+                                "b_NHD_RdDensWs" = "Roads",
                                 "b_Dam_binary1" = "Dam",
-                                "b_summerT" = "Temperature")) +
-    theme_bw() +
-    theme(text = element_text(size = 16)))
+                                "b_summerT" = "Temperature",
+                                "b_exc_ev_y" = "Exceedances")) +
+    theme_bw())
 
 # Save out this figure.
 # ggsave(y_fig,
-#        filename = "figures/teton_fall22/brms_yield_030123.jpg",
+#        filename = "figures/teton_fall22/brms_yield_032923.jpg",
 #        width = 15,
 #        height = 10,
 #        units = "cm")
@@ -692,101 +737,286 @@ get_variables(y1)
 # Using code from here to make them ggplots:
 # https://bookdown.org/content/4857/conditional-manatees.html#summary-bonus-conditional_effects
 
-y_t <- conditional_effects(y1, effects = "summerT")
+# Also need to first "unscale" all values.
 
-# Create new dataframe
-yt_df <- y_t$summerT %>%
-  # and calculate true yield values
-  # checked to be sure these default probs are 0.95
-  mutate(yield = 10^`estimate__`,
-         loweryield = 10^`lower__`,
-         upperyield = 10^`upper__`)
+# Note the attributes of the originally scaled dataset.
+center <- attr(dat_yield_brms1, "scaled:center")
+scale <- attr(dat_yield_brms1, "scaled:scale")
 
-(plot_yt <- ggplot(yt_df, aes(x = summerT, y = yield)) +
-    geom_line(color = "black", linewidth = 1) +
-    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
-                alpha = 0.25) +
-    geom_point(data = dat_yield_brms, aes(x = summerT, y = 10^log_yield),
-               alpha = 0.2) +
-    labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
-         y = expression(a[max])) +
-    ylim(0, 17) +
-    theme_bw())
+# And use them to back-transform data below
+
+###### Dams ######
 
 y_d <- conditional_effects(y1, effects = "Dam_binary")
 
 # Create new dataframe
-yd_df <- y_d$Dam_binary %>%
-  # and calculate true yield values
-  mutate(yield = 10^`estimate__`,
-         loweryield = 10^`lower__`,
-         upperyield = 10^`upper__`)
+yd_df <- y_d$Dam_binary
 
-(plot_yd <- ggplot(yd_df, aes(x = Dam_binary, y = yield)) +
+# Yield was scaled - Dam_binary was not.
+yd_select <- yd_df %>%
+  dplyr::select(`estimate__`, summerT, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  rename("log_yield" = "estimate__")
+
+# And calculate true yield values
+yd_descaled_data <- as.data.frame(t(t(yd_select) * scale + center)) %>%
+  mutate(Dam_binary = yd_df$Dam_binary)
+
+# Also, need to do this for each of the 95% CIs, but the order of the
+# de-scaling matters, so doing this twice more with each of the
+# intervals as the first column.
+
+# 2.5% lower interval
+yd_select25 <- yd_df %>%
+  dplyr::select(`lower__`, summerT, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  rename("lower_yield" = "lower__")
+
+yd_descaled_data25 <- as.data.frame(t(t(yd_select25) * scale + center)) %>%
+  mutate(Dam_binary = yd_df$Dam_binary) %>%
+  dplyr::select(Dam_binary, lower_yield)
+
+# 97.5% lower interval
+yd_select975 <- yd_df %>%
+  dplyr::select(`upper__`, summerT, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  rename("upper_yield" = "upper__")
+
+yd_descaled_data975 <- as.data.frame(t(t(yd_select975) * scale + center)) %>%
+  mutate(Dam_binary = yd_df$Dam_binary) %>%
+  dplyr::select(Dam_binary, upper_yield)
+
+yd_descaled_data <- left_join(yd_descaled_data, yd_descaled_data25)
+yd_descaled_data <- left_join(yd_descaled_data, yd_descaled_data975)
+
+(plot_yd <- ggplot(yd_descaled_data, aes(x = Dam_binary, y = 10^log_yield)) +
     geom_point(size = 3) +
-    geom_errorbar(aes(ymin = loweryield, ymax = upperyield), width = 0.2) +
-    geom_jitter(data = dat_yield_brms, aes(x = Dam_binary, y = 10^log_yield),
-               alpha = 0.1, width = 0.1) +
+    geom_errorbar(aes(ymin = 10^lower_yield, ymax = 10^upper_yield), width = 0.2) +
+    geom_jitter(data = dat_yield_combo, aes(x = Dam_binary, y = yield_med2),
+                alpha = 0.1, width = 0.1) +
     labs(x = "Likelihood of Interference by Dams",
          y = expression(a[max])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
-    ylim(0, 17) +
+    scale_y_log10() +
     theme_bw())
 
-y_w <- conditional_effects(y1, effects = "log_width")
+###### Temperature ######
+
+y_t <- conditional_effects(y1, effects = "summerT")
 
 # Create new dataframe
-yw_df <- y_w$log_width %>%
-  # and calculate true yield values
-  mutate(yield = 10^`estimate__`,
-         loweryield = 10^`lower__`,
-         upperyield = 10^`upper__`)
+yt_df <- y_t$summerT
 
-(plot_yw <- ggplot(yw_df, aes(x = 10^log_width, y = yield)) +
+yt_select <- yt_df %>%
+  dplyr::select(`estimate__`, `effect1__`, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  rename("log_yield" = "estimate__",
+         "summerT" = "effect1__")
+
+# And calculate true yield values
+yt_descaled_data <- as.data.frame(t(t(yt_select) * scale + center))
+
+# Also, need to do this for each of the 95% CIs, but the order of the
+# de-scaling matters, so doing this twice more with each of the
+# intervals as the first column.
+
+# 2.5% lower interval
+yt_select25 <- yt_df %>%
+  dplyr::select(`lower__`, `effect1__`, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  rename("lower_yield" = "lower__",
+         "summerT" = "effect1__")
+
+yt_descaled_data25 <- as.data.frame(t(t(yt_select25) * scale + center)) %>%
+  dplyr::select(summerT, lower_yield)
+
+# 97.5% lower interval
+yt_select975 <- yt_df %>%
+  dplyr::select(`upper__`, `effect1__`, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  rename("upper_yield" = "upper__",
+         "summerT" = "effect1__")
+
+yt_descaled_data975 <- as.data.frame(t(t(yt_select975) * scale + center)) %>%
+  dplyr::select(summerT, upper_yield)
+
+yt_descaled_data <- left_join(yt_descaled_data, yt_descaled_data25)
+yt_descaled_data <- left_join(yt_descaled_data, yt_descaled_data975)
+
+(plot_yt <- ggplot(yt_descaled_data, aes(x = summerT, y = 10^log_yield)) +
     geom_line(color = "black", linewidth = 1) +
-    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
+    geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
                 alpha = 0.25) +
-    geom_point(data = dat_yield_brms, 
-               aes(x = 10^log_width, y = 10^log_yield),
+    geom_point(data = dat_yield_combo, aes(x = summerT, y = 10^log_yield),
                alpha = 0.2) +
-    scale_x_log10()+
-    labs(x = "River Width (m)",
+    labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
-    ylim(0, 17) +
+    scale_y_log10() +
     theme_bw())
+
+###### Roads ######
 
 y_rd <- conditional_effects(y1, effects = "NHD_RdDensWs")
 
 # Create new dataframe
-yrd_df <- y_rd$NHD_RdDensWs %>%
-  # and calculate true yield values
-  mutate(yield = 10^`estimate__`,
-         loweryield = 10^`lower__`,
-         upperyield = 10^`upper__`)
+yrd_df <- y_rd$NHD_RdDensWs
 
-(plot_yrd <- ggplot(yrd_df, aes(x = NHD_RdDensWs, y = yield)) +
+yrd_select <- yrd_df %>%
+  dplyr::select(`estimate__`, summerT, `effect1__`, log_width, exc_ev_y) %>%
+  rename("log_yield" = "estimate__",
+         "NHD_RdDensWs" = "effect1__")
+
+# And calculate true yield values
+yrd_descaled_data <- as.data.frame(t(t(yrd_select) * scale + center))
+
+# Also, need to do this for each of the 95% CIs, but the order of the
+# de-scaling matters, so doing this twice more with each of the
+# intervals as the first column.
+
+# 2.5% lower interval
+yrd_select25 <- yrd_df %>%
+  dplyr::select(`lower__`, summerT, `effect1__`, log_width, exc_ev_y) %>%
+  rename("lower_yield" = "lower__",
+         "NHD_RdDensWs" = "effect1__")
+
+yrd_descaled_data25 <- as.data.frame(t(t(yrd_select25) * scale + center)) %>%
+  dplyr::select(NHD_RdDensWs, lower_yield)
+
+# 97.5% lower interval
+yrd_select975 <- yrd_df %>%
+  dplyr::select(`upper__`, summerT, `effect1__`, log_width, exc_ev_y) %>%
+  rename("upper_yield" = "upper__",
+         "NHD_RdDensWs" = "effect1__")
+
+yrd_descaled_data975 <- as.data.frame(t(t(yrd_select975) * scale + center)) %>%
+  dplyr::select(NHD_RdDensWs, upper_yield)
+
+yrd_descaled_data <- left_join(yrd_descaled_data, yrd_descaled_data25)
+yrd_descaled_data <- left_join(yrd_descaled_data, yrd_descaled_data975)
+
+(plot_yrd <- ggplot(yrd_descaled_data, aes(x = NHD_RdDensWs, y = 10^log_yield)) +
     geom_line(color = "black", linewidth = 1) +
-    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
+    geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
                 alpha = 0.25) +
-    geom_point(data = dat_yield_brms, 
-               aes(x = NHD_RdDensWs, y = 10^log_yield),
+    geom_point(data = dat_yield_combo, 
+               aes(x = NHD_RdDensWs, y = yield_med2),
                alpha = 0.2) +
-    #scale_x_log10()+
+    scale_y_log10()+
     labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
          y = expression(a[max])) +
-    ylim(0, 17) +
     theme_bw())
 
+###### Exceedances ######
+
+y_e <- conditional_effects(y1, effects = "exc_ev_y")
+
+# Create new dataframe
+ye_df <- y_e$exc_ev_y
+
+ye_select <- ye_df %>%
+  dplyr::select(`estimate__`, summerT, NHD_RdDensWs, log_width, `effect1__`) %>%
+  rename("log_yield" = "estimate__",
+         "exc_ev_y" = "effect1__")
+
+# And calculate true yield values
+ye_descaled_data <- as.data.frame(t(t(ye_select) * scale + center))
+
+# Also, need to do this for each of the 95% CIs, but the order of the
+# de-scaling matters, so doing this twice more with each of the
+# intervals as the first column.
+
+# 2.5% lower interval
+ye_select25 <- ye_df %>%
+  dplyr::select(`lower__`, summerT, NHD_RdDensWs, log_width, `effect1__`) %>%
+  rename("lower_yield" = "lower__",
+         "exc_ev_y" = "effect1__")
+
+ye_descaled_data25 <- as.data.frame(t(t(ye_select25) * scale + center)) %>%
+  dplyr::select(exc_ev_y, lower_yield)
+
+# 97.5% lower interval
+ye_select975 <- ye_df %>%
+  dplyr::select(`upper__`, summerT, NHD_RdDensWs, log_width, `effect1__`) %>%
+  rename("upper_yield" = "upper__",
+         "exc_ev_y" = "effect1__")
+
+ye_descaled_data975 <- as.data.frame(t(t(ye_select975) * scale + center)) %>%
+  dplyr::select(exc_ev_y, upper_yield)
+
+ye_descaled_data <- left_join(ye_descaled_data, ye_descaled_data25)
+ye_descaled_data <- left_join(ye_descaled_data, ye_descaled_data975)
+
+(plot_ye <- ggplot(ye_descaled_data, aes(x = exc_ev_y, y = 10^log_yield)) +
+    geom_line(color = "black", linewidth = 1) +
+    geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
+                alpha = 0.25) +
+    geom_point(data = dat_yield_combo, 
+               aes(x = exc_ev_y, y = yield_med2),
+               alpha = 0.2) +
+    scale_y_log10() +
+    labs(x = expression(Annual~Exceedances~of~Q[c]),
+         y = expression(a[max])) +
+    theme_bw())
+
+###### Size ######
+
+y_w <- conditional_effects(y1, effects = "log_width")
+
+# Create new dataframe
+yw_df <- y_w$log_width
+
+yw_select <- yw_df %>%
+  dplyr::select(`estimate__`, summerT, NHD_RdDensWs, `effect1__`, exc_ev_y) %>%
+  rename("log_yield" = "estimate__",
+         "log_width" = "effect1__")
+
+# And calculate true yield values
+yw_descaled_data <- as.data.frame(t(t(yw_select) * scale + center))
+
+# Also, need to do this for each of the 95% CIs, but the order of the
+# de-scaling matters, so doing this twice more with each of the
+# intervals as the first column.
+
+# 2.5% lower interval
+yw_select25 <- yw_df %>%
+  dplyr::select(`lower__`, summerT, NHD_RdDensWs, `effect1__`, exc_ev_y) %>%
+  rename("lower_yield" = "lower__",
+         "log_width" = "effect1__")
+
+yw_descaled_data25 <- as.data.frame(t(t(yw_select25) * scale + center)) %>%
+  dplyr::select(log_width, lower_yield)
+
+# 97.5% lower interval
+yw_select975 <- yw_df %>%
+  dplyr::select(`upper__`, summerT, NHD_RdDensWs, `effect1__`, exc_ev_y) %>%
+  rename("upper_yield" = "upper__",
+         "log_width" = "effect1__")
+
+yw_descaled_data975 <- as.data.frame(t(t(yw_select975) * scale + center)) %>%
+  dplyr::select(log_width, upper_yield)
+
+yw_descaled_data <- left_join(yw_descaled_data, yw_descaled_data25)
+yw_descaled_data <- left_join(yw_descaled_data, yw_descaled_data975)
+
+(plot_yw <- ggplot(yw_descaled_data, aes(x = 10^log_width, y = 10^log_yield)) +
+    geom_line(color = "black", linewidth = 1) +
+    geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
+                alpha = 0.25) +
+    geom_point(data = dat_yield_combo, aes(x = width_med, y = yield_med2),
+               alpha = 0.2) +
+    scale_y_log10() +
+    scale_x_log10() +
+    labs(x = "River Width (m)",
+         y = expression(a[max])) +
+    theme_bw())
+
+###### Combined ######
+
 # Now, let's combine the above using patchwork.
-(fig_cond_yield <- (y_fig | (plot_yt + plot_yd) / (plot_yrd + plot_yw)) +
-    plot_annotation(tag_levels = 'A'))
+(fig_cond_yield <- y_fig + plot_yd + plot_yt +
+   plot_yrd + plot_ye + plot_yw +
+   plot_annotation(tag_levels = 'A'))
 
 # And export.
-# ggsave(fig_cond_yield,
-#        filename = "figures/teton_fall22/brms_yield_cond_032323.jpg",
-#        width = 40,
-#        height = 20,
-#        units = "cm")
+ggsave(fig_cond_yield,
+       filename = "figures/teton_fall22/brms_yield_cond_033023.jpg",
+       width = 40,
+       height = 20,
+       units = "cm")
 
 ##### Nutrients #####
 
