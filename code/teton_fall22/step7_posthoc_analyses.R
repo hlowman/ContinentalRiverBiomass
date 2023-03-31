@@ -902,6 +902,79 @@ my_posterior2 <- as.matrix(y2)
 #        height = 10,
 #        units = "cm")
 
+##### Without Outliers #####
+
+# Following lab meeting, I'll do a quick check to see if removing the two
+# highest outliers of accrual changes the results of the initial model build.
+
+dat_yield_brms1.1 <- dat_yield_combo %>%
+  # assigning sites to be rownames so that we can re-identify and add HUC2
+  # back in once we've scaled the remaining variables
+  column_to_rownames(var = "site_name") %>%
+  dplyr::select(log_yield, summerT, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  filter(log_yield < 1.4)
+  
+dat_yield_brms1.1 <- scale(dat_yield_brms1.1)
+
+# Pull sites back in so that we can match with HUC2 values.
+dat_yield_brms0.1 <- rownames_to_column(as.data.frame(dat_yield_brms1.1), 
+                                     var = "site_name")
+
+dat_sites_HUCs <- dat_yield_combo %>%
+  dplyr::select(site_name, Dam_binary, huc2_id)
+
+dat_yield_brms0.1 <- left_join(dat_yield_brms0.1, dat_sites_HUCs) %>%
+  dplyr::select(log_yield, summerT, NHD_RdDensWs, 
+                Dam_binary, log_width, exc_ev_y, huc2_id) %>%
+  mutate(huc2_id = factor(huc2_id))
+
+# Fit model.
+
+y1.1 <- brm(log_yield ~ log_width + NHD_RdDensWs +
+            Dam_binary + summerT + exc_ev_y + (1|huc2_id), 
+          data = dat_yield_brms0.1, family = gaussian())
+
+# Export for safekeeping.
+saveRDS(y1.1, "data_posthoc_modelfits/accrual_brms_no_outliers_033123.rds")
+
+# Examine model outputs.
+summary(y1.1)
+
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.32      0.16     0.02     0.65 1.00     2132     2386
+# log_width        0.50      0.09     0.31     0.68 1.00     3654     3263
+# NHD_RdDensWs     0.11      0.10    -0.09     0.30 1.00     3943     3245
+# Dam_binary1     -0.49      0.15    -0.78    -0.20 1.00     5443     2971
+# summerT         -0.25      0.09    -0.42    -0.09 1.00     3729     2756
+# exc_ev_y         0.28      0.07     0.14     0.42 1.00     5654     3084
+
+# And compare results figure.
+
+color_scheme_set("teal")
+
+(y0.1_fig <- mcmc_plot(y1.1, variable = c("b_log_width", "b_exc_ev_y",
+                                     "b_NHD_RdDensWs",
+                                     "b_summerT", "b_Dam_binary1"),
+                    point_est = "median", # default = "median"
+                    prob = 0.66, # default = 0.5
+                    prob_outer = 0.95) + # default = 0.9
+    vline_at(v = 0) +
+    labs(x = "Posterior Estimates",
+         y = "Predictors") +
+    scale_y_discrete(labels = c("b_log_width" = "Width",
+                                "b_NHD_RdDensWs" = "Roads",
+                                "b_Dam_binary1" = "Dam",
+                                "b_summerT" = "Temperature",
+                                "b_exc_ev_y" = "Exceedances")) +
+    theme_bw())
+
+# Save out this figure.
+# ggsave(y0.1_fig,
+#        filename = "figures/teton_fall22/brms_yield_no_outliers_033123.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
+
 #### Model 2: Qc:Q2yr ####
 
 # Trim imported data down to variables of interest.
