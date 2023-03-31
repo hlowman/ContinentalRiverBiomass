@@ -718,6 +718,14 @@ get_variables(y2)
 # b_Intercept refers to global mean
 # r_huc2_id[] are the offsets from that mean for each condition
 
+# Note the attributes of the originally scaled dataset.
+center2 <- attr(dat_yield_brms3, "scaled:center")
+scale2 <- attr(dat_yield_brms3, "scaled:scale")
+
+###### Figures ######
+
+color_scheme_set("teal")
+
 (y2_fig <- mcmc_plot(y2, variable = c("b_log_width", "b_exc_ev_y", "b_p_log",
                                       "b_summerT", "b_NHD_RdDensWs",
                                       "b_no3_log", "b_Dam_binary1"),
@@ -732,168 +740,150 @@ get_variables(y2)
                                 "b_exc_ev_y" = "Exceedances",
                                 "b_summerT" = "Temperature",
                                 "b_NHD_RdDensWs" = "Roads",
-                                "b_log_width" = "log(Width)",
+                                "b_log_width" = "Width",
                                 "b_Dam_binary1" = "Dam")) + #top
     theme_bw())
 
 # Save out this figure.
 # ggsave(y2_fig,
-#        filename = "figures/teton_fall22/brms_yield_nuts_033023.jpg",
+#        filename = "figures/teton_fall22/brms_yield_nuts_033123.jpg",
 #        width = 15,
 #        height = 10,
 #        units = "cm")
 
-# Plot conditional effects of covariates.
+####### Nitrate #######
 
-y3_n <- conditional_effects(y3, effects = "no3_log")
+# Plot conditional effects of additional nutrient covariates.
+
+y2_n <- conditional_effects(y2, effects = "no3_log")
 
 # Create new dataframe
-y3n_df <- y3_n$no3_log %>%
-  # and calculate true yield values
-  # checked to be sure these default probs are 0.95
-  mutate(yield = 10^`estimate__`,
-         loweryield = 10^`lower__`,
-         upperyield = 10^`upper__`)
+y2n_df <- y2_n$no3_log 
 
-(plot_y3n <- ggplot(y3n_df, aes(x = 10^no3_log, y = yield)) +
-    geom_line(color = "black", linewidth = 1) +
-    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
-                alpha = 0.25) +
-    geom_point(data = dat_yield_brms3, 
+y2n_select <- y2n_df %>%
+  dplyr::select(`estimate__`, summerT, NHD_RdDensWs, log_width, 
+                exc_ev_y, `effect1__`, p_log) %>%
+  rename("log_yield" = "estimate__",
+         "no3_log" = "effect1__")
+
+# And calculate true yield values
+y2n_descaled_data <- as.data.frame(t(t(y2n_select) * scale2 + center2))
+
+# Also, need to do this for each of the 95% CIs, but the order of the
+# de-scaling matters, so doing this twice more with each of the
+# intervals as the first column.
+
+# 2.5% lower interval
+y2n_select25 <- y2n_df %>%
+  dplyr::select(`lower__`, summerT, NHD_RdDensWs, log_width, 
+                exc_ev_y, `effect1__`, p_log) %>%
+  rename("lower_yield" = "lower__",
+         "no3_log" = "effect1__")
+
+y2n_descaled_data25 <- as.data.frame(t(t(y2n_select25) * scale2 + center2)) %>%
+  dplyr::select(no3_log, lower_yield)
+
+# 97.5% lower interval
+y2n_select975 <- y2n_df %>%
+  dplyr::select(`upper__`, summerT, NHD_RdDensWs, log_width, 
+                exc_ev_y, `effect1__`, p_log) %>%
+  rename("upper_yield" = "upper__",
+         "no3_log" = "effect1__")
+
+y2n_descaled_data975 <- as.data.frame(t(t(y2n_select975) * scale2 + center2)) %>%
+  dplyr::select(no3_log, upper_yield)
+
+y2n_descaled_data <- left_join(y2n_descaled_data, y2n_descaled_data25)
+y2n_descaled_data <- left_join(y2n_descaled_data, y2n_descaled_data975)
+
+(plot_y2n <- ggplot(y2n_descaled_data, aes(x = 10^no3_log, y = 10^log_yield)) +
+    # geom_line(color = "#D46F10", linewidth = 1) +
+    # geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
+    #             alpha = 0.25, color = "#D46F10", fill = "#D46F10") +
+    geom_point(data = dat_yield_combo, 
                aes(x = 10^no3_log, y = 10^log_yield),
-               alpha = 0.2) +
+               alpha = 0.3, color = "#D46F10") +
     labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
          y = expression(a[max])) +
+    scale_y_log10() +
     scale_x_log10() +
-    ylim(0, 17) +
     theme_bw())
 
-y3_p <- conditional_effects(y3, effects = "p_log")
+####### Phosphorus #######
+
+y2_p <- conditional_effects(y2, effects = "p_log")
 
 # Create new dataframe
-y3p_df <- y3_p$p_log %>%
-  # and calculate true yield values
-  # checked to be sure these default probs are 0.95
-  mutate(yield = 10^`estimate__`,
-         loweryield = 10^`lower__`,
-         upperyield = 10^`upper__`)
+y2p_df <- y2_p$p_log
 
-(plot_y3p <- ggplot(y3p_df, aes(x = 10^p_log, y = yield)) +
-    geom_line(color = "black", linewidth = 1) +
-    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
-                alpha = 0.25) +
-    geom_point(data = dat_yield_brms3, 
+y2p_select <- y2p_df %>%
+  dplyr::select(`estimate__`, summerT, NHD_RdDensWs, log_width, 
+                exc_ev_y, no3_log, `effect1__`) %>%
+  rename("log_yield" = "estimate__",
+         "p_log" = "effect1__")
+
+# And calculate true yield values
+y2p_descaled_data <- as.data.frame(t(t(y2p_select) * scale2 + center2))
+
+# Also, need to do this for each of the 95% CIs, but the order of the
+# de-scaling matters, so doing this twice more with each of the
+# intervals as the first column.
+
+# 2.5% lower interval
+y2p_select25 <- y2p_df %>%
+  dplyr::select(`lower__`, summerT, NHD_RdDensWs, log_width, 
+                exc_ev_y, no3_log, `effect1__`) %>%
+  rename("lower_yield" = "lower__",
+         "p_log" = "effect1__")
+
+y2p_descaled_data25 <- as.data.frame(t(t(y2p_select25) * scale2 + center2)) %>%
+  dplyr::select(p_log, lower_yield)
+
+# 97.5% lower interval
+y2p_select975 <- y2p_df %>%
+  dplyr::select(`upper__`, summerT, NHD_RdDensWs, log_width, 
+                exc_ev_y, no3_log, `effect1__`) %>%
+  rename("upper_yield" = "upper__",
+         "p_log" = "effect1__")
+
+y2p_descaled_data975 <- as.data.frame(t(t(y2p_select975) * scale2 + center2)) %>%
+  dplyr::select(p_log, upper_yield)
+
+y2p_descaled_data <- left_join(y2p_descaled_data, y2p_descaled_data25)
+y2p_descaled_data <- left_join(y2p_descaled_data, y2p_descaled_data975)
+
+(plot_y2p <- ggplot(y2p_descaled_data, aes(x = 10^p_log, y = 10^log_yield)) +
+    # geom_line(color = "#D46F10", linewidth = 1) +
+    # geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
+    #             alpha = 0.25, color = "#D46F10", fill = "#D46F10") +
+    geom_point(data = dat_yield_combo, 
                aes(x = 10^p_log, y = 10^log_yield),
-               alpha = 0.2) +
+               alpha = 0.3, color = "#D46F10") +
     labs(x = expression(Mean~Dissolved~Phosphorus~(mg/L~P)),
          y = expression(a[max])) +
+    scale_y_log10() +
     scale_x_log10() +
-    ylim(0, 17) +
     theme_bw())
 
-y3_w <- conditional_effects(y3, effects = "log_width")
-
-# Create new dataframe
-y3w_df <- y3_w$log_width %>%
-  # and calculate true Qc:Q2yr values
-  mutate(yield = 10^`estimate__`,
-         loweryield = 10^`lower__`,
-         upperyield = 10^`upper__`)
-
-(plot_y3w <- ggplot(y3w_df, aes(x = 10^log_width, y = yield)) +
-    geom_line(color = "black", linewidth = 1) +
-    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
-                alpha = 0.25) +
-    geom_point(data = dat_yield_brms3, 
-               aes(x = 10^log_width, y = 10^log_yield),
-               alpha = 0.2) +
-    scale_x_log10()+
-    labs(x = "River Width (m)",
-         y = expression(a[max])) +
-    ylim(0, 17) +
-    theme_bw())
-
-y3_t <- conditional_effects(y3, effects = "summerT")
-
-# Create new dataframe
-y3t_df <- y3_t$summerT %>%
-  # and calculate true Qc:Q2yr values
-  mutate(yield = 10^`estimate__`,
-         loweryield = 10^`lower__`,
-         upperyield = 10^`upper__`)
-
-(plot_y3t <- ggplot(y3t_df, aes(x = summerT, y = yield)) +
-    geom_line(color = "black", linewidth = 1) +
-    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
-                alpha = 0.25) +
-    geom_point(data = dat_yield_brms3, 
-               aes(x = summerT, y = 10^log_yield),
-               alpha = 0.2) +
-    #scale_x_log10()+
-    labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
-         y = expression(a[max])) +
-    ylim(0, 17) +
-    theme_bw())
-
-y3_rd <- conditional_effects(y3, effects = "NHD_RdDensWs")
-
-# Create new dataframe
-y3rd_df <- y3_rd$NHD_RdDensWs %>%
-  # and calculate true Qc:Q2yr values
-  mutate(yield = 10^`estimate__`,
-         loweryield = 10^`lower__`,
-         upperyield = 10^`upper__`)
-
-(plot_y3rd <- ggplot(y3rd_df, aes(x = NHD_RdDensWs, y = yield)) +
-    geom_line(color = "black", linewidth = 1) +
-    geom_ribbon(aes(ymin = loweryield, ymax = upperyield),
-                alpha = 0.25) +
-    geom_point(data = dat_yield_brms3, 
-               aes(x = NHD_RdDensWs, y = 10^log_yield),
-               alpha = 0.2) +
-    #scale_x_log10()+
-    labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
-         y = expression(a[max])) +
-    ylim(0, 17) +
-    theme_bw())
-
-y3_d <- conditional_effects(y3, effects = "Dam_binary")
-
-# Create new dataframe
-y3d_df <- y3_d$Dam_binary %>%
-  # and calculate true yield values
-  mutate(yield = 10^`estimate__`,
-         loweryield = 10^`lower__`,
-         upperyield = 10^`upper__`)
-
-(plot_y3d <- ggplot(y3d_df, aes(x = Dam_binary, y = yield)) +
-    geom_point(size = 3) +
-    geom_errorbar(aes(ymin = loweryield, ymax = upperyield), width = 0.2) +
-    geom_jitter(data = dat_yield_brms3, aes(x = Dam_binary, y = 10^log_yield),
-                alpha = 0.1, width = 0.1) +
-    labs(x = "Likelihood of Interference by Dams",
-         y = expression(a[max])) +
-    scale_x_discrete(labels = c("5-50%", "100%")) +
-    ylim(0, 17) +
-    theme_bw())
+####### Combined #######
 
 # Now, let's combine the above using patchwork.
-(fig_cond_yield_nuts <- (y3_fig | (plot_y3d / plot_y3t) | (plot_y3n / plot_y3p) | (plot_y3rd / plot_y3w)) +
+(fig_cond_yield_nuts <- y2_fig + plot_y2n + plot_y2p +
     plot_annotation(tag_levels = 'A'))
 
 # And export.
 # ggsave(fig_cond_yield_nuts,
-#        filename = "figures/teton_fall22/brms_yield_cond_nuts_032323.jpg",
+#        filename = "figures/teton_fall22/brms_yield_cond_nuts_033123.jpg",
 #        width = 40,
-#        height = 20,
+#        height = 10,
 #        units = "cm")
 
-# Also trying to figure out a way to plot histograms/density plots
+# Also experimenting with a way to plot histograms/density plots
 # over top of these intervals.
 
-my_posterior3 <- as.matrix(y3)
+my_posterior2 <- as.matrix(y2)
 
-(y3_fig2 <- mcmc_areas(my_posterior3,
+(y2_fig2 <- mcmc_areas(my_posterior2,
                        # removed lat bc it was flattening everything
                        # then removed all but "significant" covariates
                        pars = c("b_log_width"),
@@ -906,7 +896,7 @@ my_posterior3 <- as.matrix(y3)
     theme_bw())
 
 # Save out this figure.
-# ggsave(y3_fig2,
+# ggsave(y2_fig2,
 #        filename = "figures/teton_fall22/brms_yield3_sig_021623.jpg",
 #        width = 15,
 #        height = 10,
