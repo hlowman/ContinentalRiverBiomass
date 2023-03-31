@@ -991,6 +991,17 @@ dat_Qc_trim <- left_join(dat_Qc_trim, site_precip,
 # Join with HUC2 data.
 dat_Qc_trim <- left_join(dat_Qc_trim, site_HUC2)
 
+# Log transform and edit necessary covariates.
+dat_Qc_trim <- dat_Qc_trim %>%
+  mutate(GPP_log = log10(meanGPP),
+         area_log = log10(NHD_AREASQKM),
+         log_width = log10(width_med)) %>%
+  # Also creating a new categorical dam column to model by.
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential
+    Dam == "0" ~ "1", # Certain
+    TRUE ~ NA)))
+
 # And visualize the relationships with Qc:Qy2r values.
 QcQ2_covs <- ggpairs(dat_Qc_trim %>% 
                        dplyr::select(-site_name) %>%
@@ -1013,17 +1024,6 @@ QcQ2_covs <- ggpairs(dat_Qc_trim %>%
 # to remove GPP.
 
 # (3) Remaining Pearson's correlation values are below 0.5.
-
-# Log transform and edit necessary covariates.
-dat_Qc_trim <- dat_Qc_trim %>%
-  mutate(GPP_log = log10(meanGPP),
-         area_log = log10(NHD_AREASQKM),
-         width_log = log10(width_med)) %>%
-  # Also creating a new categorical dam column to model by.
-  mutate(Dam_binary = factor(case_when(
-    Dam %in% c("50", "80", "95") ~ "0", # Potential
-    Dam == "0" ~ "1", # Certain
-    TRUE ~ NA)))
 
 # Notes on model structure:
 
@@ -1058,38 +1058,57 @@ hist(dat_Qc_trim$Qc_Q2yr)
 dat_Qc_trim <- dat_Qc_trim %>%
   mutate(logQcQ2 = log10(Qc_Q2yr))
 
-plot(logQcQ2 ~ width_log, data = dat_Qc_trim)
+plot(logQcQ2 ~ log_width, data = dat_Qc_trim)
 plot(logQcQ2 ~ NHD_RdDensWs, data = dat_Qc_trim)
 plot(logQcQ2 ~ Dam_binary, data = dat_Qc_trim)
 plot(logQcQ2 ~ huc2_id, data = dat_Qc_trim)
 hist(dat_Qc_trim$logQcQ2)
 
-# Ok, and making the final dataset with which to build models.
-dat_Qc_brms <- dat_Qc_trim %>%
-  dplyr::select(logQcQ2, width_log, NHD_RdDensWs, Dam_binary, huc2_id)
+# Ok, and making the final dataset with which to build models
+# where necessary variables have already been log-transformed and
+# now just need to be scaled.
+dat_Qc_brms1 <- dat_Qc_trim %>%
+  # assigning sites to be rownames so that we can re-identify and add HUC2
+  # back in once we've scaled the remaining variables
+  column_to_rownames(var = "site_name") %>%
+  dplyr::select(logQcQ2, NHD_RdDensWs, log_width)
+
+dat_Qc_brms1 <- scale(dat_Qc_brms1)
+
+# Pull sites back in so that we can match with HUC2 values.
+dat_Qc_brms <- rownames_to_column(as.data.frame(dat_Qc_brms1), 
+                                  var = "site_name")
+
+dat_sites_HUCs2 <- dat_Qc_trim %>%
+  dplyr::select(site_name, Dam_binary, huc2_id)
+
+dat_Qc_brms <- left_join(dat_Qc_brms, dat_sites_HUCs2) %>%
+  dplyr::select(logQcQ2, NHD_RdDensWs, 
+                Dam_binary, log_width, huc2_id) %>%
+  mutate(huc2_id = factor(huc2_id))
 
 ##### Step 1: Create multi-level model.
 
 # Remove NAs since STAN doesn't play nicely with them.
 mq1 <- dat_Qc_brms %>%
-  drop_na(NHD_RdDensWs, Dam_binary, width_log, huc2_id)
+  drop_na()
 
-q1 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + width_log + (1|huc2_id), 
+q1 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + log_width + (1|huc2_id), 
           data = mq1, family = gaussian())
 # assumes 4 chains and 2000 iterations (1000 warm-up)
 
 # Export for safekeeping.
-#saveRDS(q1, "data_posthoc_modelfits/qcq2_brms_030123.rds")
+#saveRDS(q1, "data_posthoc_modelfits/qcq2_brms_033123.rds")
 
 ##### Step 2: Examine model outputs.
 
 summary(q1)
 
 #              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept       -0.24      0.18    -0.60     0.11 1.00     2831     1834
-# NHD_RdDensWs    -0.01      0.02    -0.05     0.02 1.00     3358     2540
-# Dam_binary1     -0.06      0.09    -0.23     0.11 1.00     4436     3214
-# width_log        0.02      0.11    -0.20     0.24 1.00     3063     2060
+# Intercept        0.12      0.15    -0.17     0.42 1.00     2412     2265
+# NHD_RdDensWs    -0.09      0.10    -0.30     0.12 1.00     3519     3184
+# Dam_binary1     -0.12      0.19    -0.48     0.26 1.00     4211     2583
+# log_width        0.02      0.11    -0.20     0.23 1.00     3225     2945
 
 # Well, great convergence still, but nothing looks significant.
 
@@ -1102,7 +1121,7 @@ plot(q1)
 # Chains all appear well-mixed, but let's also check things in shinystan.
 launch_shinystan(q1)
 
-# No divergent transitions :)
+# Only 2 divergent transitions :)
 
 # Finally, examine to be sure no n_eff are < 0.1 or 10%
 mcmc_plot(q1, type = "neff")
@@ -1111,17 +1130,17 @@ mcmc_plot(q1, type = "neff")
 
 plot(conditional_effects(q1, effects = "NHD_RdDensWs"))
 plot(conditional_effects(q1, effects = "Dam_binary"))
-plot(conditional_effects(q1, effects = "width_log"))
+plot(conditional_effects(q1, effects = "log_width"))
 
 ##### Step 5: Investigate possible overdispersion.
 
 # Add column denoting number of observations.
 mq1$obs <- c(1:length(mq1$logQcQ2))
 
-q1.1 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + width_log + 
+q1.1 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + log_width + 
               (1|huc2_id) + (1|obs), 
             data = mq1, family = gaussian())
-# 322 divergent transitions EEE!
+# 60 divergent transitions EEE!
 
 # Compare with original model using leave-one-out approximation.
 loo(q1, q1.1)
@@ -1129,11 +1148,11 @@ loo(q1, q1.1)
 # Model comparisons:
 #     elpd_diff se_diff
 # q1.1   0.0       0.0  
-# q1    -4.6       1.1 
+# q1    -7.0       1.0 
 
 # Higher expected log posterior density (elpd) values = better fit.
 # So, in this case model accounting for overdispersion (q1.1) fits better.
-# But there are 67 problematic observations and hundreds of divergent
+# But there are 43 problematic observations and hundreds of divergent
 # transitions so sticking with the original model (q1).
 
 ##### Step 6: Plot the results.
@@ -1143,7 +1162,14 @@ get_variables(q1)
 # b_Intercept refers to global mean
 # r_huc2_id[] are the offsets from that mean for each condition
 
-(q_fig <- mcmc_plot(q1, variable = c("b_width_log", "b_NHD_RdDensWs", 
+# Note the attributes of the originally scaled dataset.
+center3 <- attr(dat_Qc_brms1, "scaled:center")
+scale3 <- attr(dat_Qc_brms1, "scaled:scale")
+
+###### Figures ######
+
+color_scheme_set("teal")
+(q_fig <- mcmc_plot(q1, variable = c("b_log_width", "b_NHD_RdDensWs", 
                                      "b_Dam_binary1"),
                     #type = "intervals",
                     point_est = "median", # default = "median"
@@ -1154,90 +1180,187 @@ get_variables(q1)
          y = "Predictors") +
     scale_y_discrete(labels = c("b_NHD_RdDensWs" = "Road Density",
                                 "b_Dam_binary1" = "Dam",
-                                "b_width_log" = "log(Width)")) +
+                                "b_log_width" = "Width")) +
     theme_bw())
 
 # Plot conditional effects of all covariates.
 # Using code from here to make them ggplots:
 # https://bookdown.org/content/4857/conditional-manatees.html#summary-bonus-conditional_effects
 
+####### Roads #######
+
 q_r <- conditional_effects(q1, effects = "NHD_RdDensWs")
 
 # Create new dataframe
-qr_df <- q_r$NHD_RdDensWs %>%
-  # and calculate true Qc:Q2yr values
-  mutate(QcQ2 = 10^`estimate__`,
-         lowerQcQ2 = 10^`lower__`,
-         upperQcQ2 = 10^`upper__`)
+qr_df <- q_r$NHD_RdDensWs
 
-(plot_qr <- ggplot(qr_df, aes(x = NHD_RdDensWs, y = QcQ2)) +
-    geom_line(color = "black", linewidth = 1) +
-    geom_ribbon(aes(ymin = lowerQcQ2, ymax = upperQcQ2),
-                alpha = 0.25) +
+qr_select <- qr_df %>%
+  dplyr::select(`estimate__`, `effect1__`, log_width) %>%
+  rename("logQcQ2" = "estimate__",
+         "NHD_RdDensWs" = "effect1__")
+
+# And calculate true yield values
+qr_descaled_data <- as.data.frame(t(t(qr_select) * scale3 + center3))
+
+# Also, need to do this for each of the 95% CIs, but the order of the
+# de-scaling matters, so doing this twice more with each of the
+# intervals as the first column.
+
+# 2.5% lower interval
+qr_select25 <- qr_df %>%
+  dplyr::select(`lower__`, `effect1__`, log_width) %>%
+  rename("lower_QcQ2" = "lower__",
+         "NHD_RdDensWs" = "effect1__")
+
+qr_descaled_data25 <- as.data.frame(t(t(qr_select25) * scale3 + center3)) %>%
+  dplyr::select(NHD_RdDensWs, lower_QcQ2)
+
+# 97.5% lower interval
+qr_select975 <- qr_df %>%
+  dplyr::select(`upper__`, `effect1__`, log_width) %>%
+  rename("upper_QcQ2" = "upper__",
+         "NHD_RdDensWs" = "effect1__")
+
+qr_descaled_data975 <- as.data.frame(t(t(qr_select975) * scale3 + center3)) %>%
+  dplyr::select(NHD_RdDensWs, upper_QcQ2)
+
+qr_descaled_data <- left_join(qr_descaled_data, qr_descaled_data25)
+qr_descaled_data <- left_join(qr_descaled_data, qr_descaled_data975)
+
+(plot_qr <- ggplot(qr_descaled_data, aes(x = NHD_RdDensWs, y = 10^logQcQ2)) +
+    # geom_line(color = "black", linewidth = 1) +
+    # geom_ribbon(aes(ymin = lowerQcQ2, ymax = upperQcQ2),
+    #             alpha = 0.25) +
     geom_point(data = dat_Qc_trim, aes(x = NHD_RdDensWs, y = Qc_Q2yr),
-                alpha = 0.2) +
+                alpha = 0.4, color = "#5A7ECB") +
     labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
          y = expression(Q[c]:Q[2~yr])) +
-    ylim(0, 1.2) +
+    scale_y_log10() +
     theme_bw())
+
+####### Dams #######
 
 q_d <- conditional_effects(q1, effects = "Dam_binary")
 
 # Create new dataframe
-qd_df <- q_d$Dam_binary %>%
-  # and calculate true Qc:Q2yr values
-  mutate(QcQ2 = 10^`estimate__`,
-         lowerQcQ2 = 10^`lower__`,
-         upperQcQ2 = 10^`upper__`)
+qd_df <- q_d$Dam_binary
 
-(plot_qd <- ggplot(qd_df, aes(x = Dam_binary, y = QcQ2)) +
-    geom_point(size = 3) +
-    geom_errorbar(aes(ymin = lowerQcQ2, ymax = upperQcQ2), 
-                  width = 0.2) +
-    geom_jitter(data = dat_Qc_trim, aes(x = Dam_binary, y = Qc_Q2yr),
-                alpha = 0.1, width = 0.1) +
+# Qc:Q2 was scaled - Dam_binary was not.
+qd_select <- qd_df %>%
+  dplyr::select(`estimate__`, NHD_RdDensWs, log_width) %>%
+  rename("logQcQ2" = "estimate__")
+
+# And calculate true yield values
+qd_descaled_data <- as.data.frame(t(t(qd_select) * scale3 + center3)) %>%
+  mutate(Dam_binary = qd_df$Dam_binary)
+
+# Also, need to do this for each of the 95% CIs, but the order of the
+# de-scaling matters, so doing this twice more with each of the
+# intervals as the first column.
+
+# 2.5% lower interval
+qd_select25 <- qd_df %>%
+  dplyr::select(`lower__`, NHD_RdDensWs, log_width) %>%
+  rename("lower_QcQ2" = "lower__")
+
+qd_descaled_data25 <- as.data.frame(t(t(qd_select25) * scale3 + center3)) %>%
+  mutate(Dam_binary = qd_df$Dam_binary) %>%
+  dplyr::select(Dam_binary, lower_QcQ2)
+
+# 97.5% lower interval
+qd_select975 <- qd_df %>%
+  dplyr::select(`upper__`, NHD_RdDensWs, log_width) %>%
+  rename("upper_QcQ2" = "upper__")
+
+qd_descaled_data975 <- as.data.frame(t(t(qd_select975) * scale3 + center3)) %>%
+  mutate(Dam_binary = qd_df$Dam_binary) %>%
+  dplyr::select(Dam_binary, upper_QcQ2)
+
+qd_descaled_data <- left_join(qd_descaled_data, qd_descaled_data25)
+qd_descaled_data <- left_join(qd_descaled_data, qd_descaled_data975)
+
+(plot_qd <- ggplot(qd_descaled_data, aes(x = Dam_binary, y = 10^logQcQ2)) +
+    # geom_point(size = 3) +
+    # geom_errorbar(aes(ymin = lowerQcQ2, ymax = upperQcQ2), 
+    #               width = 0.2) +
+    geom_jitter(data = dat_Qc_trim %>%
+                  drop_na(Dam_binary), aes(x = Dam_binary, y = Qc_Q2yr),
+                alpha = 0.4, width = 0.1, color = "#5A7ECB") +
     labs(x = "Likelihood of Interference by Dams",
          y = expression(Q[c]:Q[2~yr])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
-    ylim(0, 1.2) +
+    scale_y_log10() +
     theme_bw())
 
-q_w <- conditional_effects(q1, effects = "width_log")
+####### Size #######
+
+q_w <- conditional_effects(q1, effects = "log_width")
 
 # Create new dataframe
-qw_df <- q_w$width_log %>%
-  # and calculate true Qc:Q2yr values
-  mutate(QcQ2 = 10^`estimate__`,
-         lowerQcQ2 = 10^`lower__`,
-         upperQcQ2 = 10^`upper__`)
+qw_df <- q_w$log_width
 
-(plot_qw <- ggplot(qw_df, aes(x = 10^width_log, y = QcQ2)) +
-    geom_line(color = "black", linewidth = 1) +
-    geom_ribbon(aes(ymin = lowerQcQ2, ymax = upperQcQ2),
-                alpha = 0.25) +
-    geom_point(data = dat_Qc_trim, aes(x = 10^width_log, y = Qc_Q2yr),
-               alpha = 0.2) +
+qw_select <- qw_df %>%
+  dplyr::select(`estimate__`, NHD_RdDensWs, `effect1__`) %>%
+  rename("logQcQ2" = "estimate__",
+         "log_width" = "effect1__")
+
+# And calculate true yield values
+qw_descaled_data <- as.data.frame(t(t(qw_select) * scale3 + center3))
+
+# Also, need to do this for each of the 95% CIs, but the order of the
+# de-scaling matters, so doing this twice more with each of the
+# intervals as the first column.
+
+# 2.5% lower interval
+qw_select25 <- qw_df %>%
+  dplyr::select(`lower__`, NHD_RdDensWs, `effect1__`) %>%
+  rename("lower_QcQ2" = "lower__",
+         "log_width" = "effect1__")
+
+qw_descaled_data25 <- as.data.frame(t(t(qw_select25) * scale3 + center3)) %>%
+  dplyr::select(log_width, lower_QcQ2)
+
+# 97.5% lower interval
+qw_select975 <- qw_df %>%
+  dplyr::select(`upper__`, NHD_RdDensWs, `effect1__`) %>%
+  rename("upper_QcQ2" = "upper__",
+         "log_width" = "effect1__")
+
+qw_descaled_data975 <- as.data.frame(t(t(qw_select975) * scale3 + center3)) %>%
+  dplyr::select(log_width, upper_QcQ2)
+
+qw_descaled_data <- left_join(qw_descaled_data, qw_descaled_data25)
+qw_descaled_data <- left_join(qw_descaled_data, qw_descaled_data975)
+
+(plot_qw <- ggplot(qw_descaled_data, aes(x = 10^log_width, y = 10^logQcQ2)) +
+    # geom_line(color = "black", linewidth = 1) +
+    # geom_ribbon(aes(ymin = lowerQcQ2, ymax = upperQcQ2),
+    #             alpha = 0.25) +
+    geom_point(data = dat_Qc_trim, aes(x = 10^log_width, y = Qc_Q2yr),
+               alpha = 0.4, color = "#D46F10") +
+    scale_y_log10() +
     scale_x_log10()+
     labs(x = "River Width (m)",
          y = expression(Q[c]:Q[2~yr])) +
-    ylim(0, 1.2) +
     theme_bw())
+
+####### Combined #######
 
 # Now, let's combine the above using patchwork.
 (fig_cond_Qc <- (q_fig + plot_qd + plot_qr + plot_qw) +
-    plot_layout(nrow = 1) +
+    plot_layout(nrow = 2) +
     plot_annotation(tag_levels = 'A'))
 
 # And export.
 # ggsave(fig_cond_Qc,
-#        filename = "figures/teton_fall22/brms_Qc_cond_032423.jpg",
-#        width = 40,
-#        height = 10,
+#        filename = "figures/teton_fall22/brms_Qc_cond_033123.jpg",
+#        width = 28,
+#        height = 20,
 #        units = "cm")
 
 # Save out this figure.
 # ggsave(q_fig,
-#        filename = "figures/teton_fall22/brms_QcQ2_021623.jpg",
+#        filename = "figures/teton_fall22/brms_QcQ2_033123.jpg",
 #        width = 15,
 #        height = 10,
 #        units = "cm")
