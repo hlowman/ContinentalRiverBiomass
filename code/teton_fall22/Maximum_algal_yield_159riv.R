@@ -37,6 +37,9 @@ site <- fread("data_raw/site_data.tsv")
 # And the updated dataset with nutrient data.
 nuts <- readRDS("data_working/USGS_WQP_nuts_aggsite_022322.rds")
 
+# And the dataset containing exceedances.
+exc <- readRDS("data_working/Qc_exceedances_159sites_021423.rds")
+
 # Take list containing all iterations of parameters and make into a df.
 dat_out_df <- map_df(dat_out, ~as.data.frame(.x), .id="site_name")
 
@@ -92,6 +95,15 @@ hist(dat_out_yield_med$yield_med2) # still some negative values hmmm...
 # filtered out.
 hist(dat_out_yield_med$yield_med3) # seems similar to formula 1 but x100
 
+# For ease, making the original list into a df.
+dat_in_df <- map_df(dat_in, ~as.data.frame(.x), .id="site_name")
+
+# And count years in each record at each site.
+dat_years <- dat_in_df %>%
+  group_by(site_name) %>%
+  summarize(years = n_distinct(year)) %>%
+  ungroup()
+
 # Combine with rmax dataset.
 # Note, this will trim down from 182 to 159 sites due to model diagnostics.
 dat_yield_rmax_1 <- left_join(dat_rmax, dat_out_yield_med)
@@ -101,8 +113,14 @@ dat_yield_rmax_2 <- left_join(dat_yield_rmax_1, site_HUC2)
 nuts_P$site_name <- str_replace_all(nuts_P$MonitoringLocationIdentifier, 'USGS-', 'nwis_')
 # And combine primary df with nutrient data
 dat_yield_rmax_3 <- left_join(dat_yield_rmax_2, nuts_P)
+# And combine with exceedances data.
+dat_yield_rmax_4 <- left_join(dat_yield_rmax_3, exc)
+# and combine with years data to calculate exceedances/year.
+dat_yield_rmax_5 <- left_join(dat_yield_rmax_4, dat_years)
 
-dat_yield_rmax <- dat_yield_rmax_3 %>%
+dat_yield_rmax <- dat_yield_rmax_5 %>%
+  # Create new column for annual exceedance values used in models.
+  mutate(exc_ev_y = total_exc_events/years) %>%
   # Also creating a new categorical dam column to model by.
   mutate(Dam_binary = factor(case_when(
     Dam %in% c("50", "80", "95") ~ "0", # Potential
@@ -110,7 +128,7 @@ dat_yield_rmax <- dat_yield_rmax_3 %>%
     TRUE ~ NA)))
 
 # Export for future use.
-#saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_030123.rds")
+# saveRDS(dat_yield_rmax, "data_working/maxalgalyield_159sites_041123.rds")
 
 #### Figures ####
 
@@ -434,16 +452,29 @@ dat_yield_rmax <- dat_yield_rmax_3 %>%
          y = expression(a[max])) +
     theme_bw())
 
+# MAY vs. annual exceedances:
+(fig2.15 <- ggplot(dat_yield_rmax, aes(x = exc_ev_y, y = yield_med2)) +
+    geom_point(alpha = 0.9, size = 3,
+               color = "#6C7A5D") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#6C7A5D",
+                   aes(ymin = yield_2.5_2ed, ymax = yield_97.5_2)) +
+    #scale_x_log10() +
+    scale_y_log10() +
+    labs(y = expression(a[max]),
+         x = expression(Annual~Exceedances~of~Q[c])) +
+    theme_bw())
+
 # Combine figures above.
-(fig_yield_med2 <- fig2.3 + fig2.4 + fig2.5 + fig2.14 +
-    fig2.13 + fig2.11 + fig2.6 + fig2.8 +
+(fig_yield_med2 <- fig2.3 + fig2.4 + fig2.5 + fig2.15 +
+    fig2.14 + fig2.13 + fig2.11 + fig2.6 + fig2.8 +
     fig2.9 + fig2.10 +
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 3))
 
 # And export for use in the Rmarkdown file.
 # ggsave(fig_yield_med2,
-#        filename = "figures/teton_fall22/maxalgyield2_10panel_030123.jpg",
+#        filename = "figures/teton_fall22/maxalgyield2_11panel_041123.jpg",
 #        width = 40,
 #        height = 30,
 #        units = "cm") # n = 159
