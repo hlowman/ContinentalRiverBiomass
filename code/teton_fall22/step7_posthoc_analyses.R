@@ -266,7 +266,13 @@ get_variables(y1)
 
 ##### Figures #####
 
-color_scheme_set("teal")
+# Examine the data being pulled by the function below
+post_data<- mcmc_intervals_data(y1,
+                         point_est = "median", # default = "median"
+                         prob = 0.66, # default = 0.5
+                         prob_outer = 0.95) # default = 0.9
+
+View(post_data)
 
 (y_fig <- mcmc_plot(y1, variable = c("b_log_width", "b_exc_ev_y",
                                      "b_NHD_RdDensWs",
@@ -288,6 +294,43 @@ color_scheme_set("teal")
 # Save out this figure.
 # ggsave(y_fig,
 #        filename = "figures/teton_fall22/brms_yield_033123.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
+
+# Making custom plot to change color of each interval.
+(y_fig_custom <- ggplot(post_data %>%
+                        filter(parameter %in% c("b_log_width", "b_exc_ev_y",
+                                                "b_NHD_RdDensWs",
+                                                "b_summerT", "b_Dam_binary1")) %>%
+                        mutate(par_f = factor(parameter, 
+                                              levels = c("b_log_width",
+                                                         "b_exc_ev_y",
+                                                         "b_NHD_RdDensWs",
+                                                         "b_summerT",
+                                                         "b_Dam_binary1"))), 
+                        aes(x = m, y = par_f, color = par_f)) +
+    geom_linerange(aes(xmin = ll, xmax = hh),
+                  size = 2, alpha = 0.5) +
+    geom_point(size = 5) +
+    vline_at(v = 0) +
+    scale_x_continuous(breaks = c(-0.5, 0, 0.5)) +
+    labs(x = "Posterior Estimates",
+         y = "Predictors") +
+    scale_y_discrete(labels = c("b_log_width" = "Width",
+                                "b_NHD_RdDensWs" = "Roads",
+                                "b_Dam_binary1" = "Dam",
+                                "b_summerT" = "Temperature",
+                                "b_exc_ev_y" = "Exceedances")) +
+    theme_bw() +
+    scale_color_manual(values = c("#4B8FF7", "#233D3F", "#233D3F", 
+                                           "#4B8FF7", "#233D3F")) +
+    theme(text = element_text(size = 24),
+          legend.position = "none"))
+
+# Save out this figure.
+# ggsave(y_fig_custom,
+#        filename = "figures/teton_fall22/brms_yield_custom_041723.jpg",
 #        width = 15,
 #        height = 10,
 #        units = "cm")
@@ -352,17 +395,18 @@ yd_descaled_data <- left_join(yd_descaled_data, yd_descaled_data25)
 yd_descaled_data <- left_join(yd_descaled_data, yd_descaled_data975)
 
 (plot_yd <- ggplot(yd_descaled_data, aes(x = Dam_binary, y = 10^log_yield)) +
-    geom_point(size = 3, color = "#5A7ECB") +
-    geom_errorbar(aes(ymin = 10^lower_yield, ymax = 10^upper_yield), 
-                  width = 0.2,
-                  color = "#5A7ECB") +
+    geom_point(size = 5, color = "#233D3F") +
+    geom_linerange(aes(ymin = 10^lower_yield, ymax = 10^upper_yield), 
+                  size = 2, alpha = 0.7,
+                  color = "#233D3F") +
     geom_jitter(data = dat_yield_combo, aes(x = Dam_binary, y = yield_med2),
-                alpha = 0.3, width = 0.1, color = "#5A7ECB") +
+                alpha = 0.3, width = 0.1, color = "#233D3F") +
     labs(x = "Likelihood of Interference by Dams",
          y = expression(a[max])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
     scale_y_log10() +
-    theme_bw())
+    theme_bw() +
+    theme(text = element_text(size = 24)))
 
 ###### Temperature ######
 
@@ -405,15 +449,16 @@ yt_descaled_data <- left_join(yt_descaled_data, yt_descaled_data25)
 yt_descaled_data <- left_join(yt_descaled_data, yt_descaled_data975)
 
 (plot_yt <- ggplot(yt_descaled_data, aes(x = summerT, y = 10^log_yield)) +
-    geom_line(color = "#D46F10", linewidth = 1) +
+    geom_line(color = "#4B8FF7", linewidth = 1) +
     geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
-                alpha = 0.25, color = "#D46F10", fill = "#D46F10") +
+                alpha = 0.25, color = "#4B8FF7", fill = "#4B8FF7") +
     geom_point(data = dat_yield_combo, aes(x = summerT, y = 10^log_yield),
-               alpha = 0.3, color = "#D46F10") +
+               alpha = 0.3, color = "#4B8FF7") +
     labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
     scale_y_log10() +
-    theme_bw())
+    theme_bw() +
+    theme(text = element_text(size = 24)))
 
 ###### Roads ######
 
@@ -461,11 +506,12 @@ yrd_descaled_data <- left_join(yrd_descaled_data, yrd_descaled_data975)
     #            alpha = 0.25) +
     geom_point(data = dat_yield_combo, 
                aes(x = NHD_RdDensWs, y = yield_med2),
-               alpha = 0.3, color = "#5A7ECB") +
+               alpha = 0.3, color = "#233D3F") +
     scale_y_log10()+
-    labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
+    labs(x = expression(Watershed~Road~Density~(km/km^2)),
          y = expression(a[max])) +
-    theme_bw())
+    theme_bw() +
+    theme(text = element_text(size = 24)))
 
 ###### Exceedances ######
 
@@ -508,16 +554,17 @@ ye_descaled_data <- left_join(ye_descaled_data, ye_descaled_data25)
 ye_descaled_data <- left_join(ye_descaled_data, ye_descaled_data975)
 
 (plot_ye <- ggplot(ye_descaled_data, aes(x = exc_ev_y, y = 10^log_yield)) +
-    geom_line(color = "#5A7ECB", linewidth = 1) +
+    geom_line(color = "#233D3F", linewidth = 1) +
     geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
-                alpha = 0.25, color = "#5A7ECB", fill = "#5A7ECB") +
+                alpha = 0.25, color = "#233D3F", fill = "#233D3F") +
     geom_point(data = dat_yield_combo, 
                aes(x = exc_ev_y, y = yield_med2),
-               alpha = 0.3, color = "#5A7ECB") +
+               alpha = 0.3, color = "#233D3F") +
     scale_y_log10() +
     labs(x = expression(Annual~Exceedances~of~Q[c]),
          y = expression(a[max])) +
-    theme_bw())
+    theme_bw() +
+    theme(text = element_text(size = 24)))
 
 ###### Size ######
 
@@ -560,16 +607,17 @@ yw_descaled_data <- left_join(yw_descaled_data, yw_descaled_data25)
 yw_descaled_data <- left_join(yw_descaled_data, yw_descaled_data975)
 
 (plot_yw <- ggplot(yw_descaled_data, aes(x = 10^log_width, y = 10^log_yield)) +
-    geom_line(color = "#D46F10", linewidth = 1) +
+    geom_line(color = "#4B8FF7", linewidth = 1) +
     geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
-                alpha = 0.25, fill = "#D46F10", color = "#D46F10") +
+                alpha = 0.25, fill = "#4B8FF7", color = "#4B8FF7") +
     geom_point(data = dat_yield_combo, aes(x = width_med, y = yield_med2),
-               alpha = 0.3, color = "#D46F10") +
+               alpha = 0.3, color = "#4B8FF7") +
     scale_y_log10() +
     scale_x_log10() +
     labs(x = "River Width (m)",
          y = expression(a[max])) +
-    theme_bw())
+    theme_bw() +
+    theme(text = element_text(size = 24)))
 
 ###### Combined ######
 
@@ -580,9 +628,9 @@ yw_descaled_data <- left_join(yw_descaled_data, yw_descaled_data975)
 
 # And export.
 ggsave(fig_cond_yield,
-       filename = "figures/teton_fall22/brms_yield_cond_033123.jpg",
-       width = 40,
-       height = 20,
+       filename = "figures/teton_fall22/brms_yield_cond_041723.jpg",
+       width = 55,
+       height = 25,
        units = "cm")
 
 ##### Nutrients #####
