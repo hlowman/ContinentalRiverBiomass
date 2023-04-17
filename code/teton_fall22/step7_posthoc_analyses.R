@@ -448,10 +448,41 @@ yt_descaled_data975 <- as.data.frame(t(t(yt_select975) * scale + center)) %>%
 yt_descaled_data <- left_join(yt_descaled_data, yt_descaled_data25)
 yt_descaled_data <- left_join(yt_descaled_data, yt_descaled_data975)
 
+# Adding in the code from Bob to display lines/overlap rather than equally
+# shaded CIs surrounding the estimated model fit.
+#plot(d, plogis(mu_mu), type="l", ylim=c(0,0.6))
+#points(matrix_complete$bray_sh~ matrix_complete$Dist_km, pch=16, cex= 1.5)
+
+for(i in 1:1000){
+  mu <- a_ddr_sh$b_Intercept[i] + b_ddr_sh$b_Dist_km[i]*d
+  lines(d, plogis(mu), col = alpha("lightblue", 0.1) )
+}
+
+lines(d,plogis(mu_mu))
+
+test<- dat_yield_brms %>%
+  # modelr::data_grid(summerT = modelr::seq_range(summerT, n = 100)) %>%
+  tidybayes::add_epred_draws(y1, ndraws = 100) %>% # sample 100 means from the posterior
+  ggplot(aes(x = summerT, y = log_yield)) +
+  geom_line(aes(y = .epred), alpha = 0.1, color = "#4B8FF7") +
+  geom_point(data = dat_yield_brms, color = "#4B8FF7") +
+  theme_bw()
+
+mtcars %>%
+  data_grid(hp = seq_range(hp, n = 200), am) %>%
+  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
+  # ONLY do this IF you are planning to make spaghetti plots, etc.
+  # NEVER subsample to a small sample to plot intervals, densities, etc.
+  add_epred_draws(m_mpg_am, ndraws = 100) %>%   # sample 100 means from the posterior
+  ggplot(aes(x = hp, y = mpg)) +
+  geom_line(aes(y = .epred, group = .draw), alpha = 1/20, color = "#08519C") +
+  geom_point(data = mtcars) +
+  facet_wrap(~ am)
+
 (plot_yt <- ggplot(yt_descaled_data, aes(x = summerT, y = 10^log_yield)) +
     geom_line(color = "#4B8FF7", linewidth = 1) +
-    geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
-                alpha = 0.25, color = "#4B8FF7", fill = "#4B8FF7") +
+    # geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
+    #             alpha = 0.25, color = "#4B8FF7", fill = "#4B8FF7") +
     geom_point(data = dat_yield_combo, aes(x = summerT, y = 10^log_yield),
                alpha = 0.3, color = "#4B8FF7") +
     labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
@@ -622,16 +653,16 @@ yw_descaled_data <- left_join(yw_descaled_data, yw_descaled_data975)
 ###### Combined ######
 
 # Now, let's combine the above using patchwork.
-(fig_cond_yield <- y_fig + plot_yd + plot_yt +
+(fig_cond_yield <- y_fig_custom + plot_yd + plot_yt +
    plot_yrd + plot_ye + plot_yw +
    plot_annotation(tag_levels = 'A'))
 
 # And export.
-ggsave(fig_cond_yield,
-       filename = "figures/teton_fall22/brms_yield_cond_041723.jpg",
-       width = 55,
-       height = 25,
-       units = "cm")
+# ggsave(fig_cond_yield,
+#        filename = "figures/teton_fall22/brms_yield_cond_041723.jpg",
+#        width = 55,
+#        height = 30,
+#        units = "cm")
 
 ##### Nutrients #####
 
