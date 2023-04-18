@@ -389,7 +389,7 @@ yd_descaled_data <- as.data.frame(t(t(yd_select) * scale + center)) %>%
     # geom_line(aes(y = 10^log_yield, group = Dam_binary), 
     #               alpha = 1, color = "#233D3F") +
     scale_shape_identity() +
-    geom_point(shape = 0, alpha = 0.4,  color = "#233D3F") +
+    geom_point(size = 3, shape = 0, alpha = 0.4,  color = "#233D3F") +
     geom_jitter(data = dat_yield_combo %>%
                   drop_na(Dam_binary), aes(x = Dam_binary, y = 10^log_yield),
                 alpha = 0.2, width = 0.1, color = "#233D3F") +
