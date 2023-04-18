@@ -388,7 +388,7 @@ yd_descaled_data <- as.data.frame(t(t(yd_select) * scale + center)) %>%
 (plot_yd <- ggplot(yd_descaled_data, aes(x = Dam_binary, y = 10^log_yield)) +
     # geom_line(aes(y = 10^log_yield, group = Dam_binary), 
     #               alpha = 1, color = "#233D3F") +
-    scale_shape_identity() +
+    # scale_shape_identity() +
     geom_point(size = 5, shape = 15, alpha = 0.2,  color = "#233D3F") +
     geom_jitter(data = dat_yield_combo %>%
                   drop_na(Dam_binary), aes(x = Dam_binary, y = 10^log_yield),
@@ -1120,179 +1120,91 @@ color_scheme_set("teal")
                                 "b_log_width" = "Width")) +
     theme_bw())
 
-# Plot conditional effects of all covariates.
-# Using code from here to make them ggplots:
-# https://bookdown.org/content/4857/conditional-manatees.html#summary-bonus-conditional_effects
+# Examine the data being pulled by the function above
+post_data3 <- mcmc_intervals_data(q1,
+                                  point_est = "median", # default = "median"
+                                  prob = 0.66, # default = 0.5
+                                  prob_outer = 0.95) # default = 0.9
+
+View(post_data3)
+
+# Making custom plot to change color of each interval.
+# Using core dataset "post_data" rather than canned function.
+(q1_fig_custom <- ggplot(post_data3 %>%
+                           filter(parameter %in% c("b_log_width",
+                                                   "b_NHD_RdDensWs",
+                                                   "b_Dam_binary1")) %>%
+                           mutate(par_f = factor(parameter, 
+                                                 levels = c("b_log_width",
+                                                            "b_NHD_RdDensWs",
+                                                            "b_Dam_binary1"))), 
+                         aes(x = m, y = par_f, color = par_f)) +
+    geom_linerange(aes(xmin = ll, xmax = hh),
+                   size = 2, alpha = 0.5) +
+    geom_point(size = 5) +
+    vline_at(v = 0) +
+    scale_x_continuous(breaks = c(-0.4,-0.2, 0, 0.2)) +
+    labs(x = "Posterior Estimates",
+         y = "Predictors") +
+    scale_y_discrete(labels = c("b_log_width" = "Width",
+                                "b_NHD_RdDensWs" = "Roads",
+                                "b_Dam_binary1" = "Dam")) +
+    theme_bw() +
+    scale_color_manual(values = c("#4B8FF7", "#233D3F", "#233D3F")) +
+    theme(text = element_text(size = 24),
+    legend.position = "none"))
 
 ####### Roads #######
 
-q_r <- conditional_effects(q1, effects = "NHD_RdDensWs")
+# not plotting a spaghetti plot since there is no effect of roads on Qc 
 
-# Create new dataframe
-qr_df <- q_r$NHD_RdDensWs
-
-qr_select <- qr_df %>%
-  dplyr::select(`estimate__`, `effect1__`, log_width) %>%
-  rename("logQcQ2" = "estimate__",
-         "NHD_RdDensWs" = "effect1__")
-
-# And calculate true yield values
-qr_descaled_data <- as.data.frame(t(t(qr_select) * scale3 + center3))
-
-# Also, need to do this for each of the 95% CIs, but the order of the
-# de-scaling matters, so doing this twice more with each of the
-# intervals as the first column.
-
-# 2.5% lower interval
-qr_select25 <- qr_df %>%
-  dplyr::select(`lower__`, `effect1__`, log_width) %>%
-  rename("lower_QcQ2" = "lower__",
-         "NHD_RdDensWs" = "effect1__")
-
-qr_descaled_data25 <- as.data.frame(t(t(qr_select25) * scale3 + center3)) %>%
-  dplyr::select(NHD_RdDensWs, lower_QcQ2)
-
-# 97.5% lower interval
-qr_select975 <- qr_df %>%
-  dplyr::select(`upper__`, `effect1__`, log_width) %>%
-  rename("upper_QcQ2" = "upper__",
-         "NHD_RdDensWs" = "effect1__")
-
-qr_descaled_data975 <- as.data.frame(t(t(qr_select975) * scale3 + center3)) %>%
-  dplyr::select(NHD_RdDensWs, upper_QcQ2)
-
-qr_descaled_data <- left_join(qr_descaled_data, qr_descaled_data25)
-qr_descaled_data <- left_join(qr_descaled_data, qr_descaled_data975)
-
-(plot_qr <- ggplot(qr_descaled_data, aes(x = NHD_RdDensWs, y = 10^logQcQ2)) +
-    # geom_line(color = "black", linewidth = 1) +
-    # geom_ribbon(aes(ymin = lowerQcQ2, ymax = upperQcQ2),
-    #             alpha = 0.25) +
-    geom_point(data = dat_Qc_trim, aes(x = NHD_RdDensWs, y = Qc_Q2yr),
-                alpha = 0.4, color = "#5A7ECB") +
-    labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
+(plot_qr <- ggplot(dat_Qc_trim, aes(x = NHD_RdDensWs, y = 10^logQcQ2)) +
+    geom_point(size = 3, alpha = 0.3, color = "#233D3F") +
+    labs(x = expression(Watershed~Road~Density~(km/km^2)),
          y = expression(Q[c]:Q[2~yr])) +
     scale_y_log10() +
-    theme_bw())
+    theme_bw() +
+    theme(text = element_text(size = 24)))
 
 ####### Dams #######
 
-q_d <- conditional_effects(q1, effects = "Dam_binary")
+# not plotting overlapping draws since there is no effect of dams on Qc
 
-# Create new dataframe
-qd_df <- q_d$Dam_binary
-
-# Qc:Q2 was scaled - Dam_binary was not.
-qd_select <- qd_df %>%
-  dplyr::select(`estimate__`, NHD_RdDensWs, log_width) %>%
-  rename("logQcQ2" = "estimate__")
-
-# And calculate true yield values
-qd_descaled_data <- as.data.frame(t(t(qd_select) * scale3 + center3)) %>%
-  mutate(Dam_binary = qd_df$Dam_binary)
-
-# Also, need to do this for each of the 95% CIs, but the order of the
-# de-scaling matters, so doing this twice more with each of the
-# intervals as the first column.
-
-# 2.5% lower interval
-qd_select25 <- qd_df %>%
-  dplyr::select(`lower__`, NHD_RdDensWs, log_width) %>%
-  rename("lower_QcQ2" = "lower__")
-
-qd_descaled_data25 <- as.data.frame(t(t(qd_select25) * scale3 + center3)) %>%
-  mutate(Dam_binary = qd_df$Dam_binary) %>%
-  dplyr::select(Dam_binary, lower_QcQ2)
-
-# 97.5% lower interval
-qd_select975 <- qd_df %>%
-  dplyr::select(`upper__`, NHD_RdDensWs, log_width) %>%
-  rename("upper_QcQ2" = "upper__")
-
-qd_descaled_data975 <- as.data.frame(t(t(qd_select975) * scale3 + center3)) %>%
-  mutate(Dam_binary = qd_df$Dam_binary) %>%
-  dplyr::select(Dam_binary, upper_QcQ2)
-
-qd_descaled_data <- left_join(qd_descaled_data, qd_descaled_data25)
-qd_descaled_data <- left_join(qd_descaled_data, qd_descaled_data975)
-
-(plot_qd <- ggplot(qd_descaled_data, aes(x = Dam_binary, y = 10^logQcQ2)) +
-    # geom_point(size = 3) +
-    # geom_errorbar(aes(ymin = lowerQcQ2, ymax = upperQcQ2), 
-    #               width = 0.2) +
-    geom_jitter(data = dat_Qc_trim %>%
-                  drop_na(Dam_binary), aes(x = Dam_binary, y = Qc_Q2yr),
-                alpha = 0.4, width = 0.1, color = "#5A7ECB") +
+(plot_qd <- ggplot(dat_Qc_trim %>%
+                     drop_na(Dam_binary), aes(x = Dam_binary, y = 10^logQcQ2)) +
+    geom_jitter(size = 3, alpha = 0.3, width = 0.1, color = "#233D3F") +
     labs(x = "Likelihood of Interference by Dams",
          y = expression(Q[c]:Q[2~yr])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
     scale_y_log10() +
-    theme_bw())
+    theme_bw() +
+    theme(text = element_text(size = 24)))
 
 ####### Size #######
 
-q_w <- conditional_effects(q1, effects = "log_width")
+# not plotting a spaghetti plot since there is no effect of width on Qc 
 
-# Create new dataframe
-qw_df <- q_w$log_width
-
-qw_select <- qw_df %>%
-  dplyr::select(`estimate__`, NHD_RdDensWs, `effect1__`) %>%
-  rename("logQcQ2" = "estimate__",
-         "log_width" = "effect1__")
-
-# And calculate true yield values
-qw_descaled_data <- as.data.frame(t(t(qw_select) * scale3 + center3))
-
-# Also, need to do this for each of the 95% CIs, but the order of the
-# de-scaling matters, so doing this twice more with each of the
-# intervals as the first column.
-
-# 2.5% lower interval
-qw_select25 <- qw_df %>%
-  dplyr::select(`lower__`, NHD_RdDensWs, `effect1__`) %>%
-  rename("lower_QcQ2" = "lower__",
-         "log_width" = "effect1__")
-
-qw_descaled_data25 <- as.data.frame(t(t(qw_select25) * scale3 + center3)) %>%
-  dplyr::select(log_width, lower_QcQ2)
-
-# 97.5% lower interval
-qw_select975 <- qw_df %>%
-  dplyr::select(`upper__`, NHD_RdDensWs, `effect1__`) %>%
-  rename("upper_QcQ2" = "upper__",
-         "log_width" = "effect1__")
-
-qw_descaled_data975 <- as.data.frame(t(t(qw_select975) * scale3 + center3)) %>%
-  dplyr::select(log_width, upper_QcQ2)
-
-qw_descaled_data <- left_join(qw_descaled_data, qw_descaled_data25)
-qw_descaled_data <- left_join(qw_descaled_data, qw_descaled_data975)
-
-(plot_qw <- ggplot(qw_descaled_data, aes(x = 10^log_width, y = 10^logQcQ2)) +
-    # geom_line(color = "black", linewidth = 1) +
-    # geom_ribbon(aes(ymin = lowerQcQ2, ymax = upperQcQ2),
-    #             alpha = 0.25) +
-    geom_point(data = dat_Qc_trim, aes(x = 10^log_width, y = Qc_Q2yr),
-               alpha = 0.4, color = "#D46F10") +
+(plot_qw <- ggplot(dat_Qc_trim, aes(x = 10^log_width, y = 10^logQcQ2)) +
+    geom_point(size = 3, alpha = 0.3, color = "#4B8FF7") +
     scale_y_log10() +
     scale_x_log10()+
     labs(x = "River Width (m)",
          y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
+    theme_bw() +
+    theme(text = element_text(size = 24)))
 
 ####### Combined #######
 
 # Now, let's combine the above using patchwork.
-(fig_cond_Qc <- (q_fig + plot_qd + plot_qr + plot_qw) +
+(fig_cond_Qc <- (q1_fig_custom + plot_qd + plot_qr + plot_qw) +
     plot_layout(nrow = 2) +
     plot_annotation(tag_levels = 'A'))
 
 # And export.
 # ggsave(fig_cond_Qc,
-#        filename = "figures/teton_fall22/brms_Qc_cond_033123.jpg",
-#        width = 28,
-#        height = 20,
+#        filename = "figures/teton_fall22/brms_Qc_cond_041823.jpg",
+#        width = 36,
+#        height = 30,
 #        units = "cm")
 
 # Save out this figure.
