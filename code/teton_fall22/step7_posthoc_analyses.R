@@ -1185,7 +1185,7 @@ View(post_data3)
 # not plotting a spaghetti plot since there is no effect of width on Qc 
 
 (plot_qw <- ggplot(dat_Qc_trim, aes(x = 10^log_width, y = 10^logQcQ2)) +
-    geom_point(size = 3, alpha = 0.3, color = "#4B8FF7") +
+    geom_point(size = 3, alpha = 0.4, color = "#4B8FF7") +
     scale_y_log10() +
     scale_x_log10()+
     labs(x = "River Width (m)",
