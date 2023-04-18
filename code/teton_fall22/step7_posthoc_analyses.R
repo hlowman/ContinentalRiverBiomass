@@ -460,24 +460,45 @@ for(i in 1:1000){
 
 lines(d,plogis(mu_mu))
 
-test<- dat_yield_brms %>%
-  # modelr::data_grid(summerT = modelr::seq_range(summerT, n = 100)) %>%
-  tidybayes::add_epred_draws(y1, ndraws = 100) %>% # sample 100 means from the posterior
+test <- dat_yield_brms %>%
+  expand_grid(summerTemp = modelr::seq_range(summerT, n = 100)) %>%
+  tidybayes::add_epred_draws(ndraws = 100, re_formula = NA) %>% # sample 100 means from the posterior
   ggplot(aes(x = summerT, y = log_yield)) +
   geom_line(aes(y = .epred), alpha = 0.1, color = "#4B8FF7") +
   geom_point(data = dat_yield_brms, color = "#4B8FF7") +
   theme_bw()
 
-mtcars %>%
-  data_grid(hp = seq_range(hp, n = 200), am) %>%
-  # NOTE: this shows the use of ndraws to subsample within add_epred_draws()
-  # ONLY do this IF you are planning to make spaghetti plots, etc.
-  # NEVER subsample to a small sample to plot intervals, densities, etc.
-  add_epred_draws(m_mpg_am, ndraws = 100) %>%   # sample 100 means from the posterior
-  ggplot(aes(x = hp, y = mpg)) +
-  geom_line(aes(y = .epred, group = .draw), alpha = 1/20, color = "#08519C") +
-  geom_point(data = mtcars) +
-  facet_wrap(~ am)
+(testing <- add_epred_draws(newdata = expand_grid(summerT = modelr::seq_range(dat_yield_brms$summerT, n = 100),
+                                    NHD_RdDensWs = median(dat_yield_brms$NHD_RdDensWs,
+                                                          na.rm = TRUE),
+                                    Dam_binary = c(0),
+                                    log_width = median(dat_yield_brms$log_width,
+                                                       na.rm = TRUE),
+                                    exc_ev_y = median(dat_yield_brms$exc_ev_y,
+                                                      na.rm = TRUE)),
+              object = y1,
+              re_formula = NA,
+              ndraws = 100) %>%
+  ggplot(aes(x = summerT, y = log_yield)) +
+  geom_line(aes(y = .epred, group = paste(.draw)), alpha = 0.1, color = "#4B8FF7") +
+  geom_point(data = dat_yield_brms, size = 3, alpha = 0.5, color = "#4B8FF7") +
+  theme_bw())
+
+# Save out this figure.
+# ggsave(testing,
+#        filename = "figures/teton_fall22/brms_temp_predlines_041723.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm")
+
+(plot_testing <- ggplot(dat_yield_brms, aes(x = summerT, y = log_yield)) +
+  #stat_lineribbon() +
+  #scale_fill_brewer(palette = "Reds") +
+  geom_point(size = 3, alpha = 0.5, color = "#4B8FF7") +
+  geom_line(data = testing, aes(y = .epred), alpha = 0.1, color = "#4B8FF7") +
+  labs(x = "Summer Water Temp", y = "Biomass accrual") +
+  theme_bw() +
+  theme(legend.position = "bottom"))
 
 (plot_yt <- ggplot(yt_descaled_data, aes(x = summerT, y = 10^log_yield)) +
     geom_line(color = "#4B8FF7", linewidth = 1) +
