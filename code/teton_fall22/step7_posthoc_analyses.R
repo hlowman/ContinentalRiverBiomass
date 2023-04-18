@@ -267,7 +267,7 @@ get_variables(y1)
 ##### Figures #####
 
 # Examine the data being pulled by the function below
-post_data<- mcmc_intervals_data(y1,
+post_data <- mcmc_intervals_data(y1,
                          point_est = "median", # default = "median"
                          prob = 0.66, # default = 0.5
                          prob_outer = 0.95) # default = 0.9
@@ -299,6 +299,7 @@ View(post_data)
 #        units = "cm")
 
 # Making custom plot to change color of each interval.
+# Using core dataset "post_data" rather than canned function.
 (y_fig_custom <- ggplot(post_data %>%
                         filter(parameter %in% c("b_log_width", "b_exc_ev_y",
                                                 "b_NHD_RdDensWs",
@@ -410,79 +411,26 @@ yd_descaled_data <- left_join(yd_descaled_data, yd_descaled_data975)
 
 ###### Temperature ######
 
-y_t <- conditional_effects(y1, effects = "summerT")
-
-# Create new dataframe
-yt_df <- y_t$summerT
-
-yt_select <- yt_df %>%
-  dplyr::select(`estimate__`, `effect1__`, NHD_RdDensWs, log_width, exc_ev_y) %>%
-  rename("log_yield" = "estimate__",
-         "summerT" = "effect1__")
-
-# And calculate true yield values
-yt_descaled_data <- as.data.frame(t(t(yt_select) * scale + center))
-
-# Also, need to do this for each of the 95% CIs, but the order of the
-# de-scaling matters, so doing this twice more with each of the
-# intervals as the first column.
-
-# 2.5% lower interval
-yt_select25 <- yt_df %>%
-  dplyr::select(`lower__`, `effect1__`, NHD_RdDensWs, log_width, exc_ev_y) %>%
-  rename("lower_yield" = "lower__",
-         "summerT" = "effect1__")
-
-yt_descaled_data25 <- as.data.frame(t(t(yt_select25) * scale + center)) %>%
-  dplyr::select(summerT, lower_yield)
-
-# 97.5% lower interval
-yt_select975 <- yt_df %>%
-  dplyr::select(`upper__`, `effect1__`, NHD_RdDensWs, log_width, exc_ev_y) %>%
-  rename("upper_yield" = "upper__",
-         "summerT" = "effect1__")
-
-yt_descaled_data975 <- as.data.frame(t(t(yt_select975) * scale + center)) %>%
-  dplyr::select(summerT, upper_yield)
-
-yt_descaled_data <- left_join(yt_descaled_data, yt_descaled_data25)
-yt_descaled_data <- left_join(yt_descaled_data, yt_descaled_data975)
-
-# Adding in the code from Bob to display lines/overlap rather than equally
-# shaded CIs surrounding the estimated model fit.
-#plot(d, plogis(mu_mu), type="l", ylim=c(0,0.6))
-#points(matrix_complete$bray_sh~ matrix_complete$Dist_km, pch=16, cex= 1.5)
-
-for(i in 1:1000){
-  mu <- a_ddr_sh$b_Intercept[i] + b_ddr_sh$b_Dist_km[i]*d
-  lines(d, plogis(mu), col = alpha("lightblue", 0.1) )
-}
-
-lines(d,plogis(mu_mu))
-
-test <- dat_yield_brms %>%
-  expand_grid(summerTemp = modelr::seq_range(summerT, n = 100)) %>%
-  tidybayes::add_epred_draws(ndraws = 100, re_formula = NA) %>% # sample 100 means from the posterior
-  ggplot(aes(x = summerT, y = log_yield)) +
-  geom_line(aes(y = .epred), alpha = 0.1, color = "#4B8FF7") +
-  geom_point(data = dat_yield_brms, color = "#4B8FF7") +
-  theme_bw()
-
-(testing <- add_epred_draws(newdata = expand_grid(summerT = modelr::seq_range(dat_yield_brms$summerT, n = 100),
-                                    NHD_RdDensWs = median(dat_yield_brms$NHD_RdDensWs,
-                                                          na.rm = TRUE),
-                                    Dam_binary = c(0),
-                                    log_width = median(dat_yield_brms$log_width,
-                                                       na.rm = TRUE),
-                                    exc_ev_y = median(dat_yield_brms$exc_ev_y,
-                                                      na.rm = TRUE)),
-              object = y1,
-              re_formula = NA,
-              ndraws = 100) %>%
-  ggplot(aes(x = summerT, y = log_yield)) +
-  geom_line(aes(y = .epred, group = paste(.draw)), alpha = 0.1, color = "#4B8FF7") +
-  geom_point(data = dat_yield_brms, size = 3, alpha = 0.5, color = "#4B8FF7") +
-  theme_bw())
+# Working but still scaled example of spaghetti plot with 100 posterior means
+# add_epred_draws() documentation here: https://mjskay.github.io/tidybayes/reference/add_predicted_draws.html, https://cran.r-project.org/web/packages/tidybayes/vignettes/tidy-brms.html
+(testing <- add_epred_draws(newdata = expand_grid(summerT = modelr::seq_range(dat_yield_brms$summerT, 
+                                                                              n = 100),
+                                                  # hold remainder of covariates constant
+                                                  # choosing to predict for median/reference values
+                                                  NHD_RdDensWs = median(dat_yield_brms$NHD_RdDensWs,
+                                                                        na.rm = TRUE),
+                                                  Dam_binary = c(0),
+                                                  log_width = median(dat_yield_brms$log_width,
+                                                                     na.rm = TRUE),
+                                                  exc_ev_y = median(dat_yield_brms$exc_ev_y,
+                                                                    na.rm = TRUE)),
+                            object = y1,
+                            re_formula = NA, # random effects not included due to global mean
+                            ndraws = 100) %>% # draw 100 different lines
+   ggplot(aes(x = summerT, y = log_yield)) +
+   geom_line(aes(y = .epred, group = paste(.draw)), alpha = 0.1, color = "#4B8FF7") +
+   geom_point(data = dat_yield_brms, size = 3, alpha = 0.5, color = "#4B8FF7") +
+   theme_bw())
 
 # Save out this figure.
 # ggsave(testing,
@@ -491,21 +439,37 @@ test <- dat_yield_brms %>%
 #        height = 10,
 #        units = "cm")
 
-(plot_testing <- ggplot(dat_yield_brms, aes(x = summerT, y = log_yield)) +
-  #stat_lineribbon() +
-  #scale_fill_brewer(palette = "Reds") +
-  geom_point(size = 3, alpha = 0.5, color = "#4B8FF7") +
-  geom_line(data = testing, aes(y = .epred), alpha = 0.1, color = "#4B8FF7") +
-  labs(x = "Summer Water Temp", y = "Biomass accrual") +
-  theme_bw() +
-  theme(legend.position = "bottom"))
+# Condition on temperature alone.
+y_t <- add_epred_draws(newdata = expand_grid(summerT = modelr::seq_range(dat_yield_brms$summerT, n = 100),
+                       # hold remainder of covariates constant
+                       # choosing to predict for median/reference values
+                       NHD_RdDensWs = median(dat_yield_brms$NHD_RdDensWs,
+                                                                   na.rm = TRUE),
+                       Dam_binary = c(0),
+                       log_width = median(dat_yield_brms$log_width, na.rm = TRUE),
+                       exc_ev_y = median(dat_yield_brms$exc_ev_y, na.rm = TRUE)),
+                       object = y1,
+                       re_formula = NA, # random effects not included due to global mean
+                       ndraws = 100)
 
+# Create new dataframe in the appropriate order.
+yt_select <- y_t %>%
+  ungroup() %>% # removing groups as imposed above
+  dplyr::select(`.epred`, summerT, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  rename("log_yield" = ".epred")
+
+# And calculate true yield values
+yt_descaled_data <- as.data.frame(t(t(yt_select) * scale + center)) %>%
+  mutate(draw = y_t$`.draw`) # Add draws back in.
+
+# And plot all lines with original data points.
 (plot_yt <- ggplot(yt_descaled_data, aes(x = summerT, y = 10^log_yield)) +
-    geom_line(color = "#4B8FF7", linewidth = 1) +
-    # geom_ribbon(aes(ymin = 10^lower_yield, ymax = 10^upper_yield),
-    #             alpha = 0.25, color = "#4B8FF7", fill = "#4B8FF7") +
+    # Plot 100 lines.
+    geom_line(aes(y = 10^log_yield, group = draw), alpha = 0.2, color = "#4B8FF7") +
+    # Plot original unscaled data.
     geom_point(data = dat_yield_combo, aes(x = summerT, y = 10^log_yield),
-               alpha = 0.3, color = "#4B8FF7") +
+               alpha = 0.4, color = "#4B8FF7") +
+    # And label things correctly.
     labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
     scale_y_log10() +
