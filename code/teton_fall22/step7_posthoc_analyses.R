@@ -392,7 +392,7 @@ yd_descaled_data <- as.data.frame(t(t(yd_select) * scale + center)) %>%
     geom_point(size = 5, shape = 15, alpha = 0.2,  color = "#233D3F") +
     geom_jitter(data = dat_yield_combo %>%
                   drop_na(Dam_binary), aes(x = Dam_binary, y = 10^log_yield),
-                size = 3, alpha = 0.4, width = 0.1, color = "#233D3F") +
+                size = 3, alpha = 0.3, width = 0.1, color = "#233D3F") +
     labs(x = "Likelihood of Interference by Dams",
          y = expression(a[max])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
@@ -472,7 +472,7 @@ yt_descaled_data <- as.data.frame(t(t(yt_select) * scale + center)) %>%
 # not plotting a spaghetti plot since there is no effect of roads on accrual 
 
 (plot_yrd <- ggplot(dat_yield_combo, aes(x = NHD_RdDensWs, y = 10^log_yield)) +
-    geom_point(size = 3, alpha = 0.4, color = "#233D3F") +
+    geom_point(size = 3, alpha = 0.3, color = "#233D3F") +
     scale_y_log10()+
     labs(x = expression(Watershed~Road~Density~(km/km^2)),
          y = expression(a[max])) +
@@ -508,7 +508,7 @@ ye_descaled_data <- as.data.frame(t(t(ye_select) * scale + center)) %>%
 (plot_ye <- ggplot(ye_descaled_data, aes(x = exc_ev_y, y = 10^log_yield)) +
     geom_line(aes(y = 10^log_yield, group = draw), alpha = 0.2, color = "#233D3F") +
     geom_point(data = dat_yield_combo, aes(x = exc_ev_y, y = 10^log_yield),
-               size = 3, alpha = 0.4, color = "#233D3F") +
+               size = 3, alpha = 0.3, color = "#233D3F") +
     scale_y_log10() +
     labs(x = expression(Mean~Annual~Exceedances~of~Q[c]),
          y = expression(a[max])) +
@@ -560,11 +560,11 @@ yw_descaled_data <- as.data.frame(t(t(yw_select) * scale + center)) %>%
    plot_annotation(tag_levels = 'A'))
 
 # And export.
-ggsave(fig_cond_yield,
-       filename = "figures/teton_fall22/brms_yield_cond_041823.jpg",
-       width = 55,
-       height = 30,
-       units = "cm")
+# ggsave(fig_cond_yield,
+#        filename = "figures/teton_fall22/brms_yield_cond_041823.jpg",
+#        width = 55,
+#        height = 30,
+#        units = "cm")
 
 ##### Nutrients #####
 
