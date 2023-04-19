@@ -20,6 +20,7 @@ lapply(c("tidyverse", "lubridate", "rstan",
 siteswoSL <- read_csv("data_working/comids_100sites.csv")
 
 # Load in list of StreamLight data downloaded from Phil's GitHub repo.
+# https://github.com/streampulse/metabolism_synthesis/tree/master/output_data
 rawSL <- readRDS("data_raw/metabolism_synthesis_output_data/lotic_standardized_full.rds")
 
 # Create list to filter by.
