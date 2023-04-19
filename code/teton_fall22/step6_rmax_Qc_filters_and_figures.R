@@ -169,7 +169,6 @@ dat_out_full <- left_join(dat_out_join3, dat_nuts_w)
 # Export for future use.
 #saveRDS(dat_out_full, "data_working/rmax_filtered_159sites_113022.rds")
 
-
 #### rmax quantiles ####
 median(dat_out_full$r_med) # nwis_03183500
 
@@ -223,6 +222,25 @@ mean(r5below$cvQ) # 1.863781
 dat_out_full <- dat_out_full %>%
   mutate(minCI = case_when(`2.5%` < 0 ~ 0,
                            `2.5%` >= 0 ~ `2.5%`))
+
+# Examining uncertainty
+(fig1.0 <- ggplot(dat_out_full, aes(x = r_med, y = site_name)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#285B5D") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#285B5D",
+                   aes(xmin = `2.5%`, xmax = `97.5%`)) +
+    #scale_x_log10() +
+    labs(y = "Site",
+         x = expression(r[max])) +
+    theme_bw() +
+    theme(axis.text.y=element_blank()))
+
+# Add a new column to denote range
+dat_out_full <- dat_out_full %>%
+  mutate(range_r = `97.5%` - `2.5%`)
+
+plot(dat_out_full$r_med, dat_out_full$range_r)
 
 # Distribution of rmax values:
 (fig1 <- ggplot(dat_out_full, aes(x = r_med)) +
@@ -819,6 +837,25 @@ mean(qc5below$cvQ) # 2.003697
     labs(x = expression(Critical~Disturbance~Threshold~(Q[c])),
          y = "Count") +
     theme_bw())
+
+# Examining uncertainty
+(fig0c2 <- ggplot(dat_out_full_141, aes(x = c_med, y = site_name)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#405F8A") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#405F8A",
+                   aes(xmin = `2.5%`, xmax = `97.5%`)) +
+    #scale_x_log10() +
+    #scale_y_log10() + 
+    labs(x = expression(c)) +
+    theme_bw() +
+    theme(axis.text.y=element_blank()))
+
+# Add a new column to quantify range of uncertainty
+dat_out_full_141 <- dat_out_full_141 %>%
+  mutate(range_c = `97.5%` - `2.5%`)
+
+plot(dat_out_full_141$c_med, dat_out_full_141$range_c)
 
 # Distribution of Qc/Q2 values:
 (fig1qcq2 <- ggplot(dat_out_full_141, aes(x = Qc_Q2yr)) +
