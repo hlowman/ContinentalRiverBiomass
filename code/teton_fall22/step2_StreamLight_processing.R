@@ -24,7 +24,9 @@ NWIS_198sites_subset <- readRDS("data_working/NWIS_198sites_101222.rds")
 NWIS_198sitesinfo_subset <- readRDS("data_working/NWIS_198sitesinfo_101222.rds")
 NWIS_207sites_Ndays <- readRDS("data_working/NWIS_198sitesNdays_101222.rds")
 
-# Load in dataset created in StreamLight_data_assembly script.
+# Load in dataset created in StreamLight_data_assembly script using Phil's
+# data downloaded from:
+# https://github.com/streampulse/metabolism_synthesis/tree/master/output_data
 # To supplement sites available in StreamLight dataset.
 SL_85sites <- readRDS("data_working/StreamLight_daily_85site_list.rds")
 
