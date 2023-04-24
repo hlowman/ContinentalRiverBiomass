@@ -466,7 +466,7 @@ dat_yield_rmax <- dat_yield_rmax_5 %>%
     theme_bw())
 
 # Combine figures above.
-(fig_yield_med2 <- fig2.3 + fig2.4 + fig2.5 + fig2.15 +
+(fig_yield_med2 <- fig2.3 + fig2.4 + fig2.15 +
     fig2.14 + fig2.13 + fig2.11 + fig2.6 + fig2.8 +
     fig2.9 + fig2.10 +
     plot_annotation(tag_levels = 'A') +
@@ -474,7 +474,7 @@ dat_yield_rmax <- dat_yield_rmax_5 %>%
 
 # And export for use in the Rmarkdown file.
 # ggsave(fig_yield_med2,
-#        filename = "figures/teton_fall22/maxalgyield2_11panel_041123.jpg",
+#        filename = "figures/teton_fall22/maxalgyield2_10panel_042423.jpg",
 #        width = 40,
 #        height = 30,
 #        units = "cm") # n = 159
