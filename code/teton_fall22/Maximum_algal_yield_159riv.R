@@ -440,7 +440,7 @@ dat_yield_rmax <- dat_yield_rmax_5 %>%
                    color = "#5C694C",
                    aes(ymin = yield_2.5_2ed, ymax = yield_97.5_2)) +
     scale_y_log10() +
-    labs(x = expression(Mean~Summer~Temperature~(degree~C)),
+    labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
     theme_bw())
 
