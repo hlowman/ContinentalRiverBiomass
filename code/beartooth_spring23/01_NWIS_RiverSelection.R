@@ -1,4 +1,4 @@
-## Resilience of Stream Productivity to Disturbance
+## Recovery of Stream Productivity following Disturbance
 ## Originally created: October 10, 2022
 ## Heili Lowman
 
