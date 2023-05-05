@@ -30,7 +30,7 @@ lapply(c("plyr","dplyr","ggplot2","cowplot","lubridate",
        require, character.only=T)
 
 ## Source data
-df <- readRDS("/project/modelscape/users/hlowman/jobscripts/beartooth_spring23/list_181sites_Qmaxnorm_SavoySL_test.rds")
+df <- readRDS("list_181sites_Qmaxnorm_SavoySL_2sitetest.rds")
 
 #### Stan data prep ####
 
@@ -63,7 +63,7 @@ init_Ricker <- function(...) {
 
 ## export results
 PM_outputlist_Ricker <- lapply(stan_data_l,
-                               function(x) stan("/project/modelscape/users/hlowman/jobscripts/beartooth_spring23/Stan_ProductivityModel.stan",
+                               function(x) stan("Stan_ProductivityModel.stan",
                                                 data = x, 
                                                 chains = 3,
                                                 iter = 5000,
