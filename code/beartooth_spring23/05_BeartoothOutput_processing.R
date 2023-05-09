@@ -53,13 +53,13 @@ data_out4_its <- map(data_out4, extract_allparams)
 
 # Saving these out because the load-in took so long.
 # saveRDS(data_out1_its,
-#        file = "data_working/beartooth_181rivers_model_all_params_all_iterations_050923pt1.rds")
+#        file = "data_working/beartooth_181rivers_model_all_params_all_iterations_050823pt1.rds")
 # saveRDS(data_out2_its,
-#        file = "data_working/beartooth_181rivers_model_all_params_all_iterations_050923pt2.rds")
+#        file = "data_working/beartooth_181rivers_model_all_params_all_iterations_050823pt2.rds")
 # saveRDS(data_out3_its,
-#        file = "data_working/beartooth_181rivers_model_all_params_all_iterations_050923pt3.rds")
+#        file = "data_working/beartooth_181rivers_model_all_params_all_iterations_050823pt3.rds")
 # saveRDS(data_out4_its,
-#        file = "data_working/beartooth_181rivers_model_all_params_all_iterations_050923pt4.rds")
+#        file = "data_working/beartooth_181rivers_model_all_params_all_iterations_050823pt4.rds")
 
 # These can't be bound together because I've extracted "B" and "pred_GPP"
 # which have different numbers of days and prevent the rbind() function below
@@ -87,8 +87,8 @@ data_out_its_params_all <- c(data_out1_its_params, data_out2_its_params,
                              data_out3_its_params, data_out4_its_params)
 
 # Saving this out too, but keeping as a list for iteration purposes.
-saveRDS(data_out_its_params_all,
-       file = "data_working/beartooth_181rivers_model_params_all_iterations_050823.rds")
+# saveRDS(data_out_its_params_all,
+#        file = "data_working/beartooth_181rivers_model_params_all_iterations_050823.rds")
 
 #### Diagnostics ####
 
@@ -128,8 +128,8 @@ data_out_diags_123 <- rbind(data_out_diags_12, data_out3_diags_df)
 data_out_diags_all <- rbind(data_out_diags_123, data_out4_diags_df)
 
 # Export dataset
-saveRDS(data_out_diags_all,
-        file = "data_working/beartooth_181rivers_model_diags_050923.rds")
+# saveRDS(data_out_diags_all,
+#         file = "data_working/beartooth_181rivers_model_diags_050923.rds")
 
 #### Divergences ####
 
@@ -170,7 +170,7 @@ data_out_divs_123 <- rbind(data_out_divs_12, data_out3_divs_df)
 data_out_divs_all <- rbind(data_out_divs_123, data_out4_divs_df)
 
 # Export dataset
-saveRDS(data_out_divs_all,
-        file = "data_working/beartooth_181rivers_model_divs_050923.rds")
+# saveRDS(data_out_divs_all,
+#         file = "data_working/beartooth_181rivers_model_divs_050923.rds")
 
 # End of script.
