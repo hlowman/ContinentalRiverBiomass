@@ -162,6 +162,6 @@ RI_two$RI_2yr_Q_cms <- RI_two$RI_2yr_Q*0.02832 # convert cfs to cms
 # Conversion according to: https://pubs.usgs.gov/circ/2003/circ1262/htdocs/conversions.html
 
 ## Export - save to data folder
-# write_csv(RI_two, "data_working/RI_2yr_flood_180riv_050923.csv") ## in cms
+write_csv(RI_two, "data_working/RI_2yr_flood_180riv_050923.csv") ## in cms
 
 # End of script.
