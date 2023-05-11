@@ -120,6 +120,12 @@ dat_nuts_w <- dat_nuts %>%
               names_from = "CharacteristicName",
               values_from = "mean_mg_L")
 
+# Edit and trim HUC dataset.
+site_HUC_trim <- site_HUC %>%
+  dplyr::select(agency_cd, site_no, huc_2) %>%
+  mutate(site_name = paste(agency_cd, site_no, sep="-"))
+site_HUC_trim$site_name <- str_replace_all(site_HUC_trim$site_name, 'USGS-', 'nwis_')
+
 # Join all ancillary data together.
 
 dat_join1 <- left_join(dat_in_daily_means, dat_in_summer_means)
@@ -127,7 +133,7 @@ dat_join2 <- left_join(dat_join1, dat_site_info, by = c("site_name" = "SiteID"))
 dat_join3 <- left_join(dat_join2, dat_site)
 dat_join4 <- left_join(dat_join3, med_width)
 dat_join5 <- left_join(dat_join4, dat_nuts_w)
-dat_join6 <- left_join(dat_join5, site_HUC)
+dat_join6 <- left_join(dat_join5, site_HUC_trim)
 dat_join7 <- left_join(dat_join6, dat_exc)
 
 # Export covariate data for all sites.
