@@ -36,7 +36,7 @@ data_out3 <- readRDS("data_teton/teton_182rivers_output_pt3_2022_10_12.rds")
 
 # Going to create a function to pull out all iterations.
 extract_all <- function(df){
-  extract(df, c("r", "lambda", "s", "c", 
+  rstan::extract(df, c("r", "lambda", "s", "c", 
                 "B", "P", "pred_GPP", "sig_p", "sig_o"))
 }
 
