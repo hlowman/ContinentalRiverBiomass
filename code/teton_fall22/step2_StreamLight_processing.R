@@ -43,7 +43,9 @@ for(i in 1:length(sites)){
 # need to identify the intersection of files with available light data
 filenames <- intersect(sites_files, list.files(here("data_raw/individual_files")))
 
-## Import StreamLight
+## Import StreamLight data from Phil's first data release here:
+# https://www.sciencebase.gov/catalog/item/5fad844bd34eb413d5df46f1
+# PAR_surface in umol m^-2 s^-1
 SL <- plyr::ldply(filenames, function(filename) {
   d <- read.table(here("data_raw", "individual_files", filename), header = T, sep = "\t")
   d$file <- filename
@@ -106,5 +108,23 @@ SL_joined_list <- split(SL_joined_clean, SL_joined_clean$site_name)
 
 saveRDS(SL_joined_df, "data_working/StreamLight_daily_df_186sites.rds")
 saveRDS(SL_joined_list, "data_working/StreamLight_daily_list_186sites.rds")
+
+# Test standardization.
+
+PS200 <- rawSL$nwis_06893970 %>%
+  filter(Year > 2011)
+PS173 <- SL_daily$nwis_06893970_input_output.txt %>%
+  filter(Year > 2011) %>%
+  filter(Year < 2014)
+
+plot(PS200$Date, PS200$Stream_PAR_sum) # sum
+plot(PS173$Date, PS173$PAR_surface) # mean
+
+PS200$light_rel <- PS200$Stream_PAR_sum/max(PS200$Stream_PAR_sum, na.rm = TRUE)
+PS173$light_rel <- PS173$PAR_surface/max(PS173$PAR_surface, na.rm = TRUE)
+
+par(mfrow=c(2,1))
+plot(PS200$Date, PS200$light_rel)
+plot(PS173$Date, PS173$light_rel)
 
 # End of script.
