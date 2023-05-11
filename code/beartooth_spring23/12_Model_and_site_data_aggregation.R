@@ -127,20 +127,22 @@ dat_join2 <- left_join(dat_join1, dat_site_info, by = c("site_name" = "SiteID"))
 dat_join3 <- left_join(dat_join2, dat_site)
 dat_join4 <- left_join(dat_join3, med_width)
 dat_join5 <- left_join(dat_join4, dat_nuts_w)
+dat_join6 <- left_join(dat_join5, site_HUC)
+dat_join7 <- left_join(dat_join6, dat_exc)
 
 # Export covariate data for all sites.
-saveRDS(dat_join5, "data_working/covariate_data_181sites_051123.rds")
+saveRDS(dat_join7, "data_working/covariate_data_181sites_051123.rds")
 
 #### Join datasets for amax and Qc:Q2 separately ####
 
 # Yield/maximum accrual (n = 152 sites)
-dat_join_amax <- left_join(dat_amax, dat_join5)
+dat_join_amax <- left_join(dat_amax, dat_join7)
 
 # Export dataset.
 saveRDS(dat_join_amax, "data_working/amax_covariates_152sites_051123.rds")
 
 # Discharge threshold (Qc) (n = 138 sites)
-dat_join_Qc <- left_join(dat_Qc, dat_join5)
+dat_join_Qc <- left_join(dat_Qc, dat_join7)
 
 # Export dataset.
 saveRDS(dat_join_Qc, "data_working/Qc_covariates_138sites_051123.rds")
