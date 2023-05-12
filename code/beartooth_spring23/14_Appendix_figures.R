@@ -225,218 +225,78 @@ median(site_lengths$days) # 870
     plot_layout(nrow = 4))
 
 # And export for use in the appendix.
-ggsave(fig_yield_med,
-       filename = "figures/beartooth_spring23/amax_11panel_051223.jpg",
-       width = 22,
-       height = 26,
-       units = "cm") # n = 152
+# ggsave(fig_yield_med,
+#        filename = "figures/beartooth_spring23/amax_11panel_051223.jpg",
+#        width = 22,
+#        height = 26,
+#        units = "cm") # n = 152
 
 #### Qc Appendix Figure ####
 
-# Distribution of c values:
-(fig0c <- ggplot(dat_out_full_141, aes(x = c_med)) +
-   geom_histogram(bins = 60, alpha = 0.8, 
-                  fill = "#262E43", color = "#262E43") +
-   labs(x = expression(Critical~Disturbance~Threshold~(Q[c])),
-        y = "Count") +
-   theme_bw())
-
-# Examining uncertainty
-(fig0c2 <- ggplot(dat_out_full_141, aes(x = c_med, y = site_name)) +
-    geom_point(alpha = 0.8, size = 3,
-               color = "#405F8A") +
-    geom_linerange(alpha = 0.8, 
-                   color = "#405F8A",
-                   aes(xmin = `2.5%`, xmax = `97.5%`)) +
-    #scale_x_log10() +
-    #scale_y_log10() + 
-    labs(x = expression(c)) +
-    theme_bw() +
-    theme(axis.text.y=element_blank()))
-
-# Add a new column to quantify range of uncertainty
-dat_out_full_141 <- dat_out_full_141 %>%
-  mutate(range_c = `97.5%` - `2.5%`)
-
-plot(dat_out_full_141$c_med, dat_out_full_141$range_c)
-
-# Distribution of Qc/Q2 values:
-(fig1qcq2 <- ggplot(dat_out_full_141, aes(x = Qc_Q2yr)) +
-    geom_histogram(bins = 60, alpha = 0.8, 
-                   fill = "#262E43", color = "#262E43") +
-    geom_vline(xintercept = 1, linetype = "dashed") +
-    labs(x = expression(Q[c]:Q[2~yr]),
-         y = "Count") +
-    theme_bw())
-
-# CV of Discharge vs. Qc:Q2: note, x axis on LOG SCALE
-(fig2qcq2 <- ggplot(dat_out_full_141, aes(x = cvQ, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.8, size = 3,
-               color = "#405F8A") +
-    geom_linerange(alpha = 0.8, 
-                   color = "#405F8A",
-                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    scale_x_log10() +
-    scale_y_log10() + 
-    labs(x = expression(CV[Q]),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-(fig2c2 <- ggplot(dat_out_full_141, aes(x = cvQ, y = c_med)) +
-    geom_point(alpha = 0.8, size = 3,
-               color = "#405F8A") +
-    geom_linerange(alpha = 0.8, 
-                   color = "#405F8A",
-                   aes(ymin = `2.5%`, ymax = `97.5%`)) +
-    #scale_x_log10() +
-    #scale_y_log10() + 
-    labs(x = expression(CV[Q]),
-         y = expression(c)) +
-    theme_bw())
-
-# Mean Daily Light Availability vs. c:
-(fig3qcq2 <- ggplot(dat_out_full_141, aes(x = meanL, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
-    geom_point(alpha = 0.8, size = 3,
-               color = "#E6A45A") +
-    labs(x = expression(Mean~Daily~PAR),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-# Stream Order vs. c: Removing singular site w/o order info for now.
-(fig4qcq2 <- ggplot(dat_out_full_141 %>%
-                      filter(!is.na(Order)), aes(x = Order, y = Qc_Q2yr)) +
-    geom_boxplot(alpha = 0.6, color = "black", fill = "#5792CC") +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    scale_y_log10() +
-    labs(x = expression(Stream~Order),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-# Stream Width vs. c: note, x axis LOG SCALED
-(fig4.1qcq2 <- ggplot(dat_out_full_141, aes(x = width_med, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#1E2F46") +
-    geom_linerange(alpha = 0.8, 
-                   color = "#1E2F46",
-                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    scale_x_log10() + 
-    scale_y_log10() + 
-    labs(x = expression(River~Width~(m)),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-# Latitude vs. c:
-(fig5qcq2 <- ggplot(dat_out_full_141, aes(x = Lat_WGS84, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#7E8C69") +
-    geom_linerange(alpha = 0.8, 
-                   color = "#7E8C69",
-                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    labs(x = expression(Latitude),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-# Longitude vs. c:
-(fig6qcq2 <- ggplot(dat_out_full_141, aes(x = Lon_WGS84, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
-    geom_point(alpha = 0.6, size = 3, color = "#E38678") +
-    geom_linerange(alpha = 0.8, 
-                   color = "#E38678",
-                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
-    labs(x = expression(Longitude),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-# Additional exploratory plot:
-(figextra <- ggplot(dat_out_full_141, aes(x = Lon_WGS84, y = cvQ)) +
-    geom_point(alpha = 0.6, size = 3, color = "black") +
-    labs(x = expression(Longitude),
-         y = expression(CV[Q])) +
-    theme_bw())
-
-# Catchment size vs. c: note, missing Miss. R.
-# x-axis also LOG SCALED
-(fig7qcq2 <- ggplot(dat_out_full_141, aes(x = NHD_AREASQKM, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#3B7D6E") +
-    geom_linerange(alpha = 0.8, 
-                   color = "#3B7D6E",
-                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    scale_x_log10() +
-    scale_y_log10() +
-    labs(x = expression(Watershed~Area~(km^2)),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-# Land-use vs. c:
-(fig8qcq2 <- ggplot(dat_out_full_141, aes(x = LU_category, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
-    geom_boxplot(alpha = 0.6, color = "#6D4847", fill = "#6D4847") +
-    labs(x = expression(Land~Use),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
+# Create columns necessary for plotting.
+dat_Qc <- dat_Qc %>%
+  mutate(Qc_Q2yr = Qc/RI_2yr_Q_cms,
+         Qc_Q2yr2.5 = Qc2.5/RI_2yr_Q_cms,
+         Qc_Q2yr97.5 = Qc97.5/RI_2yr_Q_cms)
 
 # Mean daily GPP vs. Qc:Q2: X axis LOG SCALED
-(fig9qcq2 <- ggplot(dat_out_full_141, aes(x = meanGPP, y = Qc_Q2yr)) +
+(figq1 <- ggplot(dat_Qc, aes(x = meanGPP, y = Qc_Q2yr)) +
+   geom_point(alpha = 0.8, size = 3,
+              color = "#486999") +
+   geom_linerange(alpha = 0.8, 
+                  color = "#486999",
+                  aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+   geom_hline(yintercept = 1, linetype = "dashed") +
+   scale_x_log10() +
+   scale_y_log10() + 
+   labs(y = expression(Q[c]:Q[2~yr]),
+        x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
+   theme_bw())
+
+# CV of Discharge vs. Qc:Q2: note, x axis on LOG SCALE
+(figq2 <- ggplot(dat_Qc, aes(x = cvQ, y = Qc_Q2yr)) +
     geom_point(alpha = 0.8, size = 3,
-               color = "#486999") +
+               color = "#405F8A") +
     geom_linerange(alpha = 0.8, 
-                   color = "#486999",
+                   color = "#405F8A",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() +
     scale_y_log10() + 
-    labs(y = expression(Q[c]:Q[2~yr]),
-         x = expression(Mean~Daily~GPP~(gO[2]~m^-2~d^-1))) +
+    labs(x = expression(CV[Q]),
+         y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
-# More Land Use vs. c:
-(fig10qcq2 <- ggplot(dat_out_full_141, aes(x = NHD_RdDensCat, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#9EB45F") +
+# Mean annual exceedances vs. Qc:Q2
+(figq3 <- ggplot(dat_Qc, aes(x = exc_y, y = Qc_Q2yr)) +
+    geom_point(alpha = 0.8, size = 3,
+               color = "#38557A") +
     geom_linerange(alpha = 0.8, 
-                   color = "#9EB45F",
+                   color = "#38557A",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
+    scale_x_log10() +
     scale_y_log10() + 
-    labs(x = expression(Road~Density~by~Catchment~(km/km^2)),
+    labs(x = expression(Mean~Annual~Exceedances~of~Q[c]),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
-(fig11qcq2 <- ggplot(dat_out_full_141, aes(x = NHD_RdDensWs, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#304969") +
-    geom_linerange(alpha = 0.8, 
-                   color = "#304969",
-                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+# HUC vs. Qc:Q2: 
+(figq4 <- ggplot(dat_Qc, aes(x = huc_2, y = Qc_Q2yr)) +
+    geom_boxplot(alpha = 0.6, color = "black", fill = "#38557A") +
     geom_hline(yintercept = 1, linetype = "dashed") +
-    scale_y_log10() + 
-    labs(x = expression(Road~Density~by~Watershed~(km/km^2)),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-(fig12qcq2 <- ggplot(dat_out_full_141, 
-                     aes(x = NHD_PctImp2011Cat, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#E3907B") +
-    geom_linerange(alpha = 0.8, 
-                   color = "#E3907B",
-                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    labs(x = expression(Percent~Impervious~by~Catchment),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-(fig13qcq2 <- ggplot(dat_out_full_141, 
-                     aes(x = NHD_PctImp2011Ws, y = Qc_Q2yr)) +
-    geom_hline(yintercept = 1) +
-    geom_point(alpha = 0.6, size = 3, color = "#6D4847") +
-    labs(x = expression(Percent~Impervious~by~Watershed),
+    scale_y_log10() +
+    labs(x = expression(Regional~Hydrological~Unit~Code),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
 # Effect of Dams
-# "95 indicates the least probable interference from a structure of a given type"
-(fig14qcq2 <- ggplot(dat_out_full_141 %>%
+(figq5 <- ggplot(dat_Qc %>%
+                       # Creating the new categorical dam column we modeled by.
+                       mutate(Dam_binary = factor(case_when(
+                         Dam %in% c("50", "80", "95") ~ "0", # Potential
+                         Dam == "0" ~ "1", # Certain
+                         TRUE ~ NA))) %>%
                        drop_na(Dam_binary), 
                      aes(x = Dam_binary, y = Qc_Q2yr)) +
     geom_boxplot(alpha = 0.6, 
@@ -448,60 +308,41 @@ plot(dat_out_full_141$c_med, dat_out_full_141$range_c)
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
-# Exploring uncertainty in Qc estimates by dam categories
-(fig14qcq2.2 <- ggplot(dat_out_full_141, aes(x = Dam, y = Qc_Q2yr)) +
-    geom_linerange(alpha = 0.8, position = position_jitter(width = 0.15),
-                   color = "#4D5B90",
+# Stream Width vs. c: note, x axis LOG SCALED
+(figq6 <- ggplot(dat_Qc, aes(x = width_med, y = Qc_Q2yr)) +
+    geom_point(alpha = 0.6, size = 3, color = "#1E2F46") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#1E2F46",
+                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
+    geom_hline(yintercept = 1, linetype = "dashed") +
+    scale_x_log10() + 
+    scale_y_log10() + 
+    labs(x = expression(Stream~Width~(m)),
+         y = expression(Q[c]:Q[2~yr])) +
+    theme_bw())
+
+# Road density in the watershed
+(figq7 <- ggplot(dat_Qc, aes(x = NHD_RdDensWs, y = Qc_Q2yr)) +
+    geom_point(alpha = 0.6, size = 3, color = "#304969") +
+    geom_linerange(alpha = 0.8, 
+                   color = "#304969",
                    aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_y_log10() + 
-    labs(x = expression(Likelihood~of~Influence~by~Dams),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-# Effect of Canals
-# "95 indicates the least probable interference from a structure of a given type"
-(fig15qcq2 <- ggplot(dat_out_full_141, aes(x = Canal, y = Qc_Q2yr)) +
-    geom_boxplot(alpha = 0.6, 
-                 fill = "#E59D7F", color = "#E59D7F") +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    labs(x = expression(Likelihood~of~Influence~by~Canals),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-# Precip
-df_precip_Qc_141 <- left_join(dat_out_full_141, site_precip, by = c("site_name" = "SiteID"))
-
-(fig16qcq2 <- ggplot(df_precip_Qc_141, aes(x = pre_mm_cyr, y = Qc_Q2yr)) +
-    geom_point(alpha = 0.6, size = 3, color = "#4D5B75") +
-    geom_linerange(alpha = 0.8, 
-                   color = "#4D5B75",
-                   aes(ymin = Qc_Q2yr2.5, ymax = Qc_Q2yr97.5)) +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    scale_y_log10() +
-    labs(x = expression(Mean~Annual~Precipitation~by~Catchment~(mm)),
-         y = expression(Q[c]:Q[2~yr])) +
-    theme_bw())
-
-# HUC vs. Qc:Q2: 
-(fig17qcq2 <- ggplot(dat_out_full_141, aes(x = huc2_id, y = Qc_Q2yr)) +
-    geom_boxplot(alpha = 0.6, color = "black", fill = "#38557A") +
-    geom_hline(yintercept = 1, linetype = "dashed") +
-    scale_y_log10() +
-    labs(x = expression(Regional~Hydrological~Unit~Code),
+    labs(x = expression(Road~Density~(km/km^2)),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
 # Combine figures above and export for supplemental figure.
-(fig_qcq2_supp <- fig9qcq2 + fig2qcq2 + fig17qcq2 +
-    fig11qcq2 + fig14qcq2 + fig4.1qcq2 +
+(fig_qcq2_supp <- figq1 + figq2 + figq3 +
+    figq4 + figq5 + figq6 + figq7 +
     plot_annotation(tag_levels = 'A') +
-    plot_layout(nrow = 2))
+    plot_layout(nrow = 3))
 
 # ggsave(fig_qcq2_supp,
-#        filename = "figures/teton_fall22/QcQ2_6panel_022823.jpg",
-#        width = 30,
-#        height = 20,
-#        units = "cm") # n = 141
+#        filename = "figures/beartooth_spring23/QcQ2_7panel_051223.jpg",
+#        width = 22,
+#        height = 21,
+#        units = "cm") # n = 138
 
 # End of script.
