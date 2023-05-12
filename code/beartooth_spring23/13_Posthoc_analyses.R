@@ -204,7 +204,7 @@ get_variables(a1)
 
 ##### Figures #####
 
-# Examine the data being pulled by the function below
+# Examine the data.
 post_data <- mcmc_intervals_data(a1,
                          point_est = "median", # default = "median"
                          prob = 0.66, # default = 0.5
@@ -574,12 +574,12 @@ get_variables(a2)
 # r_huc2_id[] are the offsets from that mean for each condition
 
 # Note the attributes of the originally scaled dataset.
-center2 <- attr(dat_amax_brms2, "scaled:center")
-scale2 <- attr(dat_amax_brms2, "scaled:scale")
+center2 <- attr(dat_amax_brms2_scaled, "scaled:center")
+scale2 <- attr(dat_amax_brms2_scaled, "scaled:scale")
 
 ###### Figures ######
 
-# Examine the data being pulled by the function above
+# Examine the data.
 post_data2 <- mcmc_intervals_data(a2,
                                  point_est = "median", # default = "median"
                                  prob = 0.66, # default = 0.5
@@ -810,27 +810,12 @@ get_variables(q1)
 # r_huc2_id[] are the offsets from that mean for each condition
 
 # Note the attributes of the originally scaled dataset.
-center3 <- attr(dat_Qc_brms1, "scaled:center")
-scale3 <- attr(dat_Qc_brms1, "scaled:scale")
+center3 <- attr(dat_Qc_brms1_scaled, "scaled:center")
+scale3 <- attr(dat_Qc_brms1_scaled, "scaled:scale")
 
 ###### Figures ######
 
-color_scheme_set("teal")
-(q_fig <- mcmc_plot(q1, variable = c("b_log_width", "b_NHD_RdDensWs", 
-                                     "b_Dam_binary1"),
-                    #type = "intervals",
-                    point_est = "median", # default = "median"
-                    prob = 0.66, # default = 0.5
-                    prob_outer = 0.95) + # default = 0.9
-    vline_at(v = 0) +
-    labs(x = "Posterior Estimates",
-         y = "Predictors") +
-    scale_y_discrete(labels = c("b_NHD_RdDensWs" = "Road Density",
-                                "b_Dam_binary1" = "Dam",
-                                "b_log_width" = "Width")) +
-    theme_bw())
-
-# Examine the data being pulled by the function above
+# Examine the data.
 post_data3 <- mcmc_intervals_data(q1,
                                   point_est = "median", # default = "median"
                                   prob = 0.66, # default = 0.5
@@ -861,47 +846,47 @@ View(post_data3)
                                 "b_Dam_binary1" = "Dam")) +
     theme_bw() +
     scale_color_manual(values = c("#4B8FF7", "#233D3F", "#233D3F")) +
-    theme(text = element_text(size = 24),
+    theme(text = element_text(size = 10),
     legend.position = "none"))
 
 ####### Roads #######
 
 # not plotting a spaghetti plot since there is no effect of roads on Qc 
 
-(plot_qr <- ggplot(dat_Qc_trim, aes(x = NHD_RdDensWs, y = 10^logQcQ2)) +
+(plot_qr <- ggplot(dat_Qc, aes(x = NHD_RdDensWs, y = 10^logQcQ2)) +
     geom_point(size = 3, alpha = 0.3, color = "#233D3F") +
-    labs(x = expression(Watershed~Road~Density~(km/km^2)),
+    labs(x = expression(Road~Density~(km/km^2)),
          y = expression(Q[c]:Q[2~yr])) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 24)))
+    theme(text = element_text(size = 10)))
 
 ####### Dams #######
 
 # not plotting overlapping draws since there is no effect of dams on Qc
 
-(plot_qd <- ggplot(dat_Qc_trim %>%
+(plot_qd <- ggplot(dat_Qc %>%
                      drop_na(Dam_binary), aes(x = Dam_binary, y = 10^logQcQ2)) +
     geom_jitter(size = 3, alpha = 0.3, width = 0.1, color = "#233D3F") +
-    labs(x = "Likelihood of Interference by Dams",
+    labs(x = "Likelihood of Dam Interference",
          y = expression(Q[c]:Q[2~yr])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 24)))
+    theme(text = element_text(size = 10)))
 
 ####### Size #######
 
 # not plotting a spaghetti plot since there is no effect of width on Qc 
 
-(plot_qw <- ggplot(dat_Qc_trim, aes(x = 10^log_width, y = 10^logQcQ2)) +
+(plot_qw <- ggplot(dat_Qc, aes(x = 10^log_width, y = 10^logQcQ2)) +
     geom_point(size = 3, alpha = 0.4, color = "#4B8FF7") +
     scale_y_log10() +
     scale_x_log10()+
     labs(x = "River Width (m)",
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw() +
-    theme(text = element_text(size = 24)))
+    theme(text = element_text(size = 10)))
 
 ####### Combined #######
 
@@ -912,16 +897,9 @@ View(post_data3)
 
 # And export.
 # ggsave(fig_cond_Qc,
-#        filename = "figures/teton_fall22/brms_Qc_cond_041823.jpg",
-#        width = 36,
-#        height = 30,
-#        units = "cm")
-
-# Save out this figure.
-# ggsave(q_fig,
-#        filename = "figures/teton_fall22/brms_QcQ2_033123.jpg",
-#        width = 15,
-#        height = 10,
+#        filename = "figures/beartooth_spring23/brms_Qc_cond_051223.jpg",
+#        width = 14,
+#        height = 13,
 #        units = "cm")
 
 # End of script.
