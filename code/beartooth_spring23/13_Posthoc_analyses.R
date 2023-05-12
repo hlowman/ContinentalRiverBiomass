@@ -200,53 +200,30 @@ loo(a1, a1.1)
 get_variables(a1)
 
 # b_Intercept refers to global mean
-# r_huc2_id[] are the offsets from that mean for each condition
+# r_huc_2[] are the offsets from that mean for each condition
 
 ##### Figures #####
 
 # Examine the data being pulled by the function below
-post_data <- mcmc_intervals_data(y1,
+post_data <- mcmc_intervals_data(a1,
                          point_est = "median", # default = "median"
                          prob = 0.66, # default = 0.5
                          prob_outer = 0.95) # default = 0.9
 
 View(post_data)
 
-(y_fig <- mcmc_plot(y1, variable = c("b_log_width", "b_exc_ev_y",
-                                     "b_NHD_RdDensWs",
-                                     "b_summerT", "b_Dam_binary1"),
-      #type = "intervals",
-      point_est = "median", # default = "median"
-      prob = 0.66, # default = 0.5
-      prob_outer = 0.95) + # default = 0.9
-    vline_at(v = 0) +
-    labs(x = "Posterior Estimates",
-         y = "Predictors") +
-    scale_y_discrete(labels = c("b_log_width" = "Width",
-                                "b_NHD_RdDensWs" = "Roads",
-                                "b_Dam_binary1" = "Dam",
-                                "b_summerT" = "Temperature",
-                                "b_exc_ev_y" = "Exceedances")) +
-    theme_bw())
-
-# Save out this figure.
-# ggsave(y_fig,
-#        filename = "figures/teton_fall22/brms_yield_033123.jpg",
-#        width = 15,
-#        height = 10,
-#        units = "cm")
-
 # Making custom plot to change color of each interval.
 # Using core dataset "post_data" rather than canned function.
-(y_fig_custom <- ggplot(post_data %>%
-                        filter(parameter %in% c("b_log_width", "b_exc_ev_y",
+(a_fig_custom <- ggplot(post_data %>%
+                        filter(parameter %in% c("b_log_width", "b_exc_y",
                                                 "b_NHD_RdDensWs",
-                                                "b_summerT", "b_Dam_binary1")) %>%
+                                                "b_summermeanTemp", 
+                                                "b_Dam_binary1")) %>%
                         mutate(par_f = factor(parameter, 
                                               levels = c("b_log_width",
-                                                         "b_exc_ev_y",
+                                                         "b_exc_y",
                                                          "b_NHD_RdDensWs",
-                                                         "b_summerT",
+                                                         "b_summermeanTemp",
                                                          "b_Dam_binary1"))), 
                         aes(x = m, y = par_f, color = par_f)) +
     geom_linerange(aes(xmin = ll, xmax = hh),
@@ -259,20 +236,13 @@ View(post_data)
     scale_y_discrete(labels = c("b_log_width" = "Width",
                                 "b_NHD_RdDensWs" = "Roads",
                                 "b_Dam_binary1" = "Dam",
-                                "b_summerT" = "Temperature",
-                                "b_exc_ev_y" = "Exceedances")) +
+                                "b_summermeanTemp" = "Temperature",
+                                "b_exc_y" = "Exceedances")) +
     theme_bw() +
     scale_color_manual(values = c("#4B8FF7", "#233D3F", "#233D3F", 
                                            "#4B8FF7", "#233D3F")) +
-    theme(text = element_text(size = 24),
+    theme(text = element_text(size = 10),
           legend.position = "none"))
-
-# Save out this figure.
-# ggsave(y_fig_custom,
-#        filename = "figures/teton_fall22/brms_yield_custom_041723.jpg",
-#        width = 15,
-#        height = 10,
-#        units = "cm")
 
 # Can also use pars = c("^r_", "^b_", "^sd_") in place of variable phrasing
 # to see all results.
@@ -287,221 +257,199 @@ View(post_data)
 # Also need to first "unscale" all values.
 
 # Note the attributes of the originally scaled dataset.
-center <- attr(dat_yield_brms1, "scaled:center")
-scale <- attr(dat_yield_brms1, "scaled:scale")
+center <- attr(dat_amax_brms1_scaled, "scaled:center")
+scale <- attr(dat_amax_brms1_scaled, "scaled:scale")
 
 # And use them to back-transform data below
 
 ###### Dams ######
 
+# add_epred_draws() documentation here: https://mjskay.github.io/tidybayes/reference/add_predicted_draws.html, https://cran.r-project.org/web/packages/tidybayes/vignettes/tidy-brms.html
+
 # Using some code from this resource to properly sample the binary:
 # https://www.andrewheiss.com/blog/2021/11/10/ame-bayes-re-guide/#binary-effect
 
-# Condition on exceedances alone.
-y_d <- add_epred_draws(newdata = expand_grid(Dam_binary = c(0, 1),
-                                             # hold remainder of covariates constant
-                                             # choosing to predict for median/reference values
-                                             NHD_RdDensWs = median(dat_yield_brms$NHD_RdDensWs,
+# Condition on dams alone.
+a_d <- add_epred_draws(newdata = expand_grid(Dam_binary = c(0, 1),
+                                    # hold remainder of covariates constant
+                                    # choosing to predict for median/reference values
+                                    NHD_RdDensWs = median(dat_amax_brms$NHD_RdDensWs,
                                                                    na.rm = TRUE),
-                                             exc_ev_y = median(dat_yield_brms$exc_ev_y, na.rm = TRUE),
-                                             log_width = median(dat_yield_brms$log_width, na.rm = TRUE),
-                                             summerT = median(dat_yield_brms$summerT, na.rm = TRUE)),
-                       object = y1,
-                       re_formula = NA, # random effects not included due to global mean
+                                    exc_y = median(dat_amax_brms$exc_y, 
+                                                      na.rm = TRUE),
+                                    log_width = median(dat_amax_brms$log_width, 
+                                                       na.rm = TRUE),
+                                    summermeanTemp = median(dat_amax_brms$summermeanTemp, 
+                                                     na.rm = TRUE)),
+                       object = a1,
+                       re_formula = NA, # random effects not included due to 
+                       # wanting to plot the global mean
                        ndraws = 100)
 
-# Create new dataframe in the appropriate order.
-yd_select <- y_d %>%
+# Create new dataframe in the appropriate order as the scaled matrix.
+ad_select <- a_d %>%
   ungroup() %>% # removing groups as imposed above
-  dplyr::select(`.epred`, summerT, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  dplyr::select(`.epred`, summermeanTemp, NHD_RdDensWs, log_width, exc_y) %>%
   rename("log_yield" = ".epred")
 
 # And calculate true yield values
 # Yield was scaled - Dam_binary was not
-yd_descaled_data <- as.data.frame(t(t(yd_select) * scale + center)) %>%
-  mutate(Dam_binary = factor(y_d$Dam_binary)) %>% # Add dams back in.
-  mutate(draw = y_d$`.draw`) # Add draws back in.
+ad_descaled_data <- as.data.frame(t(t(ad_select) * scale + center)) %>%
+  mutate(Dam_binary = factor(a_d$Dam_binary)) %>% # Add dams back in.
+  mutate(draw = a_d$`.draw`) # Add draws back in.
 
 # And plot all lines with original data points.
-(plot_yd <- ggplot(yd_descaled_data, aes(x = Dam_binary, y = 10^log_yield)) +
-    # geom_line(aes(y = 10^log_yield, group = Dam_binary), 
-    #               alpha = 1, color = "#233D3F") +
-    # scale_shape_identity() +
+(plot_ad <- ggplot(ad_descaled_data, aes(x = Dam_binary, y = 10^log_yield)) +
     geom_point(size = 5, shape = 15, alpha = 0.2,  color = "#233D3F") +
-    geom_jitter(data = dat_yield_combo %>%
+    geom_jitter(data = dat_amax %>%
                   drop_na(Dam_binary), aes(x = Dam_binary, y = 10^log_yield),
                 size = 3, alpha = 0.3, width = 0.1, color = "#233D3F") +
-    labs(x = "Likelihood of Interference by Dams",
+    labs(x = "Likelihood of Dam Interference",
          y = expression(a[max])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 24)))
+    theme(text = element_text(size = 10)))
 
 ###### Temperature ######
 
-# Working but still scaled example of spaghetti plot with 100 posterior means
-# add_epred_draws() documentation here: https://mjskay.github.io/tidybayes/reference/add_predicted_draws.html, https://cran.r-project.org/web/packages/tidybayes/vignettes/tidy-brms.html
-(testing <- add_epred_draws(newdata = expand_grid(summerT = modelr::seq_range(dat_yield_brms$summerT, 
-                                                                              n = 100),
-                                                  # hold remainder of covariates constant
-                                                  # choosing to predict for median/reference values
-                                                  NHD_RdDensWs = median(dat_yield_brms$NHD_RdDensWs,
-                                                                        na.rm = TRUE),
-                                                  Dam_binary = c(0),
-                                                  log_width = median(dat_yield_brms$log_width,
-                                                                     na.rm = TRUE),
-                                                  exc_ev_y = median(dat_yield_brms$exc_ev_y,
-                                                                    na.rm = TRUE)),
-                            object = y1,
-                            re_formula = NA, # random effects not included due to global mean
-                            ndraws = 100) %>% # draw 100 different lines
-   ggplot(aes(x = summerT, y = log_yield)) +
-   geom_line(aes(y = .epred, group = paste(.draw)), alpha = 0.1, color = "#4B8FF7") +
-   geom_point(data = dat_yield_brms, size = 3, alpha = 0.5, color = "#4B8FF7") +
-   theme_bw())
-
-# Save out this figure.
-# ggsave(testing,
-#        filename = "figures/teton_fall22/brms_temp_predlines_041723.jpg",
-#        width = 15,
-#        height = 10,
-#        units = "cm")
-
 # Condition on temperature alone.
-y_t <- add_epred_draws(newdata = expand_grid(summerT = modelr::seq_range(dat_yield_brms$summerT, n = 100),
+a_t <- add_epred_draws(newdata = expand_grid(summermeanTemp = modelr::seq_range(dat_amax_brms$summermeanTemp, n = 100),
                        # hold remainder of covariates constant
                        # choosing to predict for median/reference values
-                       NHD_RdDensWs = median(dat_yield_brms$NHD_RdDensWs,
+                       NHD_RdDensWs = median(dat_amax_brms$NHD_RdDensWs,
                                                                    na.rm = TRUE),
                        Dam_binary = c(0),
-                       log_width = median(dat_yield_brms$log_width, na.rm = TRUE),
-                       exc_ev_y = median(dat_yield_brms$exc_ev_y, na.rm = TRUE)),
-                       object = y1,
-                       re_formula = NA, # random effects not included due to global mean
+                       log_width = median(dat_amax_brms$log_width, na.rm = TRUE),
+                       exc_y = median(dat_amax_brms$exc_y, na.rm = TRUE)),
+                       object = a1,
+                       re_formula = NA,
                        ndraws = 100)
 
-# Create new dataframe in the appropriate order.
-yt_select <- y_t %>%
+# Create new dataframe in the appropriate order to match scaled matrix.
+at_select <- a_t %>%
   ungroup() %>% # removing groups as imposed above
-  dplyr::select(`.epred`, summerT, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  dplyr::select(`.epred`, summermeanTemp, NHD_RdDensWs, log_width, exc_y) %>%
   rename("log_yield" = ".epred")
 
 # And calculate true yield values
-yt_descaled_data <- as.data.frame(t(t(yt_select) * scale + center)) %>%
-  mutate(draw = y_t$`.draw`) # Add draws back in.
+at_descaled_data <- as.data.frame(t(t(at_select) * scale + center)) %>%
+  mutate(draw = a_t$`.draw`) # Add draws back in.
 
 # And plot all lines with original data points.
-(plot_yt <- ggplot(yt_descaled_data, aes(x = summerT, y = 10^log_yield)) +
+(plot_at <- ggplot(at_descaled_data, aes(x = summermeanTemp, y = 10^log_yield)) +
     # Plot 100 lines.
     geom_line(aes(y = 10^log_yield, group = draw), alpha = 0.2, color = "#4B8FF7") +
     # Plot original unscaled data.
-    geom_point(data = dat_yield_combo, aes(x = summerT, y = 10^log_yield),
+    geom_point(data = dat_amax, aes(x = summermeanTemp, y = 10^log_yield),
                size = 3, alpha = 0.4, color = "#4B8FF7") +
     # And label things correctly.
     labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 24)))
+    theme(text = element_text(size = 10)))
 
 ###### Roads ######
 
 # not plotting a spaghetti plot since there is no effect of roads on accrual 
 
-(plot_yrd <- ggplot(dat_yield_combo, aes(x = NHD_RdDensWs, y = 10^log_yield)) +
+(plot_ard <- ggplot(dat_amax, aes(x = NHD_RdDensWs, y = 10^log_yield)) +
     geom_point(size = 3, alpha = 0.3, color = "#233D3F") +
     scale_y_log10()+
-    labs(x = expression(Watershed~Road~Density~(km/km^2)),
+    labs(x = expression(Road~Density~(km/km^2)),
          y = expression(a[max])) +
     theme_bw() +
-    theme(text = element_text(size = 24)))
+    theme(text = element_text(size = 10)))
 
 ###### Exceedances ######
 
 # Condition on exceedances alone.
-y_e <- add_epred_draws(newdata = expand_grid(exc_ev_y = modelr::seq_range(dat_yield_brms$exc_ev_y, n = 100),
-                                             # hold remainder of covariates constant
-                                             # choosing to predict for median/reference values
-                                             NHD_RdDensWs = median(dat_yield_brms$NHD_RdDensWs,
+a_e <- add_epred_draws(newdata = expand_grid(exc_y = modelr::seq_range(dat_amax_brms$exc_y, n = 100),
+                                  # hold remainder of covariates constant
+                                  # choosing to predict for median/reference values
+                                  NHD_RdDensWs = median(dat_amax_brms$NHD_RdDensWs,
                                                                    na.rm = TRUE),
-                                             Dam_binary = c(0),
-                                             log_width = median(dat_yield_brms$log_width, na.rm = TRUE),
-                                             summerT = median(dat_yield_brms$summerT, na.rm = TRUE)),
-                       object = y1,
-                       re_formula = NA, # random effects not included due to global mean
+                                  Dam_binary = c(0),
+                                  log_width = median(dat_amax_brms$log_width, 
+                                                     na.rm = TRUE),
+                                  summermeanTemp = median(dat_amax_brms$summermeanTemp, 
+                                                          na.rm = TRUE)),
+                       object = a1,
+                       re_formula = NA,
                        ndraws = 100)
 
 # Create new dataframe in the appropriate order.
-ye_select <- y_e %>%
+ae_select <- a_e %>%
   ungroup() %>% # removing groups as imposed above
-  dplyr::select(`.epred`, summerT, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  dplyr::select(`.epred`, summermeanTemp, NHD_RdDensWs, log_width, exc_y) %>%
   rename("log_yield" = ".epred")
 
 # And calculate true yield values
-ye_descaled_data <- as.data.frame(t(t(ye_select) * scale + center)) %>%
-  mutate(draw = y_e$`.draw`) # Add draws back in.
+ae_descaled_data <- as.data.frame(t(t(ae_select) * scale + center)) %>%
+  mutate(draw = a_e$`.draw`) # Add draws back in.
 
 # And plot all lines with original data points.
-(plot_ye <- ggplot(ye_descaled_data, aes(x = exc_ev_y, y = 10^log_yield)) +
+(plot_ae <- ggplot(ae_descaled_data, aes(x = exc_y, y = 10^log_yield)) +
     geom_line(aes(y = 10^log_yield, group = draw), alpha = 0.2, color = "#233D3F") +
-    geom_point(data = dat_yield_combo, aes(x = exc_ev_y, y = 10^log_yield),
+    geom_point(data = dat_amax, aes(x = exc_y, y = 10^log_yield),
                size = 3, alpha = 0.3, color = "#233D3F") +
     scale_y_log10() +
     labs(x = expression(Mean~Annual~Exceedances~of~Q[c]),
          y = expression(a[max])) +
     theme_bw() +
-    theme(text = element_text(size = 24)))
+    theme(text = element_text(size = 10)))
 
-###### Size ######
+###### Width ######
 
-# Condition on temperature alone.
-y_w <- add_epred_draws(newdata = expand_grid(log_width = modelr::seq_range(dat_yield_brms$log_width, n = 100),
-                                             # hold remainder of covariates constant
-                                             # choosing to predict for median/reference values
-                                             NHD_RdDensWs = median(dat_yield_brms$NHD_RdDensWs,
+# Condition on river width alone.
+a_w <- add_epred_draws(newdata = expand_grid(log_width = modelr::seq_range(dat_amax_brms$log_width, n = 100),
+                                  # hold remainder of covariates constant
+                                  # choosing to predict for median/reference values
+                                  NHD_RdDensWs = median(dat_amax_brms$NHD_RdDensWs,
                                                                    na.rm = TRUE),
-                                             Dam_binary = c(0),
-                                             summerT = median(dat_yield_brms$summerT, na.rm = TRUE),
-                                             exc_ev_y = median(dat_yield_brms$exc_ev_y, na.rm = TRUE)),
-                       object = y1,
+                                  Dam_binary = c(0),
+                                  summermeanTemp = median(dat_amax_brms$summermeanTemp, 
+                                                          na.rm = TRUE),
+                                  exc_y = median(dat_amax_brms$exc_y, na.rm = TRUE)),
+                       object = a1,
                        re_formula = NA, # random effects not included due to global mean
                        ndraws = 100)
 
-# Create new dataframe in the appropriate order.
-yw_select <- y_w %>%
+# Create new dataframe in the appropriate order to match scaled matrix.
+aw_select <- a_w %>%
   ungroup() %>% # removing groups as imposed above
-  dplyr::select(`.epred`, summerT, NHD_RdDensWs, log_width, exc_ev_y) %>%
+  dplyr::select(`.epred`, summermeanTemp, NHD_RdDensWs, log_width, exc_y) %>%
   rename("log_yield" = ".epred")
 
 # And calculate true yield values
-yw_descaled_data <- as.data.frame(t(t(yw_select) * scale + center)) %>%
-  mutate(draw = y_w$`.draw`) # Add draws back in.
+aw_descaled_data <- as.data.frame(t(t(aw_select) * scale + center)) %>%
+  mutate(draw = a_w$`.draw`) # Add draws back in.
 
 # And plot all lines with original data points.
-(plot_yw <- ggplot(yw_descaled_data, aes(x = 10^log_width, y = 10^log_yield)) +
+(plot_aw <- ggplot(aw_descaled_data, aes(x = 10^log_width, y = 10^log_yield)) +
     geom_line(aes(y = 10^log_yield, group = draw), alpha = 0.2, color = "#4B8FF7") +
-    geom_point(data = dat_yield_combo, aes(x = 10^log_width, y = 10^log_yield),
+    geom_point(data = dat_amax, aes(x = 10^log_width, y = 10^log_yield),
                size = 3, alpha = 0.4, color = "#4B8FF7") +
     scale_y_log10() +
     scale_x_log10() +
     labs(x = "River Width (m)",
          y = expression(a[max])) +
     theme_bw() +
-    theme(text = element_text(size = 24)))
+    theme(text = element_text(size = 10)))
 
 ###### Combined ######
 
-# Now, let's combine the above using patchwork.
-(fig_cond_yield <- y_fig_custom + plot_yd + plot_yt +
-   plot_yrd + plot_ye + plot_yw +
+# Now, to combine the above using patchwork.
+(fig_cond_amax <- a_fig_custom + plot_ad + plot_at +
+   plot_ard + plot_ae + plot_aw +
    plot_annotation(tag_levels = 'A'))
 
 # And export.
-# ggsave(fig_cond_yield,
-#        filename = "figures/teton_fall22/brms_yield_cond_041823.jpg",
-#        width = 55,
-#        height = 30,
+# ggsave(fig_cond_amax,
+#        filename = "figures/beartooth_spring23/brms_amax_cond_051223.jpg",
+#        width = 22,
+#        height = 12,
 #        units = "cm")
 
 ##### Nutrients #####
