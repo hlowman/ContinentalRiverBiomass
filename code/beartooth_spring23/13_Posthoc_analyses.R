@@ -449,7 +449,7 @@ aw_descaled_data <- as.data.frame(t(t(aw_select) * scale + center)) %>%
 # ggsave(fig_cond_amax,
 #        filename = "figures/beartooth_spring23/brms_amax_cond_051223.jpg",
 #        width = 22,
-#        height = 12,
+#        height = 13,
 #        units = "cm")
 
 ##### Nutrients #####
@@ -574,40 +574,13 @@ get_variables(a2)
 # r_huc2_id[] are the offsets from that mean for each condition
 
 # Note the attributes of the originally scaled dataset.
-center2 <- attr(dat_yield_brms3, "scaled:center")
-scale2 <- attr(dat_yield_brms3, "scaled:scale")
+center2 <- attr(dat_amax_brms2, "scaled:center")
+scale2 <- attr(dat_amax_brms2, "scaled:scale")
 
 ###### Figures ######
 
-color_scheme_set("teal")
-
-(y2_fig <- mcmc_plot(y2, variable = c("b_log_width", "b_exc_ev_y", "b_p_log",
-                                      "b_summerT", "b_NHD_RdDensWs",
-                                      "b_no3_log", "b_Dam_binary1"),
-                     point_est = "median", # default = "median"
-                     prob = 0.66, # default = 0.5
-                     prob_outer = 0.95) + # default = 0.9
-    vline_at(v = 0) +
-    labs(x = "Posterior Estimates",
-         y = "Predictors") +
-    scale_y_discrete(labels = c("b_p_log" = "Phosphorus",
-                                "b_no3_log" = "Nitrate",
-                                "b_exc_ev_y" = "Exceedances",
-                                "b_summerT" = "Temperature",
-                                "b_NHD_RdDensWs" = "Roads",
-                                "b_log_width" = "Width",
-                                "b_Dam_binary1" = "Dam")) + #top
-    theme_bw())
-
-# Save out this figure.
-# ggsave(y2_fig,
-#        filename = "figures/teton_fall22/brms_yield_nuts_033123.jpg",
-#        width = 15,
-#        height = 10,
-#        units = "cm")
-
 # Examine the data being pulled by the function above
-post_data2 <- mcmc_intervals_data(y2,
+post_data2 <- mcmc_intervals_data(a2,
                                  point_est = "median", # default = "median"
                                  prob = 0.66, # default = 0.5
                                  prob_outer = 0.95) # default = 0.9
@@ -615,19 +588,19 @@ post_data2 <- mcmc_intervals_data(y2,
 View(post_data2)
 
 # Making custom plot to change color of each interval.
-# Using core dataset "post_data" rather than canned function.
-(y2_fig_custom <- ggplot(post_data2 %>%
-                          filter(parameter %in% c("b_log_width", "b_exc_ev_y",
+# Using core dataset "post_data2" rather than canned function.
+(a2_fig_custom <- ggplot(post_data2 %>%
+                          filter(parameter %in% c("b_log_width", "b_exc_y",
                                                   "b_NHD_RdDensWs",
-                                                  "b_summerT", "b_Dam_binary1",
+                                                  "b_summermeanTemp", "b_Dam_binary1",
                                                   "b_no3_log", "b_p_log")) %>%
                           mutate(par_f = factor(parameter, 
                                                 levels = c("b_log_width",
-                                                           "b_exc_ev_y",
                                                            "b_p_log",
-                                                           "b_summerT",
-                                                           "b_NHD_RdDensWs",
+                                                           "b_exc_y",
+                                                           "b_summermeanTemp",
                                                            "b_no3_log",
+                                                           "b_NHD_RdDensWs",
                                                            "b_Dam_binary1"))), 
                         aes(x = m, y = par_f, color = par_f)) +
     geom_linerange(aes(xmin = ll, xmax = hh),
@@ -640,77 +613,53 @@ View(post_data2)
     scale_y_discrete(labels = c("b_log_width" = "Width",
                                 "b_NHD_RdDensWs" = "Roads",
                                 "b_Dam_binary1" = "Dam",
-                                "b_summerT" = "Temperature",
-                                "b_exc_ev_y" = "Exceedances",
+                                "b_summermeanTemp" = "Temperature",
+                                "b_exc_y" = "Exceedances",
                                 "b_no3_log" = "Nitrate",
                                 "b_p_log" = "Phosphorus")) +
     theme_bw() +
-    scale_color_manual(values = c("#4B8FF7", "#233D3F", "#4B8FF7", "#4B8FF7",
-                                  "#233D3F", "#4B8FF7", "#233D3F")) +
-    theme(text = element_text(size = 24),
+    scale_color_manual(values = c("#4B8FF7", "#4B8FF7", "#233D3F", "#4B8FF7",
+                                  "#4B8FF7", "#233D3F", "#233D3F")) +
+    theme(text = element_text(size = 10),
     legend.position = "none"))
 
 ###### Nitrate #######
 
 # not plotting a spaghetti plot since there is no effect of NO3 on accrual 
 
-(plot_y2n <- ggplot(dat_yield_combo, aes(x = 10^no3_log, y = 10^log_yield)) +
+(plot_a2n <- ggplot(dat_amax, aes(x = 10^no3_log, y = 10^log_yield)) +
     geom_point(size = 3, alpha = 0.4, color = "#4B8FF7") +
     labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
          y = expression(a[max])) +
     scale_y_log10() +
     scale_x_log10() +
     theme_bw() +
-    theme(text = element_text(size = 24)))
+    theme(text = element_text(size = 10)))
 
 ####### Phosphorus #######
 
 # not plotting a spaghetti plot since there is no effect of P on accrual 
 
-(plot_y2p <- ggplot(dat_yield_combo, aes(x = 10^p_log, y = 10^log_yield)) +
+(plot_a2p <- ggplot(dat_amax, aes(x = 10^p_log, y = 10^log_yield)) +
     geom_point(size = 3, alpha = 0.4, color = "#4B8FF7") +
     labs(x = expression(Mean~Phosphorus~(mg/L~P)),
          y = expression(a[max])) +
     scale_y_log10() +
     scale_x_log10() +
     theme_bw() +
-    theme(text = element_text(size = 24)))
+    theme(text = element_text(size = 10)))
 
 ####### Combined #######
 
 # Now, let's combine the above using patchwork.
-(fig_cond_yield_nuts <- y2_fig_custom + plot_y2n + plot_y2p +
+(fig_cond_amax_nuts <- a2_fig_custom + plot_a2n + plot_a2p +
     plot_annotation(tag_levels = 'A'))
 
 # And export.
-# ggsave(fig_cond_yield_nuts,
-#        filename = "figures/teton_fall22/brms_yield_cond_nuts_041823.jpg",
-#        width = 55,
-#        height = 15,
-#        units = "cm")
-
-# Also experimenting with a way to plot histograms/density plots
-# over top of these intervals.
-
-my_posterior2 <- as.matrix(y2)
-
-(y2_fig2 <- mcmc_areas(my_posterior2,
-                       # removed lat bc it was flattening everything
-                       # then removed all but "significant" covariates
-                       pars = c("b_log_width"),
-                       prob = 0.95) +
-    ggtitle("Posterior distributions",
-            "with 95% credible intervals not crossing zero") +
-    vline_at(v = 0) +
-    labs(x = "Posterior",
-         y = "Coefficients") +
-    theme_bw())
-
-# Save out this figure.
-# ggsave(y2_fig2,
-#        filename = "figures/teton_fall22/brms_yield3_sig_021623.jpg",
-#        width = 15,
-#        height = 10,
+# ggsave(fig_cond_amax_nuts,
+#        filename = "figures/beartooth_spring23/brms_amax_cond_nuts_051223.jpg",
+#        width = 22,
+#        height = 7,
 #        units = "cm")
 
 #### Model 2: Qc:Q2yr ####
