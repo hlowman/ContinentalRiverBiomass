@@ -22,7 +22,8 @@
 # Load necessary packages.
 lapply(c("tidybayes", "brms", "tidyverse", "lubridate", 
          "data.table", "GGally", "patchwork", "here",
-         "reshape2", "ggExtra", "ggbreak"), 
+         "reshape2", "ggExtra", "ggbreak", "sf",
+         "maps", "mapproj"), 
        require, character.only=T)
 
 #### Data ####
@@ -30,16 +31,19 @@ lapply(c("tidybayes", "brms", "tidyverse", "lubridate",
 # Import necessary datasets.
 
 # First, the data for the maximum accrual (amax) models.
-dat_amax <- readRDS("data_working/amax_covariates_152sites_051123.rds")
+dat_amax <- readRDS("data_working/amax_covariates_152sites_070523.rds")
 
 # Next, the data for the Qc:Q2yr models.
-dat_Qc <- readRDS("data_working/Qc_covariates_138sites_051123.rds")
+dat_Qc <- readRDS("data_working/Qc_covariates_138sites_070523.rds")
 
 # And, the original data used in modeling.
 dat_in <- readRDS("data_working/df_181sites_Qmaxnorm_SavoySL.rds")
 
 # As well as the model outputs.
 dat_out <- readRDS("data_working/beartooth_181rivers_model_params_all_iterations_050823.rds")
+
+# And all covariate data at all sites.
+dat_cov <- readRDS("data_working/covariate_data_181sites_070523.rds")
 
 #### Timeseries Length Appendix Figure ####
 
@@ -79,6 +83,52 @@ site_lengths <- site_lengths %>%
 
 # And calculate median timeseries length for inclusion in methods.
 median(site_lengths$days) # 870
+
+# And calculate site-years for inclusion in methods.
+dat_sy <- dat_in %>%
+  group_by(site_name, year) %>%
+  summarize(days = n()) %>%
+  ungroup() # 684
+
+mean(dat_sy$days) # mean of 283 days/year
+
+#### Site Map Appendix Figure ####
+
+# make base US map
+states <- map_data("state")
+states_sf <- st_as_sf(states,
+                      coords = c("long", "lat"),
+                      remove = F,
+                      crs = 4326)
+
+# make data sf object
+sites_sf <- st_as_sf(dat_cov,
+                     coords = c("Lon_WGS84", 
+                                "Lat_WGS84"), # always put lon (x) first
+                     remove = F, # leave the lat/lon columns in too
+                     crs = 4326) # projection: WGS84
+# see for more mapping info: https://www.nceas.ucsb.edu/sites/default/files/2020-04/OverviewCoordinateReferenceSystems.pdf
+
+# site map colored by model used
+(sitemap <- ggplot(states_sf) + # base plot
+    geom_polygon(aes(x = long, y = lat, group = group), 
+                 fill = "white", color = "black") + # map of states
+    geom_point(data = sites_sf, aes(x = Lon_WGS84, y = Lat_WGS84), 
+               fill = "#7AC9B7", shape = 21, 
+               size = 4, alpha = 0.75) + # map of sites
+    theme_classic() + # remove grid
+    labs(x = "Longitude",
+         y = "Latitude") +
+    coord_map(projection = "albers", lat0 = 39, lat1 = 45))
+
+# Checked metadata for max/min lat/lon to be sure no states outside CONUS
+# included in modeling.
+
+ggsave(plot = sitemap,
+       filename = "figures/beartooth_spring23/map_181sites.jpg",
+       width = 20,
+       height = 12,
+       units = "cm")
 
 #### Accrual Appendix Figure ####
 
