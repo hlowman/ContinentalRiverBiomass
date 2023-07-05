@@ -280,7 +280,7 @@ ggsave(plot = sitemap,
 # And export for use in the appendix.
 # ggsave(fig_yield_med,
 #        filename = "figures/beartooth_spring23/amax_11panel_070523.jpg",
-#        width = 22,
+#        width = 26,
 #        height = 26,
 #        units = "cm") # n = 152
 
@@ -392,10 +392,11 @@ dat_Qc <- dat_Qc %>%
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 3))
 
+# And export for inclusion in SI.
 # ggsave(fig_qcq2_supp,
-#        filename = "figures/beartooth_spring23/QcQ2_7panel_051223.jpg",
-#        width = 22,
-#        height = 21,
+#        filename = "figures/beartooth_spring23/QcQ2_7panel_070523.jpg",
+#        width = 26,
+#        height = 20,
 #        units = "cm") # n = 138
 
 #### GPP Appendix Figure ####
