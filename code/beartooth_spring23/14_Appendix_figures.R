@@ -190,15 +190,15 @@ ggsave(plot = sitemap,
          y = expression(a[max])) +
     theme_bw())
 
-# MAY vs. summer temp:
-(figa6 <- ggplot(dat_amax, aes(x = summermeanTemp, y = yield_med)) +
+# MAY vs. mean temp:
+(figa6 <- ggplot(dat_amax, aes(x = meanTemp, y = yield_med)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#5C694C") +
     geom_linerange(alpha = 0.8, 
                    color = "#5C694C",
                    aes(ymin = yield_2.5_ed, ymax = yield_97.5)) +
     scale_y_log10() +
-    labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
+    labs(x = paste0("Mean Water Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
     theme_bw())
 
@@ -279,7 +279,7 @@ ggsave(plot = sitemap,
 
 # And export for use in the appendix.
 # ggsave(fig_yield_med,
-#        filename = "figures/beartooth_spring23/amax_11panel_051223.jpg",
+#        filename = "figures/beartooth_spring23/amax_11panel_070523.jpg",
 #        width = 22,
 #        height = 26,
 #        units = "cm") # n = 152
