@@ -388,7 +388,7 @@ dat_Qc <- dat_Qc %>%
 
 # Combine figures above and export for supplemental figure.
 (fig_qcq2_supp <- figq1 + figq2 + figq3 +
-    figq4 + figq5 + figq6 + figq7 +
+    figq4 + figq7 + figq5 + figq6 +
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 3))
 
