@@ -67,18 +67,8 @@ dat_in_daily_means <- dat_in_df %>%
   group_by(site_name) %>%
   summarize(cvQ = (sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE)),
             meanLight = mean(PAR_surface, na.rm = TRUE),
+            meanTemp = mean(temp, na.rm = TRUE),
             meanGPP = mean(GPP, na.rm = TRUE)) %>%
-  ungroup()
-
-# Need to also calculate summer light and temperature means.
-dat_in_summer_means <- dat_in_df %>%
-  filter(DOY > 164) %>% # summer solstice-ish
-  filter(DOY < 259) %>% # autumn equinox-ish
-  group_by(site_name) %>%
-  summarize(summersumLight = sum(PAR_surface, na.rm = TRUE), 
-            # cumulative summer light
-            summermeanLight = sum(PAR_surface, na.rm = TRUE), # mean summer light
-            summermeanTemp = mean(temp, na.rm = TRUE)) %>% # mean summer temperature
   ungroup()
 
 # Also would like to add site characteristics to this dataset 
@@ -128,8 +118,8 @@ site_HUC_trim$site_name <- str_replace_all(site_HUC_trim$site_name, 'USGS-', 'nw
 
 # Join all ancillary data together.
 
-dat_join1 <- left_join(dat_in_daily_means, dat_in_summer_means)
-dat_join2 <- left_join(dat_join1, dat_site_info, by = c("site_name" = "SiteID"))
+dat_join <- dat_in_daily_means # no longer using summer mean values
+dat_join2 <- left_join(dat_join, dat_site_info, by = c("site_name" = "SiteID"))
 dat_join3 <- left_join(dat_join2, dat_site)
 dat_join4 <- left_join(dat_join3, med_width)
 dat_join5 <- left_join(dat_join4, dat_nuts_w)
@@ -137,7 +127,7 @@ dat_join6 <- left_join(dat_join5, site_HUC_trim)
 dat_join7 <- left_join(dat_join6, dat_exc)
 
 # Export covariate data for all sites.
-saveRDS(dat_join7, "data_working/covariate_data_181sites_051123.rds")
+saveRDS(dat_join7, "data_working/covariate_data_181sites_070523.rds")
 
 #### Join datasets for amax and Qc:Q2 separately ####
 
@@ -145,12 +135,12 @@ saveRDS(dat_join7, "data_working/covariate_data_181sites_051123.rds")
 dat_join_amax <- left_join(dat_amax, dat_join7)
 
 # Export dataset.
-saveRDS(dat_join_amax, "data_working/amax_covariates_152sites_051123.rds")
+saveRDS(dat_join_amax, "data_working/amax_covariates_152sites_070523.rds")
 
 # Discharge threshold (Qc) (n = 138 sites)
 dat_join_Qc <- left_join(dat_Qc, dat_join7)
 
 # Export dataset.
-saveRDS(dat_join_Qc, "data_working/Qc_covariates_138sites_051123.rds")
+saveRDS(dat_join_Qc, "data_working/Qc_covariates_138sites_070523.rds")
 
 # End of script.
