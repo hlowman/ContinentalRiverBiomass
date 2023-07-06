@@ -42,6 +42,118 @@ dat_amax <- readRDS("data_working/amax_covariates_152sites_070523.rds")
 # Next, the data for the Qc:Q2yr models.
 dat_Qc <- readRDS("data_working/Qc_covariates_138sites_070523.rds")
 
+#### rmax Quantile results ####
+
+hist(dat_amax$r_med)
+
+median(dat_amax$r_med) # 0.0967613
+# sites nwis_03183500/nwis_04124000
+log(2)/0.0967613 # 7.2 days doubling time
+
+max(dat_amax$r_med) # 0.6587127
+# site nwis_02168504
+log(2)/0.6587127 # 1.05 days doubling time
+# CIs = 0.54, 0.79
+
+min(dat_amax$r_med) # 0.005574672
+# site 	nwis_02208450
+log(2)/0.005574672 # 124 days doubling time
+# CIs = -0.044, 0.052
+
+# 95th %tile and above
+quantile(dat_amax$r_med, probs = c(0.95)) # 0.3425965 
+log(2)/0.3425965 # 2 days doubling time
+
+r95above <- dat_amax %>%
+  filter(r_med >= 0.3425965) # 8 sites
+
+# 5th %tile and below
+quantile(dat_amax$r_med, probs = c(0.05)) # 0.02897718 
+log(2)/0.02897718 # 23.9 days doubling time
+
+r5below <- dat_amax %>%
+  filter(r_med <= 0.02897718) # 8 sites
+
+# Exploring commonalities
+# GPP
+mean(r95above$meanGPP) # 9.412549
+mean(r5below$meanGPP) # 0.4756388
+
+# Mean Temp
+mean(r95above$meanTemp) # 15.20581
+mean(r5below$meanTemp) # 16.81201
+
+# Mean Light
+mean(r95above$meanLight) # 32.0798
+mean(r5below$meanLight) # 15.63432
+
+# Order
+mean(as.numeric(r95above$Order)) # 5.375
+mean(as.numeric(na.omit(r5below$Order))) # 2.571429
+
+# Size
+mean(r95above$width_med) # 63.7224
+mean(r5below$width_med) # 10.49291
+
+# Road Density
+mean(r95above$NHD_RdDensWs) # 2.122042
+mean(na.omit(r5below$NHD_RdDensWs)) # 5.066743
+
+# Discharge
+mean(r95above$cvQ) # 0.8644281
+mean(r5below$cvQ) # 1.736696
+
+#### amax Quantile results ####
+
+hist(dat_amax$yield_med)
+
+median(dat_amax$yield_med) # 1.794811
+
+max(dat_amax$yield_med) # 32.74175
+
+min(dat_amax$yield_med) # 0.06315387
+
+# 95th %tile and above
+quantile(dat_amax$yield_med, probs = c(0.95)) # 10.93067
+
+a95above <- dat_amax %>%
+  filter(yield_med >= 10.93067) # 8 sites
+
+# 5th %tile and below
+quantile(dat_amax$yield_med, probs = c(0.05)) # 0.3817241 
+
+a5below <- dat_amax %>%
+  filter(yield_med <= 0.3817241) # 8 sites
+
+# Exploring commonalities
+# GPP
+mean(a95above$meanGPP) # 9.961949
+mean(a5below$meanGPP) # 0.3721584
+
+# Mean Temp
+mean(a95above$meanTemp) # 14.72836
+mean(a5below$meanTemp) # 15.82818
+
+# Mean Light
+mean(a95above$meanLight) # 31.54914
+mean(a5below$meanLight) # 15.16072
+
+# Order
+mean(as.numeric(a95above$Order)) # 5.625
+mean(as.numeric(na.omit(a5below$Order))) # 2.5
+
+# Size
+mean(a95above$width_med) # 68.78464
+mean(a5below$width_med) # 10.15515
+
+# Road Density
+mean(a95above$NHD_RdDensWs) # 2.008137
+mean(na.omit(a5below$NHD_RdDensWs)) # 6.169365
+
+# Discharge
+mean(a95above$cvQ) # 0.8847209
+mean(a5below$cvQ) # 1.86597
+
 #### Model 1: Max. Algal Yield using 'brms' ####
 
 # First, visualize the relationships with median yield values.
