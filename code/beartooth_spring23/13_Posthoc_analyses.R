@@ -325,7 +325,7 @@ ad_descaled_data <- as.data.frame(t(t(ad_select) * scale + center)) %>%
     # Plot original unscaled data.
     geom_point(size = 3, alpha = 0.4, color = "#4B8FF7") +
     # And label things correctly.
-    labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
+    labs(x = paste0("Mean Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
     scale_y_log10() +
     theme_bw() +
