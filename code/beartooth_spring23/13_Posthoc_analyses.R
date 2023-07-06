@@ -20,6 +20,9 @@
 # This file will perform the post-hoc analyses to explore covariates that
 # might explain the median parameter estimates from our model output.
 
+# The following script was run using the Pinyon server at the University of 
+# Nevada Reno for speed.
+
 #### Setup ####
 
 # Load necessary packages.
@@ -34,10 +37,10 @@ lapply(c("tidybayes", "brms", "tidyverse", "lubridate",
 # Import necessary datasets.
 
 # First, the data for the maximum accrual (amax) models.
-dat_amax <- readRDS("data_working/amax_covariates_152sites_051123.rds")
+dat_amax <- readRDS("data_working/amax_covariates_152sites_070523.rds")
 
 # Next, the data for the Qc:Q2yr models.
-dat_Qc <- readRDS("data_working/Qc_covariates_138sites_051123.rds")
+dat_Qc <- readRDS("data_working/Qc_covariates_138sites_070523.rds")
 
 #### Model 1: Max. Algal Yield using 'brms' ####
 
@@ -67,12 +70,15 @@ may_covs <- ggpairs(dat_amax %>%
 # geographic distribution of these sites - single digit HUC2s are on the 
 # E coast for the most part.
 
+# (4) Also checked to be sure there was a lack of correlation between # of days
+# in a given record and the yield values.
+
 # Proposed starting model structure:
 
 # max algal yield/accrual ~ size + roads + dams + 
 #                           temperature + exceedances/year + 1 | HUC2
 
-# Wil create a separate model adding in nutrients based on best model
+# Will create a separate model adding in nutrients based on best model
 # fit here (since records are far fewer).
 
 hist(dat_amax$yield_med)
@@ -89,7 +95,7 @@ dat_amax <- dat_amax %>%
     TRUE ~ NA)))
 
 # One on one plots for covariates of interest vs. may.
-plot(log_yield ~ summermeanTemp, data = dat_amax)
+plot(log_yield ~ meanTemp, data = dat_amax)
 plot(log_yield ~ NHD_RdDensWs, data = dat_amax)
 plot(log_yield ~ Dam_binary, data = dat_amax)
 plot(log_yield ~ log_width, data = dat_amax)
@@ -104,7 +110,7 @@ dat_amax_brms1 <- dat_amax %>%
   # assigning sites to be rownames so that we can re-identify and add HUC2
   # and Dams back in once we've scaled the remaining variables
   column_to_rownames(var = "site_name") %>%
-  dplyr::select(log_yield, summermeanTemp, NHD_RdDensWs, log_width, exc_y)
+  dplyr::select(log_yield, meanTemp, NHD_RdDensWs, log_width, exc_y)
   
 dat_amax_brms1_scaled <- scale(dat_amax_brms1) # scale variables
 
@@ -116,43 +122,43 @@ dat_amax_Dam_HUC <- dat_amax %>%
   dplyr::select(site_name, Dam_binary, huc_2)
 
 dat_amax_brms <- left_join(dat_amax_brms, dat_amax_Dam_HUC) %>%
-  dplyr::select(log_yield, summermeanTemp, NHD_RdDensWs, 
+  dplyr::select(log_yield, meanTemp, NHD_RdDensWs, 
                 Dam_binary, log_width, exc_y, huc_2) %>%
   mutate(huc_2 = factor(huc_2))
 
 ##### Step 1: Create multi-level model.
 
 a1 <- brm(log_yield ~ log_width + NHD_RdDensWs +
-            Dam_binary + summermeanTemp + exc_y + (1|huc_2), 
+            Dam_binary + meanTemp + exc_y + (1|huc_2), 
          data = dat_amax_brms, family = gaussian())
 # assumes 4 chains and 2000 iterations (1000 warm-up)
 # Runs in about a minute on the server :)
-# 7 sites omitted due to missing data
+# 8 sites omitted due to missing data
 
 # Export for safekeeping.
-# saveRDS(a1, "data_posthoc_modelfits/accrual_brms_051123.rds")
+# saveRDS(a1, "data_posthoc_modelfits/accrual_brms_070623.rds")
 
 ##### Step 2: Examine model outputs.
 
 summary(a1)
 
-#                Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept          0.21      0.14    -0.06     0.50 1.00     2125     2070
-# log_width          0.56      0.10     0.36     0.77 1.00     3211     2755
-# NHD_RdDensWs       0.04      0.10    -0.16     0.24 1.00     2604     3047
-# Dam_binary1       -0.38      0.16    -0.68    -0.07 1.00     5292     3186
-# summermeanTemp    -0.22      0.08    -0.38    -0.05 1.00     4577     3278
-# exc_y              0.15      0.07     0.02     0.29 1.00     5774     2612
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.23      0.14    -0.04     0.52 1.00     2896     2561
+# log_width        0.52      0.10     0.33     0.72 1.00     4555     2928
+# NHD_RdDensWs     0.03      0.10    -0.17     0.22 1.00     3880     3109
+# Dam_binary1     -0.40      0.15    -0.70    -0.11 1.00     6863     3095
+# meanTemp        -0.01      0.09    -0.18     0.17 1.00     4113     2911
+# exc_y            0.16      0.07     0.02     0.31 1.00     5475     3101
 
 # Well, for one, this is great convergence! All Rhat < 1.05.
-# And at first glance, exceedance events, temperature, dam_binary1, and 
+# And at first glance, exceedance events, dam_binary1, and 
 # stream width jump out as important.
 
 ##### Step 3: Examine model diagnostics.
 
 # Everything appears to have converged well, so let's look at chain
 # mixing and posterior distributions.
-plot(a1, variable = c("b_summermeanTemp", "b_NHD_RdDensWs",
+plot(a1, variable = c("b_meanTemp", "b_NHD_RdDensWs",
                       "b_Dam_binary1", "b_log_width",
                       "b_exc_y"))
 
@@ -166,7 +172,7 @@ mcmc_plot(a1, type = "neff")
 plot(conditional_effects(a1, effects = "log_width"))
 plot(conditional_effects(a1, effects = "NHD_RdDensWs"))
 plot(conditional_effects(a1, effects = "Dam_binary"))
-plot(conditional_effects(a1, effects = "summermeanTemp"))
+plot(conditional_effects(a1, effects = "meanTemp"))
 plot(conditional_effects(a1, effects = "exc_y"))
 
 # Note, can investigate scenarios like effect1:effect2 here
@@ -178,9 +184,9 @@ plot(conditional_effects(a1, effects = "exc_y"))
 dat_amax_brms$obs <- c(1:length(dat_amax_brms$log_yield))
 
 a1.1 <- brm(log_yield ~ log_width + NHD_RdDensWs +
-            Dam_binary + summermeanTemp + exc_y + (1|huc_2) + (1|obs), 
+            Dam_binary + meanTemp + exc_y + (1|huc_2) + (1|obs), 
           data = dat_amax_brms, family = gaussian())
-# 138 divergent transitions EEK!
+# 221 divergent transitions EEK!
 
 # Compare with original model using leave-one-out approximation.
 loo(a1, a1.1)
@@ -188,12 +194,12 @@ loo(a1, a1.1)
 # Model comparisons:
 #     elpd_diff se_diff
 # a1.1   0.0       0.0  
-# a1    -3.7       0.8 
+# a1    -5.4       0.7 
 
 # Higher expected log posterior density (elpd) values = better fit.
 # So, in this case model accounting for overdispersion (a1.1) fits better.
-# But there are 24 problematic observations and 100+ divergences,
-# so my gut says the original model (a1) is the better fit.
+# But there are 31 problematic observations and 200+ divergences,
+# as well as high Rhat values, so my gut says the original model (a1) is better.
 
 ##### Step 6: Plot the results.
 
@@ -217,13 +223,13 @@ View(post_data)
 (a_fig_custom <- ggplot(post_data %>%
                         filter(parameter %in% c("b_log_width", "b_exc_y",
                                                 "b_NHD_RdDensWs",
-                                                "b_summermeanTemp", 
+                                                "b_meanTemp", 
                                                 "b_Dam_binary1")) %>%
                         mutate(par_f = factor(parameter, 
                                               levels = c("b_log_width",
                                                          "b_exc_y",
                                                          "b_NHD_RdDensWs",
-                                                         "b_summermeanTemp",
+                                                         "b_meanTemp",
                                                          "b_Dam_binary1"))), 
                         aes(x = m, y = par_f, color = par_f)) +
     geom_linerange(aes(xmin = ll, xmax = hh),
@@ -236,7 +242,7 @@ View(post_data)
     scale_y_discrete(labels = c("b_log_width" = "Width",
                                 "b_NHD_RdDensWs" = "Roads",
                                 "b_Dam_binary1" = "Dam",
-                                "b_summermeanTemp" = "Temperature",
+                                "b_meanTemp" = "Temperature",
                                 "b_exc_y" = "Exceedances")) +
     theme_bw() +
     scale_color_manual(values = c("#4B8FF7", "#233D3F", "#233D3F", 
@@ -279,7 +285,7 @@ a_d <- add_epred_draws(newdata = expand_grid(Dam_binary = c(0, 1),
                                                       na.rm = TRUE),
                                     log_width = median(dat_amax_brms$log_width, 
                                                        na.rm = TRUE),
-                                    summermeanTemp = median(dat_amax_brms$summermeanTemp, 
+                                    meanTemp = median(dat_amax_brms$meanTemp, 
                                                      na.rm = TRUE)),
                        object = a1,
                        re_formula = NA, # random effects not included due to 
@@ -289,7 +295,7 @@ a_d <- add_epred_draws(newdata = expand_grid(Dam_binary = c(0, 1),
 # Create new dataframe in the appropriate order as the scaled matrix.
 ad_select <- a_d %>%
   ungroup() %>% # removing groups as imposed above
-  dplyr::select(`.epred`, summermeanTemp, NHD_RdDensWs, log_width, exc_y) %>%
+  dplyr::select(`.epred`, meanTemp, NHD_RdDensWs, log_width, exc_y) %>%
   rename("log_yield" = ".epred")
 
 # And calculate true yield values
@@ -313,36 +319,11 @@ ad_descaled_data <- as.data.frame(t(t(ad_select) * scale + center)) %>%
 
 ###### Temperature ######
 
-# Condition on temperature alone.
-a_t <- add_epred_draws(newdata = expand_grid(summermeanTemp = modelr::seq_range(dat_amax_brms$summermeanTemp, n = 100),
-                       # hold remainder of covariates constant
-                       # choosing to predict for median/reference values
-                       NHD_RdDensWs = median(dat_amax_brms$NHD_RdDensWs,
-                                                                   na.rm = TRUE),
-                       Dam_binary = c(0),
-                       log_width = median(dat_amax_brms$log_width, na.rm = TRUE),
-                       exc_y = median(dat_amax_brms$exc_y, na.rm = TRUE)),
-                       object = a1,
-                       re_formula = NA,
-                       ndraws = 100)
+# not plotting a spaghetti plot since there is no effect of temp on accrual 
 
-# Create new dataframe in the appropriate order to match scaled matrix.
-at_select <- a_t %>%
-  ungroup() %>% # removing groups as imposed above
-  dplyr::select(`.epred`, summermeanTemp, NHD_RdDensWs, log_width, exc_y) %>%
-  rename("log_yield" = ".epred")
-
-# And calculate true yield values
-at_descaled_data <- as.data.frame(t(t(at_select) * scale + center)) %>%
-  mutate(draw = a_t$`.draw`) # Add draws back in.
-
-# And plot all lines with original data points.
-(plot_at <- ggplot(at_descaled_data, aes(x = summermeanTemp, y = 10^log_yield)) +
-    # Plot 100 lines.
-    geom_line(aes(y = 10^log_yield, group = draw), alpha = 0.2, color = "#4B8FF7") +
+(plot_at <- ggplot(dat_amax, aes(x = meanTemp, y = 10^log_yield)) +
     # Plot original unscaled data.
-    geom_point(data = dat_amax, aes(x = summermeanTemp, y = 10^log_yield),
-               size = 3, alpha = 0.4, color = "#4B8FF7") +
+    geom_point(size = 3, alpha = 0.4, color = "#4B8FF7") +
     # And label things correctly.
     labs(x = paste0("Mean Summer Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
@@ -373,7 +354,7 @@ a_e <- add_epred_draws(newdata = expand_grid(exc_y = modelr::seq_range(dat_amax_
                                   Dam_binary = c(0),
                                   log_width = median(dat_amax_brms$log_width, 
                                                      na.rm = TRUE),
-                                  summermeanTemp = median(dat_amax_brms$summermeanTemp, 
+                                  meanTemp = median(dat_amax_brms$meanTemp, 
                                                           na.rm = TRUE)),
                        object = a1,
                        re_formula = NA,
@@ -382,7 +363,7 @@ a_e <- add_epred_draws(newdata = expand_grid(exc_y = modelr::seq_range(dat_amax_
 # Create new dataframe in the appropriate order.
 ae_select <- a_e %>%
   ungroup() %>% # removing groups as imposed above
-  dplyr::select(`.epred`, summermeanTemp, NHD_RdDensWs, log_width, exc_y) %>%
+  dplyr::select(`.epred`, meanTemp, NHD_RdDensWs, log_width, exc_y) %>%
   rename("log_yield" = ".epred")
 
 # And calculate true yield values
@@ -409,7 +390,7 @@ a_w <- add_epred_draws(newdata = expand_grid(log_width = modelr::seq_range(dat_a
                                   NHD_RdDensWs = median(dat_amax_brms$NHD_RdDensWs,
                                                                    na.rm = TRUE),
                                   Dam_binary = c(0),
-                                  summermeanTemp = median(dat_amax_brms$summermeanTemp, 
+                                  meanTemp = median(dat_amax_brms$meanTemp, 
                                                           na.rm = TRUE),
                                   exc_y = median(dat_amax_brms$exc_y, na.rm = TRUE)),
                        object = a1,
@@ -419,7 +400,7 @@ a_w <- add_epred_draws(newdata = expand_grid(log_width = modelr::seq_range(dat_a
 # Create new dataframe in the appropriate order to match scaled matrix.
 aw_select <- a_w %>%
   ungroup() %>% # removing groups as imposed above
-  dplyr::select(`.epred`, summermeanTemp, NHD_RdDensWs, log_width, exc_y) %>%
+  dplyr::select(`.epred`, meanTemp, NHD_RdDensWs, log_width, exc_y) %>%
   rename("log_yield" = ".epred")
 
 # And calculate true yield values
@@ -447,7 +428,7 @@ aw_descaled_data <- as.data.frame(t(t(aw_select) * scale + center)) %>%
 
 # And export.
 # ggsave(fig_cond_amax,
-#        filename = "figures/beartooth_spring23/brms_amax_cond_051223.jpg",
+#        filename = "figures/beartooth_spring23/brms_amax_cond_070623.jpg",
 #        width = 22,
 #        height = 13,
 #        units = "cm")
@@ -473,7 +454,7 @@ dat_amax_brms2 <- dat_amax %>%
   # assigning sites to be rownames so that we can re-identify and add HUC2
   # back in once we've scaled the remaining variables
   column_to_rownames(var = "site_name") %>%
-  dplyr::select(log_yield, summermeanTemp, NHD_RdDensWs,
+  dplyr::select(log_yield, meanTemp, NHD_RdDensWs,
                 log_width, exc_y, no3_log, p_log)
 
 dat_amax_brms2_scaled <- scale(dat_amax_brms2)
@@ -483,7 +464,7 @@ dat_amax_nuts_brms <- rownames_to_column(as.data.frame(dat_amax_brms2_scaled),
                                      var = "site_name")
 
 dat_amax_nuts_brms <- left_join(dat_amax_nuts_brms, dat_amax_Dam_HUC) %>%
-  dplyr::select(log_yield, summermeanTemp, NHD_RdDensWs, 
+  dplyr::select(log_yield, meanTemp, NHD_RdDensWs, 
                 Dam_binary, log_width, exc_y,
                 no3_log, p_log, huc_2) %>%
   mutate(huc_2 = factor(huc_2))
@@ -494,27 +475,27 @@ dat_amax_nuts_brms <- dat_amax_nuts_brms %>%
 
 ##### Step 1: Create multi-level model.
 
-a2 <- brm(log_yield ~ summermeanTemp + NHD_RdDensWs + Dam_binary +
+a2 <- brm(log_yield ~ meanTemp + NHD_RdDensWs + Dam_binary +
             log_width + exc_y + no3_log + p_log + (1|huc_2), 
           data = dat_amax_nuts_brms, family = gaussian(),
-          iter = 2000) # 7 divergent transitions
+          iter = 2000) # 0 divergent transitions
 
 # Export model fit for safekeeping.
-# saveRDS(a2, "data_posthoc_modelfits/accrual_nuts_brms_051123.rds")
+# saveRDS(a2, "data_posthoc_modelfits/accrual_nuts_brms_070623.rds")
 
 ##### Step 2: Examine model outputs.
 
 summary(a2)
 
-#                Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept          0.06      0.17    -0.29     0.40 1.00     2345     1556
-# summermeanTemp     0.09      0.15    -0.20     0.40 1.00     2833     2030
-# NHD_RdDensWs      -0.16      0.13    -0.42     0.11 1.00     2222     2046
-# Dam_binary1       -0.26      0.22    -0.71     0.17 1.00     3294     2717
-# log_width          0.43      0.14     0.17     0.70 1.00     2378     2358
-# exc_y              0.08      0.09    -0.10     0.26 1.00     3915     2544
-# no3_log            0.08      0.16    -0.23     0.40 1.00     2488     2374
-# p_log              0.14      0.14    -0.13     0.40 1.00     2231     1772
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.05      0.17    -0.31     0.38 1.00     2463     2131
+# meanTemp         0.07      0.14    -0.19     0.35 1.00     2847     2415
+# NHD_RdDensWs    -0.15      0.14    -0.42     0.12 1.00     2539     2686
+# Dam_binary1     -0.26      0.22    -0.70     0.19 1.00     2972     2564
+# log_width        0.44      0.13     0.18     0.70 1.00     2605     2971
+# exc_y            0.09      0.09    -0.09     0.27 1.00     3674     2708
+# no3_log          0.07      0.16    -0.24     0.38 1.00     2922     2695
+# p_log            0.16      0.14    -0.10     0.43 1.00     2432     2350
 
 # Well, great convergence again! All Rhat < 1.05.
 # And stream width again jumps out. But everything else seems to have
@@ -524,7 +505,7 @@ summary(a2)
 
 # Everything appears to have converged ok, so let's look at chain
 # mixing and posterior distributions.
-plot(a2, variable = c("b_summermeanTemp", "b_NHD_RdDensWs",
+plot(a2, variable = c("b_meanTemp", "b_NHD_RdDensWs",
                       "b_Dam_binary1", "b_log_width",
                       "b_exc_y", "b_no3_log", "b_p_log"))
 
@@ -533,7 +514,7 @@ mcmc_plot(a2, type = "neff")
 
 ##### Step 4: Examine model relationships for each predictor.
 
-plot(conditional_effects(a2, effects = "summermeanTemp"))
+plot(conditional_effects(a2, effects = "meanTemp"))
 plot(conditional_effects(a2, effects = "NHD_RdDensWs"))
 plot(conditional_effects(a2, effects = "Dam_binary"))
 plot(conditional_effects(a2, effects = "log_width"))
@@ -546,11 +527,11 @@ plot(conditional_effects(a2, effects = "p_log"))
 # Add column denoting number of observations.
 dat_amax_nuts_brms$obs <- c(1:length(dat_amax_nuts_brms$log_yield))
 
-a2.1 <- brm(log_yield ~ summermeanTemp + NHD_RdDensWs + Dam_binary +
+a2.1 <- brm(log_yield ~ meanTemp + NHD_RdDensWs + Dam_binary +
               log_width + exc_y + no3_log + p_log +
               (1|huc_2) + (1|obs), 
             data = dat_amax_nuts_brms, family = gaussian())
-# 119 divergent transitions eeeegads
+# 154 divergent transitions eeeegads
 
 # Compare with original model using leave-one-out approximation.
 loo(a2, a2.1)
@@ -558,13 +539,12 @@ loo(a2, a2.1)
 # Model comparisons:
 #     elpd_diff se_diff
 # a2.1   0.0       0.0  
-# a2    -5.3       0.8
+# a2    -6.7       0.8
 
 # Higher expected log posterior density (elpd) values = better fit.
 # So, in this case model accounting for overdispersion (a2.1) fits better.
-# But there are 4 problematic observations, and using the logic I
-# employed above, I'm sticking with the original model since it
-# had FAR fewer divergent transitions.
+# But using the logic I employed above, I'm sticking with the original model 
+# since it had FAR fewer divergent transitions.
 
 ##### Step 6: Plot the results.
 
@@ -592,13 +572,13 @@ View(post_data2)
 (a2_fig_custom <- ggplot(post_data2 %>%
                           filter(parameter %in% c("b_log_width", "b_exc_y",
                                                   "b_NHD_RdDensWs",
-                                                  "b_summermeanTemp", "b_Dam_binary1",
+                                                  "b_meanTemp", "b_Dam_binary1",
                                                   "b_no3_log", "b_p_log")) %>%
                           mutate(par_f = factor(parameter, 
                                                 levels = c("b_log_width",
                                                            "b_p_log",
                                                            "b_exc_y",
-                                                           "b_summermeanTemp",
+                                                           "b_meanTemp",
                                                            "b_no3_log",
                                                            "b_NHD_RdDensWs",
                                                            "b_Dam_binary1"))), 
@@ -613,7 +593,7 @@ View(post_data2)
     scale_y_discrete(labels = c("b_log_width" = "Width",
                                 "b_NHD_RdDensWs" = "Roads",
                                 "b_Dam_binary1" = "Dam",
-                                "b_summermeanTemp" = "Temperature",
+                                "b_meanTemp" = "Temperature",
                                 "b_exc_y" = "Exceedances",
                                 "b_no3_log" = "Nitrate",
                                 "b_p_log" = "Phosphorus")) +
@@ -657,7 +637,7 @@ View(post_data2)
 
 # And export.
 # ggsave(fig_cond_amax_nuts,
-#        filename = "figures/beartooth_spring23/brms_amax_cond_nuts_051223.jpg",
+#        filename = "figures/beartooth_spring23/brms_amax_cond_nuts_070623.jpg",
 #        width = 22,
 #        height = 7,
 #        units = "cm")
