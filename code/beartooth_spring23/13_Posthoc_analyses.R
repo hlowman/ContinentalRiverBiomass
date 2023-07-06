@@ -663,10 +663,10 @@ QcQ2_covs <- ggpairs(dat_Qc %>%
 
 # Some notes regarding these covariates.
 
-# (1) Road density and impervious cover appear tightly correlated (0.824), so
+# (1) Road density and impervious cover appear tightly correlated, so
 # I should probably only include one of these in the final model build again.
 
-# (2) Stream width and meanGPP also appear correlated (0.618), more strongly
+# (2) Stream width and meanGPP also appear correlated, more strongly
 # than they did in the rmax covariate exploration. So, makes double sense
 # to remove GPP.
 
@@ -686,8 +686,8 @@ dat_Qc <- dat_Qc %>%
          log_width = log10(width_med)) %>%
   # Also creating the new categorical dam column to model by.
   mutate(Dam_binary = factor(case_when(
-    Dam %in% c("50", "80", "95") ~ "0", # Potential
-    Dam == "0" ~ "1", # Certain
+    Dam %in% c("50", "80", "95") ~ "0", # Potential effect of dams
+    Dam == "0" ~ "1", # Certain effect of dams
     TRUE ~ NA)))
 
 plot(logQcQ2 ~ log_width, data = dat_Qc)
@@ -726,21 +726,21 @@ dat_Qc_brms_noNA <- dat_Qc_brms %>%
   drop_na(logQcQ2)
 
 q1 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + log_width + (1|huc_2), 
-          data = dat_Qc_brms_noNA, family = gaussian())
+          data = dat_Qc_brms_noNA, family = gaussian()) # 130 sites
 # assumes 4 chains and 2000 iterations (1000 warm-up)
 
 # Export for safekeeping.
-# saveRDS(q1, "data_posthoc_modelfits/qcq2_brms_051123.rds")
+# saveRDS(q1, "data_posthoc_modelfits/qcq2_brms_070623.rds")
 
 ##### Step 2: Examine model outputs.
 
 summary(q1)
 
 #              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept        0.20      0.21    -0.21     0.61 1.00     1772     1976
-# NHD_RdDensWs    -0.06      0.11    -0.29     0.16 1.00     3110     2962
-# Dam_binary1     -0.22      0.18    -0.57     0.13 1.00     5089     2785
-# log_width        0.05      0.11    -0.18     0.27 1.00     3182     2896
+# Intercept        0.21      0.21    -0.18     0.61 1.00     1723     2200
+# NHD_RdDensWs    -0.06      0.12    -0.29     0.17 1.00     3527     3249
+# Dam_binary1     -0.22      0.18    -0.57     0.14 1.00     4122     2813
+# log_width        0.05      0.12    -0.18     0.27 1.00     3393     3119
 
 # Well, great convergence still, but nothing looks significant.
 
@@ -767,7 +767,7 @@ dat_Qc_brms_noNA$obs <- c(1:length(dat_Qc_brms_noNA$logQcQ2))
 q1.1 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + log_width + 
               (1|huc_2) + (1|obs), 
             data = dat_Qc_brms_noNA, family = gaussian())
-# 150 divergent transitions EEE!
+# 296 divergent transitions EEE!
 
 # Compare with original model using leave-one-out approximation.
 loo(q1, q1.1)
@@ -775,12 +775,11 @@ loo(q1, q1.1)
 # Model comparisons:
 #     elpd_diff se_diff
 # q1.1   0.0       0.0  
-# q1   -22.0       0.9 
+# q1    -8.6       0.9 
 
 # Higher expected log posterior density (elpd) values = better fit.
 # So, in this case model accounting for overdispersion (q1.1) fits better.
-# But there are 44 problematic observations and 150 divergent
-# transitions so sticking with the original model (q1).
+# But there are 200+ divergent transitions so choosing original model (q1).
 
 ##### Step 6: Plot the results.
 
@@ -877,7 +876,7 @@ View(post_data3)
 
 # And export.
 # ggsave(fig_cond_Qc,
-#        filename = "figures/beartooth_spring23/brms_Qc_cond_051223.jpg",
+#        filename = "figures/beartooth_spring23/brms_Qc_cond_070623.jpg",
 #        width = 14,
 #        height = 13,
 #        units = "cm")
