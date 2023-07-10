@@ -42,9 +42,12 @@ dat_out <- readRDS("data_working/beartooth_181rivers_model_params_all_iterations
 # And, the original data used in modeling.
 dat_in <- readRDS("data_working/df_181sites_Qmaxnorm_SavoySL.rds")
 
-# And finally a dataset with long names for IDing purposes.
+# A dataset with long names for IDing purposes.
 dat_names <- readRDS("data_working/NWIS_Info_181riv_HUC2_df_050923.rds") %>%
   dplyr::select(site_no, station_nm)
+
+# And all covariate data at all sites.
+dat_cov <- readRDS("data_working/covariate_data_181sites_070523.rds")
 
 #### Reviewer 1 ####
 
@@ -283,6 +286,14 @@ nRMSE_1site <- mapply(nRMSE_fxn, rmse1, dat_in1)
 
 #### Reviewer 2 ####
 
+##### Less constrained priors 6 site example #####
 
+##### c vs. s values 6 site example #####
+
+# Using the data imported above, select for 6 sites of interest that span
+# a gradient in coefficients of variation in discharge (which we interpret
+# as storm frequency.
+
+storm_sites6 <- c("nwis_06795500", "nwis_02217643", "nwis_05082500", "nwis_04176500", "nwis_06893350", "nwis_07075250")
 
 # End of script.
