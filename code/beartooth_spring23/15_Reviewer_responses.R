@@ -27,7 +27,7 @@
 
 # Load necessary packages.
 lapply(c("tidybayes", "brms", "tidyverse", "lubridate", 
-         "data.table", "GGally",
+         "data.table", "GGally", "plotly",
          "multcomp", "patchwork", "bayesplot",
          "modelsummary", "here", "nlme","loo"), 
        require, character.only=T)
@@ -41,6 +41,13 @@ dat_out <- readRDS("data_working/beartooth_181rivers_model_params_all_iterations
 
 # And, the original data used in modeling.
 dat_in <- readRDS("data_working/df_181sites_Qmaxnorm_SavoySL.rds")
+
+# Then, the data for the maximum accrual (amax) models.
+dat_amax <- readRDS("data_working/amax_covariates_152sites_070523.rds")
+
+# Next, the data for the Qc:Q2yr models.
+dat_Qc <- readRDS("data_working/Qc_covariates_138sites_070523.rds") %>%
+  mutate(Qc_Q2yr = Qc/RI_2yr_Q_cms)
 
 # A dataset with long names for IDing purposes.
 dat_names <- readRDS("data_working/NWIS_Info_181riv_HUC2_df_050923.rds") %>%
@@ -279,7 +286,87 @@ nRMSE_1site <- mapply(nRMSE_fxn, rmse1, dat_in1)
 #        height = 15,
 #        units = "cm")
 
-##### Summary figures of sites lost during filtering #####
+##### New Site Selection for SI Figure #####
+
+# Need to identify 16 sites that span time series length, land cover type,
+# light, and flow regimes to address reviewer's comments re: heterogeneity
+# of results across site types.
+
+# Create site groupings for land cover.
+dev <- c("urban", "agricultural")
+undev <- c("grassland", "forested", "water", "wetland")
+
+# Plot using most conservative dataset.
+dat_Qc <- dat_Qc %>%
+  
+  mutate(my_groups = factor(case_when(total_days > 870 & LU_category %in% dev &
+                                        cvQ <= 1 & meanLight > 24 ~ "Long_Dev_Steady_Light",
+                                      total_days > 870 & LU_category %in% dev &
+                                        cvQ <= 1 & meanLight <= 24 ~ "Long_Dev_Steady_Dark",
+                                      total_days > 870 & LU_category %in% dev &
+                                        cvQ > 1 & meanLight > 24 ~ "Long_Dev_Turb_Light",
+                                      total_days > 870 & LU_category %in% dev &
+                                        cvQ > 1 & meanLight <= 24 ~ "Long_Dev_Turb_Dark",
+                                      total_days > 870 & LU_category %in% undev &
+                                        cvQ <= 1 & meanLight > 24 ~ "Long_Undev_Steady_Light",
+                                      total_days > 870 & LU_category %in% undev &
+                                        cvQ <= 1 & meanLight <= 24 ~ "Long_Undev_Steady_Dark",
+                                      total_days > 870 & LU_category %in% undev &
+                                        cvQ > 1 & meanLight > 24 ~ "Long_Undev_Turb_Light",
+                                      total_days > 870 & LU_category %in% undev &
+                                        cvQ > 1 & meanLight <= 24 ~ "Long_Undev_Turb_Dark",
+                                      total_days <= 870 & LU_category %in% dev &
+                                        cvQ <= 1 & meanLight > 24 ~ "Short_Dev_Steady_Light",
+                                      total_days <= 870 & LU_category %in% dev &
+                                        cvQ <= 1 & meanLight <= 24 ~ "Short_Dev_Steady_Dark",
+                                      total_days <= 870 & LU_category %in% dev &
+                                        cvQ > 1 & meanLight > 24 ~ "Short_Dev_Turb_Light",
+                                      total_days <= 870 & LU_category %in% dev &
+                                        cvQ > 1 & meanLight <= 24 ~ "Short_Dev_Turb_Dark",
+                                      total_days <= 870 & LU_category %in% undev &
+                                        cvQ <= 1 & meanLight > 24 ~ "Short_Undev_Steady_Light",
+                                      total_days <= 870 & LU_category %in% undev &
+                                        cvQ <= 1 & meanLight <= 24 ~ "Short_Undev_Steady_Dark",
+                                      total_days <= 870 & LU_category %in% undev &
+                                        cvQ > 1 & meanLight > 24 ~ "Short_Undev_Turb_Light",
+                                      total_days <= 870 & LU_category %in% undev &
+                                        cvQ > 1 & meanLight <= 24 ~ "Short_Undev_Turb_Dark"),
+                            levels = c("Long_Dev_Steady_Light",
+                                       "Long_Dev_Steady_Dark",
+                                       "Long_Dev_Turb_Light",
+                                       "Long_Dev_Turb_Dark",
+                                       "Long_Undev_Steady_Light",
+                                       "Long_Undev_Steady_Dark",
+                                       "Long_Undev_Turb_Light",
+                                       "Long_Undev_Turb_Dark",
+                                       "Short_Dev_Steady_Light",
+                                       "Short_Dev_Steady_Dark",
+                                       "Short_Dev_Turb_Light",
+                                       "Short_Dev_Turb_Dark",
+                                       "Short_Undev_Steady_Light",
+                                       "Short_Undev_Steady_Dark",
+                                       "Short_Undev_Turb_Light",
+                                       "Short_Undev_Turb_Dark")))
+
+dat_r_Qc_plus <- left_join(dat_Qc, dat_amax %>% dplyr::select(site_name, yield_med))
+
+(viz_fig <- ggplot(dat_r_Qc_plus, aes(x = yield_med, y = Qc_Q2yr)) +
+    geom_jitter(alpha = 0.8, size = 3, 
+                aes(color = my_groups, text = site_name)) +
+    scale_y_log10() +
+    scale_x_log10() +
+    labs(x = "Maximum Daily Accrual",
+         y = "Qc:Q2yr",
+         color = "Groupings") +
+    theme_bw())
+
+# ggsave(viz_fig,
+#        filename = "figures/beartooth_spring23/Sites_16Groups_071123.jpg",
+#        width = 15,
+#        height = 10,
+#        units = "cm") # n = 138
+
+(viz_plotly <- ggplotly(viz_fig))
 
 # Note, the revised version of the Supplementary figure displaying predicted 
 # GPP at multiple sites can be found in the "14_Appendix_figures.R" script.
@@ -295,5 +382,69 @@ nRMSE_1site <- mapply(nRMSE_fxn, rmse1, dat_in1)
 # as storm frequency.
 
 storm_sites6 <- c("nwis_06795500", "nwis_02217643", "nwis_05082500", "nwis_04176500", "nwis_06893350", "nwis_07075250")
+
+dat_out_storm6 <- dat_out_df %>%
+  filter(site_name %in% storm_sites6)
+
+(fig_sc1 <- ggplot(dat_out_storm6 %>%
+                   filter(site_name == "nwis_06795500"), aes(x = s, y = c)) +
+  geom_point(alpha = 0.75) +
+  labs(title = "Shell Creek, NE") +
+  xlim(0, 6) +
+  ylim(0, 2) +
+  theme_bw())
+
+(fig_sc2 <- ggplot(dat_out_storm6 %>%
+                     filter(site_name == "nwis_02217643"), aes(x = s, y = c)) +
+    geom_point(alpha = 0.75) +
+    labs(title = "Parks Creek, GA") +
+    xlim(0, 6) +
+    ylim(0, 2) +
+    theme_bw())
+
+(fig_sc3 <- ggplot(dat_out_storm6 %>%
+                     filter(site_name == "nwis_05082500"), aes(x = s, y = c)) +
+    geom_point(alpha = 0.75) +
+    labs(title = "Red River, ND") +
+    xlim(0, 6) +
+    ylim(0, 2) +
+    theme_bw())
+
+(fig_sc4 <- ggplot(dat_out_storm6 %>%
+                     filter(site_name == "nwis_04176500"), aes(x = s, y = c)) +
+    geom_point(alpha = 0.75) +
+    labs(title = "River Raisin, MI") +
+    xlim(0, 6) +
+    ylim(0, 2) +
+    theme_bw())
+
+(fig_sc5 <- ggplot(dat_out_storm6 %>%
+                     filter(site_name == "nwis_06893350"), aes(x = s, y = c)) +
+    geom_point(alpha = 0.75) +
+    labs(title = "Tomahawk Creek, KS") +
+    xlim(0, 6) +
+    ylim(0, 2) +
+    theme_bw())
+
+(fig_sc6 <- ggplot(dat_out_storm6 %>%
+                     filter(site_name == "nwis_07075250"), aes(x = s, y = c)) +
+    geom_point(alpha = 0.75) +
+    labs(title = "S. Fork Little Red River, AR") + 
+    xlim(0, 6) +
+    ylim(0, 2) +
+    theme_bw())
+
+# Now, let's combine the above using patchwork.
+(fig_sc <- (fig_sc1 + fig_sc2 + fig_sc3 +
+              fig_sc4 + fig_sc5 + fig_sc6) +
+    plot_layout(nrow = 2) +
+    plot_annotation(tag_levels = 'A'))
+
+# And export.
+# ggsave(fig_sc,
+#        filename = "figures/beartooth_spring23/s_vs_c_6sites_071023.jpg",
+#        width = 22,
+#        height = 16,
+#        units = "cm")
 
 # End of script.
