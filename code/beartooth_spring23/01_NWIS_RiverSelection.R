@@ -77,6 +77,10 @@ highq_sites <- diagnostics[which(
   # at pos_ER < 5/15/25/50, 85/42/32/13 more sites disappear
                 diagnostics$pos_ER < 15),]
 
+# Make list of sites removed due to poor error term convergence &
+# biologically unrealistic GPP/ER estimates.
+filt_sites_rnd1 <- anti_join(diagnostics, highq_sites, by = c("site"))
+
 # 276 records remaining after diagnostic filtering
 # but some sites have multiple time resolutions (e.g., 15 and 30 minutes)
 highq_site_names <- unique(highq_sites$site) ## 248 unique sites
@@ -88,6 +92,17 @@ s <- sub_mdf %>%
 # Removing all except stream sites. Possible categories include:
 # ST (stream), ST-CA (canal), ST-DCH (ditch), ST-TS (tidal stream), or SP (spring)
 s <- s[which(s$site_type == "ST"),] ## 8 sites drop off
+
+# Make list of sites removed due to site type.
+filt_sites_rnd2 <- anti_join(highq_sites, s, by = c("site" = "site_name"))
+
+# Combine removed sites and calculate brief summary statistics.
+filt_sites_rnd12 <- rbind(filt_sites_rnd1, filt_sites_rnd2)
+
+mean(filt_sites_rnd12$err_obs_iid_sigma_Rhat) # 1.78
+mean(filt_sites_rnd12$err_proc_iid_sigma_Rhat) # 1.23 
+mean(filt_sites_rnd12$neg_GPP) # 6.75
+mean(filt_sites_rnd12$pos_ER) # 21.35
 
 # Import time series of streamMetabolizer-generated predictions
 # to be able to filter by daily Rhat values for K600
@@ -186,6 +201,26 @@ sub_by_gap_sum <- sub_by_gap1 %>%
 ## subset for sites with a max gap of 14 days
 sub_by_gap2 <- sub_by_gap1[which(sub_by_gap1$gap <= 14),] # 755 site-years
 length(levels(as.factor(sub_by_gap2$site_name))) # 198 unique sites
+
+# Make list of sites removed due to less than 90 days of data &
+# gaps larger than 14 days.
+filt_sites_rnd3 <- anti_join(s, sub_by_gap2, by = c("site_name"))
+
+# Combine withdataset length information for manuscript summaries.
+summary_gaps <- sub_by_gap %>%
+  group_by(site_name) %>%
+  summarize(years = n(),
+            max_gap = max(gap),
+            days_yr = mean(n),
+            days_sum = sum(n))%>%
+  ungroup()
+
+filt_sites_rnd3_days <- left_join(filt_sites_rnd3, summary_gaps)
+
+mean(filt_sites_rnd3_days$years) # 4.92
+mean(filt_sites_rnd3_days$max_gap) # 113
+mean(filt_sites_rnd3_days$days_yr) # 110
+mean(filt_sites_rnd3_days$days_sum) # 550
 
 # Renaming dataset with sites, number of days, and gap records by year
 highq_years <- sub_by_gap2
