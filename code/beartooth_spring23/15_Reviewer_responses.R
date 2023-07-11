@@ -330,7 +330,8 @@ dat_Qc <- dat_Qc %>%
                                       total_days <= 870 & LU_category %in% undev &
                                         cvQ > 1 & meanLight > 24 ~ "Short_Undev_Turb_Light",
                                       total_days <= 870 & LU_category %in% undev &
-                                        cvQ > 1 & meanLight <= 24 ~ "Short_Undev_Turb_Dark"),
+                                        cvQ > 1 & meanLight <= 24 ~ "Short_Undev_Turb_Dark",
+                                      TRUE ~ NA),
                             levels = c("Long_Dev_Steady_Light",
                                        "Long_Dev_Steady_Dark",
                                        "Long_Dev_Turb_Light",
@@ -367,6 +368,11 @@ dat_r_Qc_plus <- left_join(dat_Qc, dat_amax %>% dplyr::select(site_name, yield_m
 #        units = "cm") # n = 138
 
 (viz_plotly <- ggplotly(viz_fig))
+
+# Sites I will use for the new figure are: nwis_13213000, nwis_05435950,
+# nwis_03219500, nwis_01648010, nwis_04137500, nwis_14211010, nwis_07109500,
+# nwis_11044000, nwis_05057200, nwis_12102075, nwis_05451210, nwis_06893970,
+# nwis_08447300, nwis_02217643, nwis_04059500, nwis_03538830
 
 # Note, the revised version of the Supplementary figure displaying predicted 
 # GPP at multiple sites can be found in the "14_Appendix_figures.R" script.

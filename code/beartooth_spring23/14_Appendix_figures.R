@@ -45,6 +45,10 @@ dat_out <- readRDS("data_working/beartooth_181rivers_model_params_all_iterations
 # And all covariate data at all sites.
 dat_cov <- readRDS("data_working/covariate_data_181sites_070523.rds")
 
+# And finally a dataset with long names for IDing purposes.
+dat_names <- readRDS("data_working/NWIS_Info_181riv_HUC2_df_050923.rds") %>%
+  dplyr::select(site_no, station_nm)
+
 #### Timeseries Length Appendix Figure ####
 
 # Making a histogram of the lengths of the timeseries for an appendix figure.
@@ -503,15 +507,17 @@ dat_in16df <- dat_in %>%
 
 dat_in16 <- split(dat_in16df, dat_in16df$site_name)
 
-# Re-simulating using all output iterations. Started ~3:45, Ended ~4:05
+# Re-simulating using all output iterations. Started ~5:17, Ended ~6:??
 Ricker_sim16sites <- mapply(Ricker_sim_fxn, dat_out16, dat_in16)
+
+saveRDS(Ricker_sim16sites, "data_working/Ricker_sim_16sites_071123.rds")
 
 # And for each day, I would like to calculate
 # - median GPP
 # - 97.5% and 2.5% percentiles
 
 # Going to pull out just the predicted GPP values.
-# So, making a list of odd numbers to pull out predGPP values (see above for reasoning).
+# So, making a list of odd numbers to pull out predGPP values.
 my_values <- seq(from = 1, to = 32, by = 2)
 data_16site_gpp <- Ricker_sim16sites[my_values]
 
@@ -528,7 +534,12 @@ pred_gpp16 <- lapply(data_16site_gpp,
 orig_gpp_date16 <- lapply(dat_in16, function(x) x %>% select(date, GPP, seq))
 
 # Add names to confidence interval lists
-my_names <- c("nwis_0166818623", "nwis_02217643", "nwis_04176500", "nwis_05082500", "nwis_06893350", "nwis_07075250", "nwis_08374550", "nwis_13013650")
+my_names <- c("nwis_01648010", "nwis_02217643", "nwis_03219500", 
+              "nwis_03538830", "nwis_04059500", "nwis_04137500", 
+              "nwis_05057200", "nwis_05435950", "nwis_05451210", 
+              "nwis_06893970", "nwis_07109500", "nwis_08447300",
+              "nwis_11044000", "nwis_12102075", "nwis_13213000",  
+              "nwis_14211010")
 
 names(pred_gpp16) <- my_names
 pred_gpp16 <- lapply(pred_gpp16, function(x) as.data.frame(x) %>% 
@@ -547,201 +558,381 @@ rmse16 <- Ricker_sim16sites[my_values2]
 nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
 
 # And plot
-# Mill Creek, VA
-(gpp_plot8.1 <- ggplot(df_pred8$nwis_0166818623, aes(date, GPP)) +
-    geom_point(size = 2, color = "#303018") +
-    geom_line(aes(date, Median), 
+# ???
+(gpp_plot16.1 <- ggplot(df_pred16$nwis_13213000, aes(date, GPP)) +
+    geom_point(linewidth = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Small Order - Steady Flow - High Light") +
+         title = "Long - Developed - Steady Flow - High Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5,
-                    ymax = q97.5),
+                    ymax = q97.5,
+                    group = seq),
                 fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2016-06-01"), y = 13,
-             label = paste("nRMSE = ",round(nRMSE_8site[1], 
+    annotate(geom = "text", x = date("2015-07-01"), y = 55,
+             label = paste("nRMSE = ",round(nRMSE_16site[15], 
                                             digits = 2)), size = 4) + 
     theme_bw() +
     theme(legend.position = "none",
-          title = element_text(size = 10),
+          title = element_text(size = 8),
           axis.title.x = element_text(size=10), 
           axis.text.x = element_text(size=10),
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# Parks Creek, GA
-(gpp_plot8.2 <- ggplot(df_pred8$nwis_02217643, aes(date, GPP)) +
-    geom_point(size = 2, color = "#303018") +
-    geom_line(aes(date, Median), 
-              color = "#609048", size = 1.2) +
-    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
-         x = "Date",
-         title = "Small Order - Steady Flow - Low Light") +
-    scale_x_date(date_labels = "%b %Y") +
-    geom_ribbon(aes(ymin = q2.5,
-                    ymax = q97.5),
-                fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2016-11-01"), y = 6,
-             label = paste("nRMSE = ",round(nRMSE_8site[2], 
-                                            digits = 2)), size = 4) + 
-    theme_bw() +
-    theme(legend.position = "none",
-          title = element_text(size = 10),
-          axis.title.x = element_text(size=10), 
-          axis.text.x = element_text(size=10),
-          axis.text.y = element_text(size=10),
-          axis.title.y = element_text(size=10)))
-
-# Tomahawk Creek, KS
-(gpp_plot8.3 <- ggplot(df_pred8$nwis_06893350, aes(date, GPP)) +
-    geom_point(size = 2, color = "#303018") +
-    geom_line(aes(date, Median), 
-              color = "#609048", size = 1.2) +
-    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
-         x = "Date",
-         title = "Small Order - Turbulent Flow - High Light") +
-    scale_x_date(date_labels = "%b %Y") +
-    geom_ribbon(aes(ymin = q2.5,
-                    ymax = q97.5),
-                fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2011-12-01"), y = 4,
-             label = paste("nRMSE = ",round(nRMSE_8site[5], 
-                                            digits = 2)), size = 4) + 
-    theme_bw() +
-    theme(legend.position = "none",
-          title = element_text(size = 10),
-          axis.title.x = element_text(size=10), 
-          axis.text.x = element_text(size=10),
-          axis.text.y = element_text(size=10),
-          axis.title.y = element_text(size=10)))
-
-# S. Fork Little Red River, AR
-(gpp_plot8.4 <- ggplot(df_pred8$nwis_07075250, aes(date, GPP)) +
-    geom_point(size = 2, color = "#303018") +
-    geom_line(aes(date, Median), 
-              color = "#609048", size = 1.2) +
-    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
-         x = "Date",
-         title = "Small Order - Turbulent Flow - Low Light") +
-    scale_x_date(date_labels = "%b %Y") +
-    geom_ribbon(aes(ymin = q2.5,
-                    ymax = q97.5),
-                fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2016-06-01"), y = 2.75,
-             label = paste("nRMSE = ",round(nRMSE_8site[6], 
-                                            digits = 2)), size = 4) + 
-    theme_bw() +
-    theme(legend.position = "none",
-          title = element_text(size = 10),
-          axis.title.x = element_text(size=10), 
-          axis.text.x = element_text(size=10),
-          axis.text.y = element_text(size=10),
-          axis.title.y = element_text(size=10)))
-
-# Red River, ND
-(gpp_plot8.5 <- ggplot(df_pred8$nwis_05082500, aes(date, GPP)) +
-    geom_point(size = 2, color = "#303018") +
-    geom_line(aes(date, Median), 
-              color = "#609048", size = 1.2) +
-    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
-         x = "Date",
-         title = "Large Order - Steady Flow - High Light") +
-    scale_x_date(date_labels = "%b %Y") +
-    geom_ribbon(aes(ymin = q2.5,
-                    ymax = q97.5),
-                fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2016-10-15"), y = 9,
-             label = paste("nRMSE = ",round(nRMSE_8site[4], 
-                                            digits = 2)), size = 4) + 
-    theme_bw() +
-    theme(legend.position = "none",
-          title = element_text(size = 10),
-          axis.title.x = element_text(size=10), 
-          axis.text.x = element_text(size=10),
-          axis.text.y = element_text(size=10),
-          axis.title.y = element_text(size=10)))
-
-# Snake River, WY
-(gpp_plot8.6 <- ggplot(df_pred8$nwis_13013650, aes(date, GPP)) +
+# ???
+(gpp_plot16.2 <- ggplot(df_pred16$nwis_05435950, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Large Order - Steady Flow - Low Light") +
+         title = "Long - Developed - Steady Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5, 
+                    group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2015-01-01"), y = 20,
+             label = paste("nRMSE = ",round(nRMSE_16site[8], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.3 <- ggplot(df_pred16$nwis_03219500, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Long - Developed - Variable Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2015-06-01"), y = 20,
+             label = paste("nRMSE = ",round(nRMSE_16site[3], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.4 <- ggplot(df_pred16$nwis_01648010, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Long - Developed - Variable Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2016-06-01"), y = 9,
+             label = paste("nRMSE = ",round(nRMSE_16site[1], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.5 <- ggplot(df_pred16$nwis_04137500, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Long - Undeveloped - Steady Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2015-01-01"), y = 12,
+             label = paste("nRMSE = ",round(nRMSE_16site[6], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.6 <- ggplot(df_pred16$nwis_14211010, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Long - Undeveloped - Steady Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2015-01-01"), y = 18,
+             label = paste("nRMSE = ",round(nRMSE_16site[16], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ??? 
+(gpp_plot16.7 <- ggplot(df_pred16$nwis_07109500, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Long - Undeveloped - Variable Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2015-01-01"), y = 35,
+             label = paste("nRMSE = ",round(nRMSE_16site[11], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.8 <- ggplot(df_pred16$nwis_11044000, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Long - Undeveloped - Variable Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2015-01-01"), y = 12,
+             label = paste("nRMSE = ",round(nRMSE_16site[13], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.9 <- ggplot(df_pred16$nwis_05057200, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Short - Developed - Steady Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2016-10-01"), y = 23,
+             label = paste("nRMSE = ",round(nRMSE_16site[7], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.10 <- ggplot(df_pred16$nwis_12102075 , aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Short - Developed - Steady Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2016-10-01"), y = 17,
+             label = paste("nRMSE = ",round(nRMSE_16site[14], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.11 <- ggplot(df_pred16$nwis_05451210, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Short - Developed - Variable Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2010-01-01"), y = 17.5,
+             label = paste("nRMSE = ",round(nRMSE_16site[9], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.12 <- ggplot(df_pred16$nwis_06893970, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Short - Developed - Variable Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2013-10-01"), y = 9,
+             label = paste("nRMSE = ",round(nRMSE_16site[10], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.13 <- ggplot(df_pred16$nwis_08447300, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Short - Undeveloped - Steady Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2013-06-01"), y = 23,
+             label = paste("nRMSE = ",round(nRMSE_16site[12], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.14 <- ggplot(df_pred16$nwis_02217643, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Short - Undeveloped - Steady Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
     #scale_x_break(c(as.Date("2011-01-01"), as.Date("2014-01-01"))) +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2015-01-01"), y = 27,
-             label = paste("nRMSE = ",round(nRMSE_8site[8], 
+    annotate(geom = "text", x = date("2016-10-01"), y = 6,
+             label = paste("nRMSE = ",round(nRMSE_16site[2], 
                                             digits = 2)), size = 4) + 
     theme_bw() +
     theme(legend.position = "none",
-          title = element_text(size = 10),
+          title = element_text(size = 8),
           axis.title.x = element_text(size=10), 
           axis.text.x = element_text(size=10),
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# Raisin River, MI 
-(gpp_plot8.7 <- ggplot(df_pred8$nwis_04176500, aes(date, GPP)) +
-    geom_point(size = 2, color = "#303018") +
-    geom_line(aes(date, Median), 
-              color = "#609048", size = 1.2) +
-    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
-         x = "Date",
-         title = "Large Order - Turbulent Flow - High Light") +
-    scale_x_date(date_labels = "%b %Y") +
-    geom_ribbon(aes(ymin = q2.5,
-                    ymax = q97.5),
-                fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2014-03-01"), y = 45,
-             label = paste("nRMSE = ",round(nRMSE_8site[3], 
-                                            digits = 2)), size = 4) + 
-    theme_bw() +
-    theme(legend.position = "none",
-          title = element_text(size = 10),
-          axis.title.x = element_text(size=10), 
-          axis.text.x = element_text(size=10),
-          axis.text.y = element_text(size=10),
-          axis.title.y = element_text(size=10)))
-
-# Rio Grande, TX
-(gpp_plot8.8 <- ggplot(df_pred8$nwis_08374550, aes(date, GPP)) +
+# ??? 
+(gpp_plot16.15 <- ggplot(df_pred16$nwis_04059500, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Large Order - Turbulent Flow - Low Light") +
+         title = "Short - Undeveloped - Variable Flow - High Light") +
     scale_x_date(date_labels = "%b %Y") +
-    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
+    geom_ribbon(aes(ymin = q2.5,
+                    ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
-    annotate(geom = "text", x = date("2012-03-01"), y = 6,
-             label = paste("nRMSE = ",round(nRMSE_8site[7], 
+    annotate(geom = "text", x = date("2016-01-01"), y = 7,
+             label = paste("nRMSE = ",round(nRMSE_16site[5], 
                                             digits = 2)), size = 4) + 
     theme_bw() +
     theme(legend.position = "none",
-          title = element_text(size = 10),
+          title = element_text(size = 8),
+          axis.title.x = element_text(size=10), 
+          axis.text.x = element_text(size=10),
+          axis.text.y = element_text(size=10),
+          axis.title.y = element_text(size=10)))
+
+# ???
+(gpp_plot16.16 <- ggplot(df_pred16$nwis_03538830, aes(date, GPP)) +
+    geom_point(size = 2, color = "#303018") +
+    geom_line(aes(date, Median, group = seq), 
+              color = "#609048", size = 1.2) +
+    labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
+         x = "Date",
+         title = "Short - Undeveloped - Variable Flow - Low Light") +
+    scale_x_date(date_labels = "%b %Y") +
+    geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
+                fill = "#90A860", alpha = 0.3) +
+    annotate(geom = "text", x = date("2015-06-01"), y = 15,
+             label = paste("nRMSE = ",round(nRMSE_16site[4], 
+                                            digits = 2)), size = 4) + 
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text(size = 8),
           axis.title.x = element_text(size=10), 
           axis.text.x = element_text(size=10),
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
 # Combine and export.
-(fig_nRMSE <- gpp_plot8.1 + gpp_plot8.2 + 
-    gpp_plot8.3 + gpp_plot8.4 +
-    gpp_plot8.5 + gpp_plot8.6 +
-    gpp_plot8.7 + gpp_plot8.8 +
+(fig_nRMSE <- gpp_plot16.1 + gpp_plot16.2 + gpp_plot16.3 + gpp_plot16.4 +
+    gpp_plot16.5 + gpp_plot16.6 + gpp_plot16.7 + gpp_plot16.8 +
+    gpp_plot16.9 + gpp_plot16.10 + gpp_plot16.11 + gpp_plot16.12 +
+    gpp_plot16.13 + gpp_plot16.14 + gpp_plot16.15 + gpp_plot16.16 +
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 4))
 
 # ggsave(fig_nRMSE,
-#        filename = "figures/beartooth_spring23/nRMSE_8panel_051223.jpg",
-#        width = 22,
-#        height = 22,
-#        units = "cm") # empty dates fixed :)
+#        filename = "figures/beartooth_spring23/nRMSE_16panel_071123.jpg",
+#        width = 40,
+#        height = 20,
+#        units = "cm")
 
 # End of script.
