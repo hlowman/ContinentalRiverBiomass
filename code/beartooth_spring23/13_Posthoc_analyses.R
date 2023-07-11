@@ -42,6 +42,14 @@ dat_amax <- readRDS("data_working/amax_covariates_152sites_070523.rds")
 # Next, the data for the Qc:Q2yr models.
 dat_Qc <- readRDS("data_working/Qc_covariates_138sites_070523.rds")
 
+# As well as the data for the Qc:Q2yr table (includes some sites that
+# would not pass filtering steps and therefore are not included in models).
+dat_Qc_all <- readRDS("data_working/QcQ2_unfiltered_181sites_051023.rds")
+
+# And finally a dataset with long names for IDing purposes.
+dat_names <- readRDS("data_working/NWIS_Info_181riv_HUC2_df_050923.rds") %>%
+  dplyr::select(site_no, station_nm)
+
 #### rmax Quantile results ####
 
 hist(dat_amax$r_med)
@@ -78,6 +86,7 @@ r5below <- dat_amax %>%
 # GPP
 mean(r95above$meanGPP) # 9.412549
 mean(r5below$meanGPP) # 0.4756388
+plot(log10(dat_amax$meanGPP), log10(dat_amax$r_med)) # largely positive trend
 
 # Mean Temp
 mean(r95above$meanTemp) # 15.20581
@@ -94,6 +103,7 @@ mean(as.numeric(na.omit(r5below$Order))) # 2.571429
 # Size
 mean(r95above$width_med) # 63.7224
 mean(r5below$width_med) # 10.49291
+plot(log10(dat_amax$width_med), log10(dat_amax$r_med)) # also positive trend
 
 # Road Density
 mean(r95above$NHD_RdDensWs) # 2.122042
@@ -102,6 +112,15 @@ mean(na.omit(r5below$NHD_RdDensWs)) # 5.066743
 # Discharge
 mean(r95above$cvQ) # 0.8644281
 mean(r5below$cvQ) # 1.736696
+plot(log10(dat_amax$cvQ), dat_amax$r_med) # negative trend
+
+# Plot of all estimates with uncertainty intervals.
+dat_rplot <- dat_amax %>%
+  mutate(site = fct_reorder(site_name, r_med))
+
+ggplot(dat_rplot, aes(x = r_med, y = site)) +
+  geom_linerange(aes(xmin = `2.5%`, xmax = `97.5%`)) +
+  theme_bw()
 
 #### amax Quantile results ####
 
@@ -754,11 +773,138 @@ View(post_data2)
 #        height = 7,
 #        units = "cm")
 
-#### Model 2: Qc:Q2yr ####
+#### c Quantile results ####
 
-# Log transform and edit necessary covariates.
+hist(dat_Qc$c_med)
+
+median(dat_Qc$c_med) # 0.5526624
+# sites nwis_03293500/nwis_03105500
+
+max(dat_Qc$c_med) # 1.095712
+# site nwis_08211200
+# CIs = 1.0200995, 1.3406258
+
+min(dat_Qc$c_med) # 0.0182254
+# site nwis_07144100
+# CIs = 0.01746739, 0.01908124
+
+# 95th %tile and above
+quantile(dat_Qc$c_med, probs = c(0.95)) # 1.079826
+
+c95above <- dat_Qc %>%
+  filter(c_med >= 1.079826) # 7 sites
+
+# 5th %tile and below
+quantile(dat_Qc$c_med, probs = c(0.05)) # 0.04372825 
+
+c5below <- dat_Qc %>%
+  filter(c_med <= 0.04372825) # 7 sites
+
+# Exploring commonalities
+# GPP
+mean(c95above$meanGPP) # 2.343602
+mean(c5below$meanGPP) # 1.871838
+plot(log10(dat_Qc$meanGPP), log10(dat_Qc$c_med)) # little relationship if any
+
+# Mean Temp
+mean(c95above$meanTemp) # 16.48804
+mean(c5below$meanTemp) # 16.8627
+
+# Mean Light
+mean(c95above$meanLight) # 22.90659
+mean(c5below$meanLight) # 25.19958
+
+# Order
+mean(as.numeric(c95above$Order)) # 3.857143
+mean(as.numeric(na.omit(c5below$Order))) # 4.714286
+
+# Size
+mean(c95above$width_med) # 27.98565
+mean(c5below$width_med) # 11.39569
+plot(log10(dat_Qc$width_med), log10(dat_Qc$c_med)) # again little relationship
+
+# Road Density
+mean(c95above$NHD_RdDensWs) # 4.674267
+mean(na.omit(c5below$NHD_RdDensWs)) # 3.578859
+
+# Discharge
+mean(c95above$cvQ) # 1.647701
+mean(c5below$cvQ) # 3.873372
+plot(log10(dat_Qc$cvQ), log10(dat_Qc$c_med))
+
+# Plot of all estimates with uncertainty intervals.
+dat_cplot <- dat_Qc %>%
+  mutate(site = fct_reorder(site_name, c_med))
+
+ggplot(dat_cplot, aes(x = c_med, y = site)) +
+  geom_linerange(aes(xmin = `2.5%`, xmax = `97.5%`)) +
+  theme_bw()
+
+#### Qc:Q2yr Quantile results ####
+
+# Create necessary covariates.
 dat_Qc <- dat_Qc %>%
   mutate(Qc_Q2yr = Qc/RI_2yr_Q_cms)
+
+# Number of sites with Qc_Q2yr < 1
+under <- dat_Qc %>%
+  filter(Qc_Q2yr < 1)
+
+hist(dat_Qc$Qc_Q2yr)
+
+median(dat_Qc$c_med) # 0.5526624
+# sites nwis_03293500/nwis_03105500
+
+max(dat_Qc$c_med) # 1.095712
+# site nwis_08211200
+# CIs = 1.0200995, 1.3406258
+
+min(dat_Qc$c_med) # 0.0182254
+# site nwis_07144100
+# CIs = 0.01746739, 0.01908124
+
+# 95th %tile and above
+quantile(dat_Qc$c_med, probs = c(0.95)) # 1.079826
+
+c95above <- dat_Qc %>%
+  filter(c_med >= 1.079826) # 7 sites
+
+# 5th %tile and below
+quantile(dat_Qc$c_med, probs = c(0.05)) # 0.04372825 
+
+c5below <- dat_Qc %>%
+  filter(c_med <= 0.04372825) # 7 sites
+
+# Exploring commonalities
+# GPP
+mean(c95above$meanGPP) # 2.343602
+mean(c5below$meanGPP) # 1.871838
+
+# Mean Temp
+mean(c95above$meanTemp) # 16.48804
+mean(c5below$meanTemp) # 16.8627
+
+# Mean Light
+mean(c95above$meanLight) # 22.90659
+mean(c5below$meanLight) # 25.19958
+
+# Order
+mean(as.numeric(c95above$Order)) # 3.857143
+mean(as.numeric(na.omit(c5below$Order))) # 4.714286
+
+# Size
+mean(c95above$width_med) # 27.98565
+mean(c5below$width_med) # 11.39569
+
+# Road Density
+mean(c95above$NHD_RdDensWs) # 4.674267
+mean(na.omit(c5below$NHD_RdDensWs)) # 3.578859
+
+# Discharge
+mean(c95above$cvQ) # 1.647701
+mean(c5below$cvQ) # 3.873372
+
+#### Model 2: Qc:Q2yr ####
 
 # And visualize the relationships with Qc:Qy2r values.
 QcQ2_covs <- ggpairs(dat_Qc %>% 
@@ -992,5 +1138,25 @@ View(post_data3)
 #        width = 14,
 #        height = 13,
 #        units = "cm")
+
+#### Table 1 data ####
+
+# Using dat_names data, I've filtered for the site numbers that correspond
+# to the 5 sites used for geomorphological comparisons.
+
+five_sites <- c("nwis_0165389205", "nwis_05451210", "nwis_01645704",
+                "nwis_05524500", "nwis_05515500")
+
+dat_Qc_5 <- dat_Qc_all %>%
+  filter(site_name %in% five_sites)
+
+five_no_sites <- c("0165389205", "05451210", "01645704",
+                "05524500", "05515500")
+
+dat_names_5 <- dat_names %>%
+  filter(site_no %in% five_no_sites)
+
+dat_5_sites <- cbind(dat_Qc_5, dat_names_5) %>%
+  mutate(Qc_Q2yr = Qc/RI_2yr_Q_cms)
 
 # End of script.
