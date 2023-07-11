@@ -401,7 +401,7 @@ dat_Qc <- dat_Qc %>%
 
 #### GPP Appendix Figure ####
 
-# 8-paneled plot demonstrating model fit across a variety of site-types.
+# 16-paneled plot demonstrating model fit across a variety of site-types.
 
 # First, need to create the function for predicting GPP.
 PM_Ricker <- function(r, lambda, s, c, sig_p, sig_o, df) {
@@ -482,27 +482,29 @@ nRMSE_fxn <- function(df, df_orig){
   
 }
 
-my8sites <- c("nwis_0166818623", "nwis_02217643",
-              "nwis_06893350", "nwis_07075250",
-              "nwis_05082500", "nwis_13013650",
-              "nwis_04176500", "nwis_08374550")
+my16sites <- c("nwis_13213000", "nwis_05435950", "nwis_03219500", 
+               "nwis_01648010", "nwis_04137500", "nwis_14211010", 
+               "nwis_07109500", "nwis_11044000", "nwis_05057200", 
+               "nwis_12102075", "nwis_05451210", "nwis_06893970",
+               "nwis_08447300", "nwis_02217643", "nwis_04059500", 
+               "nwis_03538830")
 
 # Take list containing all iterations of parameters and make into a df.
 dat_out_df <- map_df(dat_out, ~as.data.frame(.x), .id="site_name")
 
 # Trimming input and output datasets for the sites of interest.
-dat_out8df <- dat_out_df %>%
-  filter(site_name %in% my8sites)
+dat_out16df <- dat_out_df %>%
+  filter(site_name %in% my16sites)
 
-dat_out8 <- split(dat_out8df, dat_out8df$site_name)
+dat_out16 <- split(dat_out16df, dat_out16df$site_name)
 
-dat_in8df <- dat_in %>%
-  filter(site_name %in% my8sites)
+dat_in16df <- dat_in %>%
+  filter(site_name %in% my16sites)
 
-dat_in8 <- split(dat_in8df, dat_in8df$site_name)
+dat_in16 <- split(dat_in16df, dat_in16df$site_name)
 
 # Re-simulating using all output iterations. Started ~3:45, Ended ~4:05
-Ricker_sim8sites <- mapply(Ricker_sim_fxn, dat_out8, dat_in8)
+Ricker_sim16sites <- mapply(Ricker_sim_fxn, dat_out16, dat_in16)
 
 # And for each day, I would like to calculate
 # - median GPP
@@ -510,39 +512,39 @@ Ricker_sim8sites <- mapply(Ricker_sim_fxn, dat_out8, dat_in8)
 
 # Going to pull out just the predicted GPP values.
 # So, making a list of odd numbers to pull out predGPP values (see above for reasoning).
-my_values <- seq(from = 1, to = 16, by = 2)
-data_8site_gpp <- Ricker_sim8sites[my_values]
+my_values <- seq(from = 1, to = 32, by = 2)
+data_16site_gpp <- Ricker_sim16sites[my_values]
 
 # Calculate median and confidence intervals
 quantile25 <- function(x){quantile(x, probs = 0.025, na.rm = TRUE)}
 quantile975 <- function(x){quantile(x, probs = 0.975, na.rm = TRUE)}
 
-pred_gpp8 <- lapply(data_8site_gpp, 
+pred_gpp16 <- lapply(data_16site_gpp, 
                     function(x) cbind(apply(x, 1, median),
                                       apply(x, 1, quantile25),
                                       apply(x, 1, quantile975)))
 
 # Pull out original GPP values used and sequence #s (for plotting)
-orig_gpp_date8 <- lapply(dat_in8, function(x) x %>% select(date, GPP, seq))
+orig_gpp_date16 <- lapply(dat_in16, function(x) x %>% select(date, GPP, seq))
 
 # Add names to confidence interval lists
 my_names <- c("nwis_0166818623", "nwis_02217643", "nwis_04176500", "nwis_05082500", "nwis_06893350", "nwis_07075250", "nwis_08374550", "nwis_13013650")
 
-names(pred_gpp8) <- my_names
-pred_gpp8 <- lapply(pred_gpp8, function(x) as.data.frame(x) %>% 
+names(pred_gpp16) <- my_names
+pred_gpp16 <- lapply(pred_gpp16, function(x) as.data.frame(x) %>% 
                       rename("Median" = "V1",
                              "q2.5" = "V2",
                              "q97.5" = "V3")) # OMG YAY!!!!
 
 # Bind into a single dataframe
-keys <- unique(c(names(orig_gpp_date8), names(pred_gpp8)))
-df_pred8 <- setNames(Map(cbind, orig_gpp_date8[keys], pred_gpp8[keys]), keys)
+keys <- unique(c(names(orig_gpp_date16), names(pred_gpp16)))
+df_pred16 <- setNames(Map(cbind, orig_gpp_date16[keys], pred_gpp16[keys]), keys)
 
 # And finally, calculate the normalized RMSE.
-my_values2 <- seq(from = 2, to = 16, by = 2)
-rmse8 <- Ricker_sim8sites[my_values2]
+my_values2 <- seq(from = 2, to = 32, by = 2)
+rmse16 <- Ricker_sim16sites[my_values2]
 
-nRMSE_8site <- mapply(nRMSE_fxn, rmse8, dat_in8)
+nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
 
 # And plot
 # Mill Creek, VA
