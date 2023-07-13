@@ -21,7 +21,7 @@
 # comments.
 
 # The following script was run using the Pinyon server at the University of 
-# Nevada Reno for speed.
+# Nevada Reno for speed when re-running the full model at 6 selected sites.
 
 #### Setup ####
 
@@ -160,7 +160,7 @@ data_out6_diags <- map(PM_outputlist_Ricker, extract_summary)
 
 # Save this out too
 # saveRDS(data_out6_diags,
-#        file = "data_working/pinyon_6rivers_model_cs_params_diags_071223.rds")
+#        file = "data_working/pinyon_6rivers_model_cs_params_diags_071323.rds")
 
 # Take list above and make into a df.
 data_out6_diags_df <- map_df(data_out6_diags, ~as.data.frame(.x), .id="site_name") %>%
@@ -539,6 +539,158 @@ dat_r_Qc_plus <- left_join(dat_Qc, dat_amax %>% dplyr::select(site_name, yield_m
 
 ##### Less constrained priors 6 site example #####
 
+# These same 6 sites are also used to answer other reviewer comments above & below.
+
+dat_in6.2 <- dat_in %>%
+  filter(site_name %in% c("nwis_06795500", "nwis_02217643", 
+                          "nwis_05082500", "nwis_04176500", 
+                          "nwis_06893350", "nwis_07075250"))
+
+# Split into a list by ID
+l6.2 <- split(dat_in6.2, dat_in6.2$site_name)
+
+# Export dataset for future use.
+saveRDS(l6.2, "data_working/list_6sites_Qmaxnorm_SavoySL.rds")
+
+# Rename source data
+df2 <- l6.2
+
+# Stan data prep
+rstan_options(auto_write=TRUE)
+# Specify number of cores
+options(mc.cores=6)
+
+# Compile necessary data
+stan_data_compile <- function(x){
+  data <- list(Ndays=length(x$GPP), # number of days/records
+               light = x$light_rel, # relativized light (to maximum light)
+               GPP = x$GPP,         # GPP estimates
+               GPP_sd = x$GPP_sd,   # standard deviation of GPP estimates
+               tQ = x$Q_rel,        # relativized discharge (to Qmax)
+               new_e = x$new_e)     # instances of re-initialization needed
+  
+  return(data)
+}
+
+stan_data_l2 <- lapply(df2, function(x) stan_data_compile(x))
+
+# Latent Biomass (Ricker population) Model
+# sets initial values to help chains converge
+init_Ricker2 <- function(...) {
+  list(c = 0.5, s = 1.5) # values updated to match Blaszczak et al.
+}
+
+# export results
+PM_outputlist_Ricker2 <- lapply(stan_data_l2,
+                               function(x) stan("code/beartooth_spring23/Stan_ProductivityModel_lessinformedpriors_R1.stan",
+                                                data = x, 
+                                                chains = 3,
+                                                iter = 5000,
+                                                init = init_Ricker2,
+                                                control = list(max_treedepth = 12)))
+
+# saveRDS(PM_outputlist_Ricker2, "data_pinyon/pinyon_6rivers_output_2023_07_13.rds")
+
+# Extract only r and c data from the model
+# And use a new function to calculate median and 95%tiles.
+# Obtain summary statistics using new "extract_summary" function.
+# Note, this pulls diagnostics for site-level parameters.
+extract_summary2 <- function(x){
+  df <- x
+  df1 <- summary(df,
+                 pars = c("r", "c"),
+                 probs = c(0.025, 0.5, 0.975))$summary # 2.5% and 97.5% percentiles
+  as.data.frame(df1) %>% rownames_to_column("parameter")
+}
+
+# And now map this to the output list. 
+data_out6_diags2 <- map(PM_outputlist_Ricker2, extract_summary2)
+
+# Save this out too
+saveRDS(data_out6_diags2,
+       file = "data_working/pinyon_6rivers_model_rc_params_diags_071323.rds")
+
+# Take list above and make into a df.
+data_out6_diags2_df <- map_df(data_out6_diags2, ~as.data.frame(.x), .id="site_name")
+
+dat_out6_ronly <- data_out6_diags2_df %>%
+  filter(parameter == "r") %>%
+  rename(r_med = `50%`)
+
+dat_out6_conly <- data_out6_diags2_df %>%
+  filter(parameter == "c") %>%
+  rename(c_med = `50%`)
+
+# plot r values #
+# Filter the larger dataset.
+dat_amax_6 <- dat_amax %>%
+  filter(site_name %in% c("nwis_06795500", "nwis_02217643", 
+                          "nwis_05082500", "nwis_04176500", 
+                          "nwis_06893350", "nwis_07075250"))
+
+# Join the two datasets.
+dat_amax_6$Priors <- "Lowman et al."
+dat_out6_ronly$Priors <- "Blaszczak et al."
+
+dat_r_both_6 <- full_join(dat_amax_6, dat_out6_ronly) %>%
+  # make priors a factor %>%
+  mutate(Priors = factor(Priors, levels = c("Lowman et al.", "Blaszczak et al."))) %>%
+  # reorder sites and add names for plotting
+  mutate(Site = factor(case_when(site_name == "nwis_02217643" ~ "Parks Creek, GA",
+                                 site_name == "nwis_06893350" ~ "Tomahawk Creek, KS",
+                                 site_name == "nwis_07075250" ~ "S. Fork Little Red River, AR",
+                                 site_name == "nwis_05082500" ~ "Red River, ND",
+                                 site_name == "nwis_04176500" ~ "River Raisin, MI",
+                                 site_name == "nwis_06795500" ~ "Shell Creek, NE"),
+                       levels = c("S. Fork Little Red River, AR", "Tomahawk Creek, KS", 
+                                  "River Raisin, MI", "Red River, ND", 
+                                  "Parks Creek, GA", "Shell Creek, NE")))
+
+(fig_r <- ggplot(dat_r_both_6, aes(x = r_med, y = Site, color = Priors)) +
+    geom_point(size = 5, alpha = 0.75, position = position_dodge(width = -0.5)) +
+    geom_errorbarh(aes(xmin = `2.5%`, 
+                       xmax = `97.5%`), 
+                   height = 0.25,
+                   position = position_dodge(width = -0.5)) +
+    labs(y = "Site", x = "rmax") +
+    scale_color_manual(values = c("black", "grey")) +
+    theme_bw()) # Lowman r values slightly lower and more constrained than Blaszczak ones
+
+# plot c values #
+# Filter the larger dataset.
+dat_Qc_all_6 <- dat_Qc_all %>%
+  filter(site_name %in% c("nwis_06795500", "nwis_02217643", 
+                          "nwis_05082500", "nwis_04176500", 
+                          "nwis_06893350", "nwis_07075250"))
+
+# Join the two datasets.
+dat_Qc_all_6$Priors <- "Lowman et al."
+dat_out6_conly$Priors <- "Blaszczak et al."
+
+dat_c_both_6 <- full_join(dat_Qc_all_6, dat_out6_conly) %>%
+  # make priors a factor %>%
+  mutate(Priors = factor(Priors, levels = c("Lowman et al.", "Blaszczak et al."))) %>%
+  # reorder sites and add names for plotting
+  mutate(Site = factor(case_when(site_name == "nwis_02217643" ~ "Parks Creek, GA",
+                                 site_name == "nwis_06893350" ~ "Tomahawk Creek, KS",
+                                 site_name == "nwis_07075250" ~ "S. Fork Little Red River, AR",
+                                 site_name == "nwis_05082500" ~ "Red River, ND",
+                                 site_name == "nwis_04176500" ~ "River Raisin, MI",
+                                 site_name == "nwis_06795500" ~ "Shell Creek, NE"),
+                       levels = c("S. Fork Little Red River, AR", "Tomahawk Creek, KS", 
+                                  "River Raisin, MI", "Red River, ND", 
+                                  "Parks Creek, GA", "Shell Creek, NE")))
+
+(fig_c <- ggplot(dat_c_both_6, aes(x = c_med, y = Site, color = Priors)) +
+    geom_point(size = 5, alpha = 0.75, position = position_dodge(width = -0.5)) +
+    geom_errorbarh(aes(xmin = `2.5%`, 
+                       xmax = `97.5%`), 
+                   height = 0.25,
+                   position = position_dodge(width = -0.5)) +
+    labs(y = "Site", x = "c") +
+    scale_color_manual(values = c("black", "grey")) +
+    theme_bw()) # c values the same, save the AR site that converges poorly
+
 ##### c vs. s values 6 site example #####
 
 # Using the data imported above, select for 6 sites of interest that span
@@ -553,48 +705,48 @@ dat_out_storm6 <- dat_out_df %>%
                    filter(site_name == "nwis_06795500"), aes(x = s, y = c)) +
   geom_point(alpha = 0.75) +
   labs(title = "Shell Creek, NE") +
-  xlim(0, 6) +
-  ylim(0, 2) +
+  #xlim(0, 6) +
+  #ylim(0, 2) +
   theme_bw())
 
 (fig_sc2 <- ggplot(dat_out_storm6 %>%
                      filter(site_name == "nwis_02217643"), aes(x = s, y = c)) +
     geom_point(alpha = 0.75) +
     labs(title = "Parks Creek, GA") +
-    xlim(0, 6) +
-    ylim(0, 2) +
+    #xlim(0, 6) +
+    #ylim(0, 2) +
     theme_bw())
 
 (fig_sc3 <- ggplot(dat_out_storm6 %>%
                      filter(site_name == "nwis_05082500"), aes(x = s, y = c)) +
     geom_point(alpha = 0.75) +
     labs(title = "Red River, ND") +
-    xlim(0, 6) +
-    ylim(0, 2) +
+    #xlim(0, 6) +
+    #ylim(0, 2) +
     theme_bw())
 
 (fig_sc4 <- ggplot(dat_out_storm6 %>%
                      filter(site_name == "nwis_04176500"), aes(x = s, y = c)) +
     geom_point(alpha = 0.75) +
     labs(title = "River Raisin, MI") +
-    xlim(0, 6) +
-    ylim(0, 2) +
+    #xlim(0, 6) +
+    #ylim(0, 2) +
     theme_bw())
 
 (fig_sc5 <- ggplot(dat_out_storm6 %>%
                      filter(site_name == "nwis_06893350"), aes(x = s, y = c)) +
     geom_point(alpha = 0.75) +
     labs(title = "Tomahawk Creek, KS") +
-    xlim(0, 6) +
-    ylim(0, 2) +
+    #xlim(0, 6) +
+    #ylim(0, 2) +
     theme_bw())
 
 (fig_sc6 <- ggplot(dat_out_storm6 %>%
                      filter(site_name == "nwis_07075250"), aes(x = s, y = c)) +
     geom_point(alpha = 0.75) +
     labs(title = "S. Fork Little Red River, AR") + 
-    xlim(0, 6) +
-    ylim(0, 2) +
+    #xlim(0, 6) +
+    #ylim(0, 2) +
     theme_bw())
 
 # Now, let's combine the above using patchwork.
@@ -605,7 +757,7 @@ dat_out_storm6 <- dat_out_df %>%
 
 # And export.
 # ggsave(fig_sc,
-#        filename = "figures/beartooth_spring23/s_vs_c_6sites_071023.jpg",
+#        filename = "figures/beartooth_spring23/s_vs_c_6sites_071323.jpg",
 #        width = 22,
 #        height = 16,
 #        units = "cm")
