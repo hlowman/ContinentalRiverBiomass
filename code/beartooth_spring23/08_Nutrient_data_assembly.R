@@ -265,7 +265,7 @@ wqpNuts <- wqpNuts %>%
                                     ResultMeasureValue*0.001,
                                              TRUE ~ ResultMeasureValue))
 
-# FINAL UNITS: mg/L as NO3-N, mg/L as PO4-P, and mg/L of P
+# FINAL UNITS: mg/L as NO3-N and mg/L of P
 
 #### Summary by site ####
 
