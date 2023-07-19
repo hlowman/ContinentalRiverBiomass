@@ -510,7 +510,7 @@ dat_in16 <- split(dat_in16df, dat_in16df$site_name)
 # Re-simulating using all output iterations. Started ~5:17, Ended ~6:??
 Ricker_sim16sites <- mapply(Ricker_sim_fxn, dat_out16, dat_in16)
 
-saveRDS(Ricker_sim16sites, "data_working/Ricker_sim_16sites_071123.rds")
+# saveRDS(Ricker_sim16sites, "data_working/Ricker_sim_16sites_071123.rds")
 
 # And for each day, I would like to calculate
 # - median GPP
@@ -558,7 +558,7 @@ rmse16 <- Ricker_sim16sites[my_values2]
 nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
 
 # And plot
-# ???
+# Boise River, ID
 (gpp_plot16.1 <- ggplot(df_pred16$nwis_13213000, aes(date, GPP)) +
     geom_point(linewidth = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -582,7 +582,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Sugar River, WI
 (gpp_plot16.2 <- ggplot(df_pred16$nwis_05435950, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -606,7 +606,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Scioto River, OH
 (gpp_plot16.3 <- ggplot(df_pred16$nwis_03219500, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -628,7 +628,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Rock Creek, DC
 (gpp_plot16.4 <- ggplot(df_pred16$nwis_01648010, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -650,7 +650,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Au Sable River, MI
 (gpp_plot16.5 <- ggplot(df_pred16$nwis_04137500, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -673,7 +673,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Clackamas River, OR
 (gpp_plot16.6 <- ggplot(df_pred16$nwis_14211010, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -695,7 +695,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ??? 
+# Arkansas River, CO
 (gpp_plot16.7 <- ggplot(df_pred16$nwis_07109500, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -718,7 +718,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Santa Margarita River, CA
 (gpp_plot16.8 <- ggplot(df_pred16$nwis_11044000, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -740,7 +740,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Baldhill Creek, ND
 (gpp_plot16.9 <- ggplot(df_pred16$nwis_05057200, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -763,7 +763,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Clarks Creek, WA
 (gpp_plot16.10 <- ggplot(df_pred16$nwis_12102075 , aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -785,7 +785,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# South Fork Iowa River, IA
 (gpp_plot16.11 <- ggplot(df_pred16$nwis_05451210, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -808,7 +808,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Spring Branch Creek, MO
 (gpp_plot16.12 <- ggplot(df_pred16$nwis_06893970, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -830,7 +830,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Pecos River, TX
 (gpp_plot16.13 <- ggplot(df_pred16$nwis_08447300, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -853,7 +853,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Parks Creek, GA
 (gpp_plot16.14 <- ggplot(df_pred16$nwis_02217643, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -876,7 +876,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ??? 
+# Ford River, MI
 (gpp_plot16.15 <- ggplot(df_pred16$nwis_04059500, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
@@ -899,7 +899,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# ???
+# Obed River, TN
 (gpp_plot16.16 <- ggplot(df_pred16$nwis_03538830, aes(date, GPP)) +
     geom_point(size = 2, color = "#303018") +
     geom_line(aes(date, Median, group = seq), 
