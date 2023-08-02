@@ -365,7 +365,7 @@ View(post_data)
                         aes(x = m, y = par_f, color = par_f)) +
     geom_linerange(aes(xmin = ll, xmax = hh),
                   size = 2, alpha = 0.5) +
-    geom_point(size = 5) +
+    geom_point(size = 3) +
     vline_at(v = 0) +
     scale_x_continuous(breaks = c(-0.5, 0, 0.5)) +
     labs(x = "Posterior Estimates",
@@ -378,7 +378,7 @@ View(post_data)
     theme_bw() +
     scale_color_manual(values = c("#4B8FF7", "#233D3F", "#233D3F", 
                                            "#4B8FF7", "#233D3F")) +
-    theme(text = element_text(size = 10),
+    theme(text = element_text(size = 8),
           legend.position = "none"))
 
 # Can also use pars = c("^r_", "^b_", "^sd_") in place of variable phrasing
@@ -446,7 +446,7 @@ ad_descaled_data <- as.data.frame(t(t(ad_select) * scale + center)) %>%
     scale_x_discrete(labels = c("5-50%", "100%")) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 10)))
+    theme(text = element_text(size = 8)))
 
 ###### Temperature ######
 
@@ -460,7 +460,7 @@ ad_descaled_data <- as.data.frame(t(t(ad_select) * scale + center)) %>%
          y = expression(a[max])) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 10)))
+    theme(text = element_text(size = 8)))
 
 ###### Roads ######
 
@@ -472,7 +472,7 @@ ad_descaled_data <- as.data.frame(t(t(ad_select) * scale + center)) %>%
     labs(x = expression(Road~Density~(km/km^2)),
          y = expression(a[max])) +
     theme_bw() +
-    theme(text = element_text(size = 10)))
+    theme(text = element_text(size = 8)))
 
 ###### Exceedances ######
 
@@ -507,10 +507,10 @@ ae_descaled_data <- as.data.frame(t(t(ae_select) * scale + center)) %>%
     geom_point(data = dat_amax, aes(x = exc_y, y = 10^log_yield),
                size = 3, alpha = 0.3, color = "#233D3F") +
     scale_y_log10() +
-    labs(x = expression(Mean~Annual~Exceedances~of~Q[c]),
+    labs(x = expression(Mean~Annual~Q[c]~Exceedances),
          y = expression(a[max])) +
     theme_bw() +
-    theme(text = element_text(size = 10)))
+    theme(text = element_text(size = 8)))
 
 ###### Width ######
 
@@ -548,7 +548,7 @@ aw_descaled_data <- as.data.frame(t(t(aw_select) * scale + center)) %>%
     labs(x = "River Width (m)",
          y = expression(a[max])) +
     theme_bw() +
-    theme(text = element_text(size = 10)))
+    theme(text = element_text(size = 8)))
 
 ###### Combined ######
 
@@ -559,10 +559,11 @@ aw_descaled_data <- as.data.frame(t(t(aw_select) * scale + center)) %>%
 
 # And export.
 # ggsave(fig_cond_amax,
-#        filename = "figures/beartooth_spring23/brms_amax_cond_070623.jpg",
-#        width = 22,
-#        height = 13,
-#        units = "cm")
+#        filename = "figures/beartooth_spring23/brms_amax_cond_080223.tiff",
+#        width = 17.8,
+#        height = 10,
+#        units = "cm",
+#        dpi = 300)
 
 ##### Nutrients #####
 
@@ -716,7 +717,7 @@ View(post_data2)
                         aes(x = m, y = par_f, color = par_f)) +
     geom_linerange(aes(xmin = ll, xmax = hh),
                    size = 2, alpha = 0.5) +
-    geom_point(size = 5) +
+    geom_point(size = 3) +
     vline_at(v = 0) +
     scale_x_continuous(breaks = c(-0.5, 0, 0.5)) +
     labs(x = "Posterior Estimates",
@@ -731,7 +732,7 @@ View(post_data2)
     theme_bw() +
     scale_color_manual(values = c("#4B8FF7", "#4B8FF7", "#233D3F", "#4B8FF7",
                                   "#4B8FF7", "#233D3F", "#233D3F")) +
-    theme(text = element_text(size = 10),
+    theme(text = element_text(size = 8),
     legend.position = "none"))
 
 ###### Nitrate #######
@@ -745,7 +746,7 @@ View(post_data2)
     scale_y_log10() +
     scale_x_log10() +
     theme_bw() +
-    theme(text = element_text(size = 10)))
+    theme(text = element_text(size = 8)))
 
 ####### Phosphorus #######
 
@@ -758,7 +759,7 @@ View(post_data2)
     scale_y_log10() +
     scale_x_log10() +
     theme_bw() +
-    theme(text = element_text(size = 10)))
+    theme(text = element_text(size = 8)))
 
 ####### Combined #######
 
@@ -768,10 +769,11 @@ View(post_data2)
 
 # And export.
 # ggsave(fig_cond_amax_nuts,
-#        filename = "figures/beartooth_spring23/brms_amax_cond_nuts_070623.jpg",
-#        width = 22,
-#        height = 7,
-#        units = "cm")
+#        filename = "figures/beartooth_spring23/brms_amax_cond_nuts_080223.tiff",
+#        width = 17.8,
+#        height = 5,
+#        units = "cm",
+#        dpi = 300)
 
 #### c Quantile results ####
 
@@ -1073,7 +1075,7 @@ View(post_data3)
                          aes(x = m, y = par_f, color = par_f)) +
     geom_linerange(aes(xmin = ll, xmax = hh),
                    size = 2, alpha = 0.5) +
-    geom_point(size = 5) +
+    geom_point(size = 3) +
     vline_at(v = 0) +
     scale_x_continuous(breaks = c(-0.4,-0.2, 0, 0.2)) +
     labs(x = "Posterior Estimates",
@@ -1083,7 +1085,7 @@ View(post_data3)
                                 "b_Dam_binary1" = "Dam")) +
     theme_bw() +
     scale_color_manual(values = c("#4B8FF7", "#233D3F", "#233D3F")) +
-    theme(text = element_text(size = 10),
+    theme(text = element_text(size = 8),
     legend.position = "none"))
 
 ####### Roads #######
@@ -1096,7 +1098,7 @@ View(post_data3)
          y = expression(Q[c]:Q[2~yr])) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 10)))
+    theme(text = element_text(size = 8)))
 
 ####### Dams #######
 
@@ -1110,7 +1112,7 @@ View(post_data3)
     scale_x_discrete(labels = c("5-50%", "100%")) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 10)))
+    theme(text = element_text(size = 8)))
 
 ####### Size #######
 
@@ -1123,7 +1125,7 @@ View(post_data3)
     labs(x = "River Width (m)",
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw() +
-    theme(text = element_text(size = 10)))
+    theme(text = element_text(size = 8)))
 
 ####### Combined #######
 
@@ -1134,10 +1136,11 @@ View(post_data3)
 
 # And export.
 # ggsave(fig_cond_Qc,
-#        filename = "figures/beartooth_spring23/brms_Qc_cond_070623.jpg",
-#        width = 14,
-#        height = 13,
-#        units = "cm")
+#        filename = "figures/beartooth_spring23/brms_Qc_cond_080223.tiff",
+#        width = 12,
+#        height = 10,
+#        units = "cm",
+#        dpi = 300)
 
 #### Table 1 data ####
 

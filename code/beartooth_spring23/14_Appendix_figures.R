@@ -80,10 +80,11 @@ site_lengths <- site_lengths %>%
 
 # And export.
 # ggsave(ts_hist,
-#        filename = "figures/beartooth_spring23/TS_length_hist_051223.jpg",
-#        width = 14,
-#        height = 7,
-#        units = "cm")
+#        filename = "figures/beartooth_spring23/TS_length_hist_080223.tiff",
+#        width = 17.8,
+#        height = 10,
+#        units = "cm",
+#        dpi = 300)
 
 # And calculate median timeseries length for inclusion in methods.
 median(site_lengths$days) # 870
@@ -113,13 +114,13 @@ sites_sf <- st_as_sf(dat_cov,
                      crs = 4326) # projection: WGS84
 # see for more mapping info: https://www.nceas.ucsb.edu/sites/default/files/2020-04/OverviewCoordinateReferenceSystems.pdf
 
-# site map colored by model used
+# site map
 (sitemap <- ggplot(states_sf) + # base plot
     geom_polygon(aes(x = long, y = lat, group = group), 
                  fill = "white", color = "black") + # map of states
     geom_point(data = sites_sf, aes(x = Lon_WGS84, y = Lat_WGS84), 
                fill = "#7AC9B7", shape = 21, 
-               size = 4, alpha = 0.75) + # map of sites
+               size = 3, alpha = 0.75) + # map of sites
     theme_classic() + # remove grid
     labs(x = "Longitude",
          y = "Latitude") +
@@ -128,11 +129,12 @@ sites_sf <- st_as_sf(dat_cov,
 # Checked metadata for max/min lat/lon to be sure no states outside CONUS
 # included in modeling.
 
-ggsave(plot = sitemap,
-       filename = "figures/beartooth_spring23/map_181sites.jpg",
-       width = 20,
-       height = 12,
-       units = "cm")
+# ggsave(plot = sitemap,
+#        filename = "figures/beartooth_spring23/map_181sites_080223.tiff",
+#        width = 17.8,
+#        height = 10,
+#        units = "cm",
+#        dpi = 300)
 
 #### Accrual Appendix Figure ####
 
@@ -183,14 +185,14 @@ ggsave(plot = sitemap,
                    aes(ymin = yield_2.5_ed, ymax = yield_97.5)) +
     scale_y_log10() +
     labs(y = expression(a[max]),
-         x = expression(Mean~Annual~Exceedances~of~Q[c])) +
+         x = expression(Mean~Annual~Q[c]~Exceedances)) +
     theme_bw())
 
 # MAY vs. HUC: 
 (figa5 <- ggplot(dat_amax, aes(x = huc_2, y = yield_med)) +
     geom_boxplot(alpha = 0.6, color = "black", fill = "#6C7A5D") +
     scale_y_log10() +
-    labs(x = expression(Regional~Hydrological~Unit~Code),
+    labs(x = expression(Regional~Hydrologic~Unit~Code),
          y = expression(a[max])) +
     theme_bw())
 
@@ -202,7 +204,7 @@ ggsave(plot = sitemap,
                    color = "#5C694C",
                    aes(ymin = yield_2.5_ed, ymax = yield_97.5)) +
     scale_y_log10() +
-    labs(x = paste0("Mean Water Temperature (", '\u00B0', "C)"),
+    labs(x = paste0("Mean Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
     theme_bw())
 
@@ -283,10 +285,11 @@ ggsave(plot = sitemap,
 
 # And export for use in the appendix.
 # ggsave(fig_yield_med,
-#        filename = "figures/beartooth_spring23/amax_11panel_070523.jpg",
-#        width = 26,
-#        height = 26,
-#        units = "cm") # n = 152
+#        filename = "figures/beartooth_spring23/amax_11panel_080223.tiff",
+#        width = 22,
+#        height = 22,
+#        units = "cm",
+#        dpi = 300) # n = 152
 
 #### Qc Appendix Figure ####
 
@@ -334,7 +337,7 @@ dat_Qc <- dat_Qc %>%
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() +
     scale_y_log10() + 
-    labs(x = expression(Mean~Annual~Exceedances~of~Q[c]),
+    labs(x = expression(Mean~Annual~Q[c]~Exceedances),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
@@ -343,7 +346,7 @@ dat_Qc <- dat_Qc %>%
     geom_boxplot(alpha = 0.6, color = "black", fill = "#38557A") +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_y_log10() +
-    labs(x = expression(Regional~Hydrological~Unit~Code),
+    labs(x = expression(Regional~Hydrologic~Unit~Code),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
@@ -361,7 +364,7 @@ dat_Qc <- dat_Qc %>%
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_y_log10() + 
     scale_x_discrete(labels = c("5-50%", "100%")) +
-    labs(x = expression(Likelihood~of~Influence~by~Dams),
+    labs(x = expression(Likelihood~of~Dam~Influence),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
@@ -398,10 +401,11 @@ dat_Qc <- dat_Qc %>%
 
 # And export for inclusion in SI.
 # ggsave(fig_qcq2_supp,
-#        filename = "figures/beartooth_spring23/QcQ2_7panel_070523.jpg",
-#        width = 26,
-#        height = 20,
-#        units = "cm") # n = 138
+#        filename = "figures/beartooth_spring23/QcQ2_7panel_080223.tiff",
+#        width = 22,
+#        height = 16.5,
+#        units = "cm",
+#        dpi = 300) # n = 138
 
 #### GPP Appendix Figure ####
 
@@ -531,7 +535,8 @@ pred_gpp16 <- lapply(data_16site_gpp,
                                       apply(x, 1, quantile975)))
 
 # Pull out original GPP values used and sequence #s (for plotting)
-orig_gpp_date16 <- lapply(dat_in16, function(x) x %>% select(date, GPP, seq))
+orig_gpp_date16 <- lapply(dat_in16, function(x) x %>% 
+                            dplyr::select(date, GPP, seq))
 
 # Add names to confidence interval lists
 my_names <- c("nwis_01648010", "nwis_02217643", "nwis_03219500", 
@@ -565,7 +570,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Long - Developed - Steady Flow - High Light") +
+         title = "Developed - Steady Flow - High Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5,
@@ -589,7 +594,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Long - Developed - Steady Flow - Low Light") +
+         title = "Developed - Steady Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5, 
@@ -613,7 +618,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Long - Developed - Variable Flow - High Light") +
+         title = "Developed - Variable Flow - High Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -635,7 +640,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Long - Developed - Variable Flow - Low Light") +
+         title = "Developed - Variable Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -657,8 +662,8 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Long - Undeveloped - Steady Flow - High Light") +
-    scale_x_date(date_labels = "%b %Y") +
+         title = "Undeveloped - Steady Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y", date_breaks = "3 years") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -680,7 +685,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Long - Undeveloped - Steady Flow - Low Light") +
+         title = "Undeveloped - Steady Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -702,8 +707,8 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Long - Undeveloped - Variable Flow - High Light") +
-    scale_x_date(date_labels = "%b %Y") +
+         title = "Undeveloped - Variable Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y", date_breaks = "3 years") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -725,7 +730,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Long - Undeveloped - Variable Flow - Low Light") +
+         title = "Undeveloped - Variable Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -747,7 +752,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Short - Developed - Steady Flow - High Light") +
+         title = "Developed - Steady Flow - High Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5, group = seq),
@@ -770,7 +775,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Short - Developed - Steady Flow - Low Light") +
+         title = "Developed - Steady Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -792,7 +797,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Short - Developed - Variable Flow - High Light") +
+         title = "Developed - Variable Flow - High Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5, group = seq),
@@ -815,7 +820,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Short - Developed - Variable Flow - Low Light") +
+         title = "Developed - Variable Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -837,8 +842,8 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Short - Undeveloped - Steady Flow - High Light") +
-    scale_x_date(date_labels = "%b %Y") +
+         title = "Undeveloped - Steady Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y", date_breaks = "1 year") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -860,7 +865,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Short - Undeveloped - Steady Flow - Low Light") +
+         title = "Undeveloped - Steady Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
     #scale_x_break(c(as.Date("2011-01-01"), as.Date("2014-01-01"))) +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
@@ -883,8 +888,8 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Short - Undeveloped - Variable Flow - High Light") +
-    scale_x_date(date_labels = "%b %Y") +
+         title = "Undeveloped - Variable Flow - High Light") +
+    scale_x_date(date_labels = "%b %Y", date_breaks = "2 years") +
     geom_ribbon(aes(ymin = q2.5,
                     ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -906,7 +911,7 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
               color = "#609048", size = 1.2) +
     labs(y = expression('GPP (g '*~O[2]~ m^-2~d^-1*')'),
          x = "Date",
-         title = "Short - Undeveloped - Variable Flow - Low Light") +
+         title = "Undeveloped - Variable Flow - Low Light") +
     scale_x_date(date_labels = "%b %Y") +
     geom_ribbon(aes(ymin = q2.5, ymax = q97.5, group = seq),
                 fill = "#90A860", alpha = 0.3) +
@@ -921,18 +926,29 @@ nRMSE_16site <- mapply(nRMSE_fxn, rmse16, dat_in16)
           axis.text.y = element_text(size=10),
           axis.title.y = element_text(size=10)))
 
-# Combine and export.
-(fig_nRMSE <- gpp_plot16.1 + gpp_plot16.2 + gpp_plot16.3 + gpp_plot16.4 +
+# Combine and export in two figures (since one proved too many panels.
+(fig_nRMSE_long <- gpp_plot16.1 + gpp_plot16.2 + gpp_plot16.3 + gpp_plot16.4 +
     gpp_plot16.5 + gpp_plot16.6 + gpp_plot16.7 + gpp_plot16.8 +
-    gpp_plot16.9 + gpp_plot16.10 + gpp_plot16.11 + gpp_plot16.12 +
+    plot_annotation(tag_levels = 'A') +
+    plot_layout(nrow = 4))
+
+(fig_nRMSE_short <- gpp_plot16.9 + gpp_plot16.10 + gpp_plot16.11 + gpp_plot16.12 +
     gpp_plot16.13 + gpp_plot16.14 + gpp_plot16.15 + gpp_plot16.16 +
     plot_annotation(tag_levels = 'A') +
     plot_layout(nrow = 4))
 
-# ggsave(fig_nRMSE,
-#        filename = "figures/beartooth_spring23/nRMSE_16panel_071123.jpg",
-#        width = 40,
-#        height = 20,
-#        units = "cm")
+# ggsave(fig_nRMSE_long,
+#        filename = "figures/beartooth_spring23/nRMSE1_8panel_080223.tiff",
+#        width = 17.8,
+#        height = 22.5,
+#        units = "cm",
+#        dpi = 300)
+
+# ggsave(fig_nRMSE_short,
+#        filename = "figures/beartooth_spring23/nRMSE2_8panel_080223.tiff",
+#        width = 17.8,
+#        height = 22.5,
+#        units = "cm",
+#        dpi = 300)
 
 # End of script.
