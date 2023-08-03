@@ -376,9 +376,9 @@ View(post_data)
                                 "b_meanTemp" = "Temperature",
                                 "b_exc_y" = "Exceedances")) +
     theme_bw() +
-    scale_color_manual(values = c("#4B8FF7", "#233D3F", "#233D3F", 
-                                           "#4B8FF7", "#233D3F")) +
-    theme(text = element_text(size = 8),
+    scale_color_manual(values = c("#4B8FF7", "#F29F05", "#F29F05", 
+                                           "#4B8FF7", "#F29F05")) +
+    theme(text = element_text(size = 10),
           legend.position = "none"))
 
 # Can also use pars = c("^r_", "^b_", "^sd_") in place of variable phrasing
@@ -437,16 +437,16 @@ ad_descaled_data <- as.data.frame(t(t(ad_select) * scale + center)) %>%
 
 # And plot all lines with original data points.
 (plot_ad <- ggplot(ad_descaled_data, aes(x = Dam_binary, y = 10^log_yield)) +
-    geom_point(size = 5, shape = 15, alpha = 0.2,  color = "#233D3F") +
+    geom_point(size = 5, shape = 15, alpha = 0.2,  color = "#F29F05") +
     geom_jitter(data = dat_amax %>%
                   drop_na(Dam_binary), aes(x = Dam_binary, y = 10^log_yield),
-                size = 3, alpha = 0.3, width = 0.1, color = "#233D3F") +
-    labs(x = "Likelihood of Dam Interference",
+                size = 3, alpha = 0.3, width = 0.1, color = "#F29F05") +
+    labs(x = "Likelihood of Dams",
          y = expression(a[max])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 8)))
+    theme(text = element_text(size = 10)))
 
 ###### Temperature ######
 
@@ -456,23 +456,23 @@ ad_descaled_data <- as.data.frame(t(t(ad_select) * scale + center)) %>%
     # Plot original unscaled data.
     geom_point(size = 3, alpha = 0.4, color = "#4B8FF7") +
     # And label things correctly.
-    labs(x = paste0("Mean Temperature (", '\u00B0', "C)"),
+    labs(x = paste0("Temperature (", '\u00B0', "C)"),
          y = expression(a[max])) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 8)))
+    theme(text = element_text(size = 10)))
 
 ###### Roads ######
 
 # not plotting a spaghetti plot since there is no effect of roads on accrual 
 
 (plot_ard <- ggplot(dat_amax, aes(x = NHD_RdDensWs, y = 10^log_yield)) +
-    geom_point(size = 3, alpha = 0.3, color = "#233D3F") +
+    geom_point(size = 3, alpha = 0.3, color = "#F29F05") +
     scale_y_log10()+
     labs(x = expression(Road~Density~(km/km^2)),
          y = expression(a[max])) +
     theme_bw() +
-    theme(text = element_text(size = 8)))
+    theme(text = element_text(size = 10)))
 
 ###### Exceedances ######
 
@@ -503,14 +503,15 @@ ae_descaled_data <- as.data.frame(t(t(ae_select) * scale + center)) %>%
 
 # And plot all lines with original data points.
 (plot_ae <- ggplot(ae_descaled_data, aes(x = exc_y, y = 10^log_yield)) +
-    geom_line(aes(y = 10^log_yield, group = draw), alpha = 0.2, color = "#233D3F") +
+    geom_line(aes(y = 10^log_yield, group = draw), 
+              alpha = 0.2, color = "#F29F05") +
     geom_point(data = dat_amax, aes(x = exc_y, y = 10^log_yield),
-               size = 3, alpha = 0.3, color = "#233D3F") +
+               size = 3, alpha = 0.3, color = "#F29F05") +
     scale_y_log10() +
-    labs(x = expression(Mean~Annual~Q[c]~Exceedances),
+    labs(x = expression(Annual~Q[c]~Exceedances),
          y = expression(a[max])) +
     theme_bw() +
-    theme(text = element_text(size = 8)))
+    theme(text = element_text(size = 10)))
 
 ###### Width ######
 
@@ -548,7 +549,7 @@ aw_descaled_data <- as.data.frame(t(t(aw_select) * scale + center)) %>%
     labs(x = "River Width (m)",
          y = expression(a[max])) +
     theme_bw() +
-    theme(text = element_text(size = 8)))
+    theme(text = element_text(size = 10)))
 
 ###### Combined ######
 
@@ -559,7 +560,7 @@ aw_descaled_data <- as.data.frame(t(t(aw_select) * scale + center)) %>%
 
 # And export.
 # ggsave(fig_cond_amax,
-#        filename = "figures/beartooth_spring23/brms_amax_cond_080223.tiff",
+#        filename = "figures/beartooth_spring23/brms_amax_cond_080323.tiff",
 #        width = 17.8,
 #        height = 10,
 #        units = "cm",
@@ -730,9 +731,9 @@ View(post_data2)
                                 "b_no3_log" = "Nitrate",
                                 "b_p_log" = "Phosphorus")) +
     theme_bw() +
-    scale_color_manual(values = c("#4B8FF7", "#4B8FF7", "#233D3F", "#4B8FF7",
-                                  "#4B8FF7", "#233D3F", "#233D3F")) +
-    theme(text = element_text(size = 8),
+    scale_color_manual(values = c("#4B8FF7", "#4B8FF7", "#F29F05", "#4B8FF7",
+                                  "#4B8FF7", "#F29F05", "#F29F05")) +
+    theme(text = element_text(size = 10),
     legend.position = "none"))
 
 ###### Nitrate #######
@@ -741,12 +742,12 @@ View(post_data2)
 
 (plot_a2n <- ggplot(dat_amax, aes(x = 10^no3_log, y = 10^log_yield)) +
     geom_point(size = 3, alpha = 0.4, color = "#4B8FF7") +
-    labs(x = expression(Mean~Nitrate~(mg/L~NO[3]-N)),
+    labs(x = expression(Nitrate~(mg/L~NO[3]-N)),
          y = expression(a[max])) +
     scale_y_log10() +
     scale_x_log10() +
     theme_bw() +
-    theme(text = element_text(size = 8)))
+    theme(text = element_text(size = 10)))
 
 ####### Phosphorus #######
 
@@ -754,12 +755,12 @@ View(post_data2)
 
 (plot_a2p <- ggplot(dat_amax, aes(x = 10^p_log, y = 10^log_yield)) +
     geom_point(size = 3, alpha = 0.4, color = "#4B8FF7") +
-    labs(x = expression(Mean~Phosphorus~(mg/L~P)),
+    labs(x = expression(Phosphorus~(mg/L~P)),
          y = expression(a[max])) +
     scale_y_log10() +
     scale_x_log10() +
     theme_bw() +
-    theme(text = element_text(size = 8)))
+    theme(text = element_text(size = 10)))
 
 ####### Combined #######
 
@@ -769,7 +770,7 @@ View(post_data2)
 
 # And export.
 # ggsave(fig_cond_amax_nuts,
-#        filename = "figures/beartooth_spring23/brms_amax_cond_nuts_080223.tiff",
+#        filename = "figures/beartooth_spring23/brms_amax_cond_nuts_080323.tiff",
 #        width = 17.8,
 #        height = 5,
 #        units = "cm",
@@ -1084,8 +1085,8 @@ View(post_data3)
                                 "b_NHD_RdDensWs" = "Roads",
                                 "b_Dam_binary1" = "Dam")) +
     theme_bw() +
-    scale_color_manual(values = c("#4B8FF7", "#233D3F", "#233D3F")) +
-    theme(text = element_text(size = 8),
+    scale_color_manual(values = c("#4B8FF7", "#F29F05", "#F29F05")) +
+    theme(text = element_text(size = 10),
     legend.position = "none"))
 
 ####### Roads #######
@@ -1093,12 +1094,12 @@ View(post_data3)
 # not plotting a spaghetti plot since there is no effect of roads on Qc 
 
 (plot_qr <- ggplot(dat_Qc, aes(x = NHD_RdDensWs, y = 10^logQcQ2)) +
-    geom_point(size = 3, alpha = 0.3, color = "#233D3F") +
+    geom_point(size = 3, alpha = 0.3, color = "#F29F05") +
     labs(x = expression(Road~Density~(km/km^2)),
          y = expression(Q[c]:Q[2~yr])) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 8)))
+    theme(text = element_text(size = 10)))
 
 ####### Dams #######
 
@@ -1106,13 +1107,13 @@ View(post_data3)
 
 (plot_qd <- ggplot(dat_Qc %>%
                      drop_na(Dam_binary), aes(x = Dam_binary, y = 10^logQcQ2)) +
-    geom_jitter(size = 3, alpha = 0.3, width = 0.1, color = "#233D3F") +
-    labs(x = "Likelihood of Dam Interference",
+    geom_jitter(size = 3, alpha = 0.3, width = 0.1, color = "#F29F05") +
+    labs(x = "Likelihood of Dams",
          y = expression(Q[c]:Q[2~yr])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
     scale_y_log10() +
     theme_bw() +
-    theme(text = element_text(size = 8)))
+    theme(text = element_text(size = 10)))
 
 ####### Size #######
 
@@ -1125,7 +1126,7 @@ View(post_data3)
     labs(x = "River Width (m)",
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw() +
-    theme(text = element_text(size = 8)))
+    theme(text = element_text(size = 10)))
 
 ####### Combined #######
 
@@ -1136,7 +1137,7 @@ View(post_data3)
 
 # And export.
 # ggsave(fig_cond_Qc,
-#        filename = "figures/beartooth_spring23/brms_Qc_cond_080223.tiff",
+#        filename = "figures/beartooth_spring23/brms_Qc_cond_080323.tiff",
 #        width = 12,
 #        height = 10,
 #        units = "cm",
