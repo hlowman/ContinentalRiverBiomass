@@ -436,11 +436,12 @@ ad_descaled_data <- as.data.frame(t(t(ad_select) * scale + center)) %>%
   mutate(draw = a_d$`.draw`) # Add draws back in.
 
 # And plot all lines with original data points.
-(plot_ad <- ggplot(ad_descaled_data, aes(x = Dam_binary, y = 10^log_yield)) +
-    geom_point(size = 5, shape = 15, alpha = 0.2,  color = "#F29F05") +
-    geom_jitter(data = dat_amax %>%
-                  drop_na(Dam_binary), aes(x = Dam_binary, y = 10^log_yield),
-                size = 3, alpha = 0.3, width = 0.1, color = "#F29F05") +
+(plot_ad <- ggplot(data = dat_amax %>%
+                  drop_na(Dam_binary),
+                  aes(x = Dam_binary, y = 10^log_yield)) +
+    geom_jitter(size = 3, alpha = 0.3, width = 0.1, color = "#F29F05") +
+    geom_point(data = ad_descaled_data, size = 5, shape = 15, 
+               alpha = 0.2,  color = "#D46F10") +
     labs(x = "Likelihood of Dams",
          y = expression(a[max])) +
     scale_x_discrete(labels = c("5-50%", "100%")) +
@@ -502,11 +503,10 @@ ae_descaled_data <- as.data.frame(t(t(ae_select) * scale + center)) %>%
   mutate(draw = a_e$`.draw`) # Add draws back in.
 
 # And plot all lines with original data points.
-(plot_ae <- ggplot(ae_descaled_data, aes(x = exc_y, y = 10^log_yield)) +
-    geom_line(aes(y = 10^log_yield, group = draw), 
-              alpha = 0.2, color = "#F29F05") +
-    geom_point(data = dat_amax, aes(x = exc_y, y = 10^log_yield),
-               size = 3, alpha = 0.3, color = "#F29F05") +
+(plot_ae <- ggplot(data = dat_amax, aes(x = exc_y, y = 10^log_yield)) +
+    geom_point(size = 3, alpha = 0.3, color = "#F29F05") +
+    geom_line(data = ae_descaled_data, aes(group = draw), 
+              alpha = 0.2, color = "#D46F10") +
     scale_y_log10() +
     labs(x = expression(Annual~Q[c]~Exceedances),
          y = expression(a[max])) +
@@ -540,10 +540,10 @@ aw_descaled_data <- as.data.frame(t(t(aw_select) * scale + center)) %>%
   mutate(draw = a_w$`.draw`) # Add draws back in.
 
 # And plot all lines with original data points.
-(plot_aw <- ggplot(aw_descaled_data, aes(x = 10^log_width, y = 10^log_yield)) +
-    geom_line(aes(y = 10^log_yield, group = draw), alpha = 0.2, color = "#4B8FF7") +
-    geom_point(data = dat_amax, aes(x = 10^log_width, y = 10^log_yield),
-               size = 3, alpha = 0.4, color = "#4B8FF7") +
+(plot_aw <- ggplot(data = dat_amax, aes(x = 10^log_width, y = 10^log_yield)) +
+    geom_point(size = 3, alpha = 0.4, color = "#4B8FF7") +
+    geom_line(data = aw_descaled_data, 
+              aes(group = draw), alpha = 0.2, color = "#5A7ECB") +
     scale_y_log10() +
     scale_x_log10() +
     labs(x = "River Width (m)",
@@ -560,7 +560,7 @@ aw_descaled_data <- as.data.frame(t(t(aw_select) * scale + center)) %>%
 
 # And export.
 # ggsave(fig_cond_amax,
-#        filename = "figures/beartooth_spring23/brms_amax_cond_080323.tiff",
+#        filename = "figures/beartooth_spring23/brms_amax_cond_081623.tiff",
 #        width = 17.8,
 #        height = 10,
 #        units = "cm",
