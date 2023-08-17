@@ -769,4 +769,23 @@ dat_out_storm6 <- dat_out_df %>%
 #        height = 16,
 #        units = "cm")
 
+# Also, performing a regression on c and s values to summarize how many
+# sites display co-variance/potential for equifinality issues and adding
+# this language to the Results section briefly.
+
+# Take list containing all iterations of parameters and make into a df.
+dat_out_df <- map_df(dat_out, ~as.data.frame(.x), .id="site_name")
+
+dat_out_lnfits <- dat_out_df %>%
+  group_by(site_name) %>%
+  # fit exponential regression for each site
+  #and extract only r-squared values
+  summarize(lnfit_r2 = summary(lm(log(c) ~ s))$r.squared) %>%
+  ungroup()
+
+hist(dat_out_lnfits$lnfit_r2)
+
+under_0.4_lnfits <- dat_out_lnfits %>%
+  filter(lnfit_r2 < 0.4) # 149 of 181 have an R^2 less than 0.4
+
 # End of script.

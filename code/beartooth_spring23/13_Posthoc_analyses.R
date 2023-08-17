@@ -851,7 +851,7 @@ dat_Qc <- dat_Qc %>%
 
 # Number of sites with Qc_Q2yr < 1
 under <- dat_Qc %>%
-  filter(Qc_Q2yr < 1)
+  filter(Qc_Q2yr < 1) # 102 of 138 have a Qc_Q2yr less than 1
 
 hist(dat_Qc$Qc_Q2yr)
 
