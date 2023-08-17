@@ -311,8 +311,11 @@ dat_in1df <- dat_in %>%
 
 dat_in1 <- split(dat_in1df, dat_in1df$site_name)
 
-# Re-simulating using all output iterations. Started ~1:28, Ended ~4:05
+# Re-simulating using all output iterations. Started ~1:10, Ended ~??
 Ricker_sim1 <- Ricker_sim_fxn(dat_out1df, dat_in1df)
+
+# Exporting to save progress.
+# saveRDS(Ricker_sim1, "data_working/Ricker_sim_1site_081623.rds")
 
 # And for each day, I would like to calculate 2.5%, 50%, and 97.5%tiles.
 
@@ -382,6 +385,8 @@ nRMSE_1site <- mapply(nRMSE_fxn, rmse1, dat_in1)
                              filter(date < ymd(as.character("2008-12-31"))), 
                            aes(date, Q)) +
     geom_line(color = "#5792CC", linewidth = 1.2) +
+    geom_hline(yintercept = 41.6, size = 1) +
+    geom_hline(yintercept = 28.8, size = 1, linetype = "dashed") +
     labs(y = expression('Discharge ('*m^3~s^-1*')'),
          x = "Date") +
     scale_x_date(date_labels = "%b %Y", date_breaks = "3 months") +
@@ -419,6 +424,8 @@ nRMSE_1site <- mapply(nRMSE_fxn, rmse1, dat_in1)
                                filter(date > ymd(as.character("2009-12-31"))), 
                              aes(date, Q)) +
     geom_line(color = "#5792CC", linewidth = 1.2) +
+    geom_hline(yintercept = 41.6, size = 1) +
+    geom_hline(yintercept = 28.8, size = 1, linetype = "dashed") +
     labs(y = expression('Discharge ('*m^3~s^-1*')'),
          x = "Date") +
     scale_x_date(date_labels = "%b %Y", date_breaks = "3 months") +
@@ -439,7 +446,7 @@ nRMSE_1site <- mapply(nRMSE_fxn, rmse1, dat_in1)
 
 # And export.
 # ggsave(fig_SFIR,
-#        filename = "figures/beartooth_spring23/predGPP_SForkIowa_071023.jpg",
+#        filename = "figures/beartooth_spring23/predGPP_SForkIowa_081723.jpg",
 #        width = 30,
 #        height = 15,
 #        units = "cm")
