@@ -225,7 +225,7 @@ sites_sf <- st_as_sf(dat_cov,
          y = expression(a[max])) +
     theme_bw())
 
-# MAY vs. stream width:
+# MAY vs. river width:
 (figa8 <- ggplot(dat_amax, aes(x = width_med, y = yield_med)) +
     geom_point(alpha = 0.8, size = 3, color = "#454F34") +
     geom_linerange(alpha = 0.8, 
@@ -233,7 +233,7 @@ sites_sf <- st_as_sf(dat_cov,
                    aes(ymin = yield_2.5_ed, ymax = yield_97.5)) +
     scale_x_log10() + 
     scale_y_log10() +
-    labs(x = expression(Stream~Width~(m)),
+    labs(x = expression(River~Width~(m)),
          y = expression(a[max])) +
     theme_bw())
 
@@ -285,7 +285,7 @@ sites_sf <- st_as_sf(dat_cov,
 
 # And export for use in the appendix.
 # ggsave(fig_yield_med,
-#        filename = "figures/beartooth_spring23/amax_11panel_080223.tiff",
+#        filename = "figures/beartooth_spring23/amax_11panel_081723.tiff",
 #        width = 22,
 #        height = 22,
 #        units = "cm",
@@ -350,7 +350,7 @@ dat_Qc <- dat_Qc %>%
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
-# Effect of Dams
+# Effect of Dams vs. Qc:Q2
 (figq5 <- ggplot(dat_Qc %>%
                        # Creating the new categorical dam column we modeled by.
                        mutate(Dam_binary = factor(case_when(
@@ -368,7 +368,7 @@ dat_Qc <- dat_Qc %>%
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
-# Stream Width vs. c: note, x axis LOG SCALED
+# River Width vs. Qc:Q2: note, x axis LOG SCALED
 (figq6 <- ggplot(dat_Qc, aes(x = width_med, y = Qc_Q2yr)) +
     geom_point(alpha = 0.6, size = 3, color = "#1E2F46") +
     geom_linerange(alpha = 0.8, 
@@ -377,11 +377,11 @@ dat_Qc <- dat_Qc %>%
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_x_log10() + 
     scale_y_log10() + 
-    labs(x = expression(Stream~Width~(m)),
+    labs(x = expression(River~Width~(m)),
          y = expression(Q[c]:Q[2~yr])) +
     theme_bw())
 
-# Road density in the watershed
+# Road density in the watershed vs. Qc:Q2
 (figq7 <- ggplot(dat_Qc, aes(x = NHD_RdDensWs, y = Qc_Q2yr)) +
     geom_point(alpha = 0.6, size = 3, color = "#304969") +
     geom_linerange(alpha = 0.8, 
@@ -401,7 +401,7 @@ dat_Qc <- dat_Qc %>%
 
 # And export for inclusion in SI.
 # ggsave(fig_qcq2_supp,
-#        filename = "figures/beartooth_spring23/QcQ2_7panel_080223.tiff",
+#        filename = "figures/beartooth_spring23/QcQ2_7panel_081723.tiff",
 #        width = 22,
 #        height = 16.5,
 #        units = "cm",
