@@ -27,11 +27,10 @@
 
 # Load necessary packages.
 lapply(c("tidybayes", "brms", "tidyverse", "lubridate", 
-         "data.table", "GGally", "plotly",
-         "multcomp", "patchwork", "bayesplot",
-         "modelsummary", "here", "nlme","loo","parallel",
-         "tidyverse","rstan","devtools",
-         "bayesplot","shinystan"), 
+         "data.table", "GGally", "plotly", "bayesplot",
+         "multcomp", "patchwork", "bayesplot", "shinystan",
+         "modelsummary", "here", "nlme", "loo", "parallel",
+         "tidyverse", "rstan", "devtools"), 
        require, character.only=T)
 
 #### Data ####
@@ -541,6 +540,232 @@ dat_r_Qc_plus <- left_join(dat_Qc, dat_amax %>% dplyr::select(site_name, yield_m
 
 # Note, the revised version of the Supplementary figure displaying predicted 
 # GPP at multiple sites can be found in the "14_Appendix_figures.R" script.
+
+##### Effects of Variation in TS Length #####
+
+# For consistency, I will aim to use sites included in the Appendix Figure.
+
+# First, I will investigate which of those sites have the longest records,
+# and select 3.
+
+my16sites <- c("nwis_13213000", "nwis_05435950", "nwis_03219500", 
+               "nwis_01648010", "nwis_04137500", "nwis_14211010", 
+               "nwis_07109500", "nwis_11044000", "nwis_05057200", 
+               "nwis_12102075", "nwis_05451210", "nwis_06893970",
+               "nwis_08447300", "nwis_02217643", "nwis_04059500", 
+               "nwis_03538830")
+
+dat_in16 <- dat_in %>%
+  filter(site_name %in% my16sites)
+
+dat_in16_days <- dat_in16 %>%
+  group_by(site_name) %>%
+  summarize(ndays = n()) %>%
+  ungroup()
+
+# These sites appear to be good candidates for the TS length analysis:
+# nwis_04137500 - 2788 days or ~ 7.6 years
+# nwis_07109500 - 2376 days or ~ 6.5 years
+# nwis_14211010 - 1603 days or ~ 4.4 years
+
+# Select these three sites and then further split them into 5 timeframes each:
+# 3 months, 6 months, 1 year, 2 years, and 4 years of data
+# to compare parameter estimates when full timeseries is used.
+
+###### nwis_04137500 ######
+
+dat_in_04137500 <- dat_in %>%
+  filter(site_name == "nwis_04137500")
+
+# select random indexes (to the nearest day) of timeframes to sample
+# with max values being based on the end of the data length
+mo3 <- round(runif(1, min=1, max=2698)) # 1936
+mo6 <- round(runif(1, min=1, max=2608)) # 1034
+yr1 <- round(runif(1, min=1, max=2423)) # 1393
+yr2 <- round(runif(1, min=1, max=2058)) # 668
+yr4 <- round(runif(1, min=1, max=1328)) # 584
+
+# select data according to these random indices
+# and add new columns for relative L and Q
+dat_in_04137500_mo3 <- dat_in_04137500[mo3:(mo3+90),] %>% 
+  mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+         Q_rel = Q/max(Q, na.rm = TRUE),
+         sample = "3 months")
+dat_in_04137500_mo6 <- dat_in_04137500[mo6:(mo6+180),] %>% 
+  mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+         Q_rel = Q/max(Q, na.rm = TRUE),
+         sample = "6 months")
+dat_in_04137500_yr1 <- dat_in_04137500[yr1:(yr1+365),] %>% 
+  mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+         Q_rel = Q/max(Q, na.rm = TRUE),
+         sample = "1 year")
+dat_in_04137500_yr2 <- dat_in_04137500[yr2:(yr2+730),] %>% 
+  mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+         Q_rel = Q/max(Q, na.rm = TRUE),
+         sample = "2 years")
+dat_in_04137500_yr4 <- dat_in_04137500[yr4:(yr4+1460),] %>% 
+  mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+         Q_rel = Q/max(Q, na.rm = TRUE),
+         sample = "4 years")
+
+# join into a single dataframe
+dat_in3 <- rbind(dat_in_04137500_mo3, dat_in_04137500_mo6)
+dat_in3 <- rbind(dat_in3, dat_in_04137500_yr1)
+dat_in3 <- rbind(dat_in3, dat_in_04137500_yr2)
+dat_in3 <- rbind(dat_in3, dat_in_04137500_yr4)
+
+# Split into a list by ID
+l3 <- split(dat_in3, dat_in3$sample)
+
+# Export dataset for future use.
+saveRDS(l3, "data_working/list_1site_5ts_Qmaxnorm_SavoySL.rds")
+
+# Rename source data
+df <- l3
+
+# Stan data prep
+rstan_options(auto_write=TRUE)
+# Specify number of cores
+options(mc.cores=6)
+
+# Compile necessary data
+stan_data_compile <- function(x){
+  data <- list(Ndays=length(x$GPP), # number of days/records
+               light = x$light_rel, # relativized light (to maximum light)
+               GPP = x$GPP,         # GPP estimates
+               GPP_sd = x$GPP_sd,   # standard deviation of GPP estimates
+               tQ = x$Q_rel,        # relativized discharge (to maximum Q)
+               new_e = x$new_e)     # instances of re-initialization needed
+  
+  return(data)
+}
+
+stan_data_l <- lapply(df, function(x) stan_data_compile(x))
+
+# Latent Biomass (Ricker population) Model
+# sets initial values to help chains converge
+init_Ricker <- function(...) {
+  list(r = 0.2, lambda = -0.03, c = 0.5, s = 1.5) # values to match priors
+}
+
+## export results - started at 11:15am
+PM_outputlist_Ricker <- lapply(stan_data_l,
+                               function(x) stan("code/beartooth_spring23/Stan_ProductivityModel.stan",
+                                                data = x, 
+                                                chains = 3,
+                                                iter = 5000,
+                                                init = init_Ricker,
+                                                control = list(max_treedepth = 12)))
+
+# saveRDS(PM_outputlist_Ricker, "data_pinyon/pinyon_1river_5ts_output_2023_09_30.rds")
+
+# Going to create a function to pull out all iterations.
+extract_params <- function(df){
+  rstan::extract(df, c("r", "lambda", "c", "s"))
+}
+
+data_out_04137500 <- map(PM_outputlist_Ricker, extract_params)
+
+# Save this out too
+# saveRDS(data_out_04137500,
+#        file = "data_working/pinyon_1river_5ts_params_all_iterations_093023.rds")
+
+# And now use a new function to calculate median and 95%tiles.
+# Obtain summary statistics using new "extract_summary" function.
+# Note, this pulls diagnostics for site-level parameters.
+extract_summary <- function(x){
+  df <- x
+  df1 <- summary(df,
+                 pars = c("r", "lambda", "c", "s"),
+                 probs = c(0.025, 0.5, 0.975))$summary
+  as.data.frame(df1) %>% rownames_to_column("parameter")
+}
+
+# And now map this to the output list. 
+data_out_04137500_diags <- map(PM_outputlist_Ricker, extract_summary)
+
+# Save this out too
+# saveRDS(data_out_04137500_diags,
+#        file = "data_working/pinyon_1river_5ts_params_diags_093023.rds")
+
+# Take list above and make into a df.
+data_out_04137500_c <- map_df(data_out_04137500_diags, 
+                                     ~as.data.frame(.x), .id="sample") %>%
+  # and for now, I'm going to focus solely on "r" and "c" values
+  filter(parameter %in% c("c")) %>%
+  # and rename to match the other dataset
+  rename(c_med = `50%`)
+
+# Filter the larger dataset that includes values from the same site.
+dat_out_04137500_orig_c <- dat_Qc_all %>%
+  filter(site_name == "nwis_04137500")
+
+# Join the two datasets.
+dat_out_04137500_orig_c$sample <- "7.5 years"
+
+dat_c_both <- full_join(dat_out_04137500_orig_c, data_out_04137500_c) %>%
+  # make norm a factor %>%
+  mutate(sample = factor(sample, levels = c("3 months", "6 months",
+                                            "1 year", "2 years", "4 years",
+                                            "7.5 years"))) %>%
+  # add names for plotting
+  mutate(run = factor(case_when(sample == "7.5 years" ~ "Original",
+                                TRUE ~ "Resample"),
+                       levels = c("Resample", "Original")))
+
+(fig_c <- ggplot(dat_c_both, aes(x = c_med, y = sample, color = run)) +
+    geom_point(size = 5, alpha = 0.75, position = position_dodge(width = -0.5)) +
+    geom_errorbarh(aes(xmin = `2.5%`, 
+                       xmax = `97.5%`), 
+                   height = 0.25,
+                   position = position_dodge(width = -0.5)) +
+    labs(y = "Length of Time Series", x = "c", color = "Run") +
+    scale_color_manual(values = c("grey", "black")) +
+    theme_bw())
+
+# Take list above and make into a df.
+data_out_04137500_r <- map_df(data_out_04137500_diags, 
+                              ~as.data.frame(.x), .id="sample") %>%
+  filter(parameter %in% c("r")) %>%
+  rename(r_med = `50%`)
+
+# Filter the larger dataset that includes values from the same site.
+dat_out_04137500_orig_r <- dat_amax %>%
+  filter(site_name == "nwis_04137500")
+
+# Join the two datasets.
+dat_out_04137500_orig_r$sample <- "7.5 years"
+
+dat_r_both <- full_join(dat_out_04137500_orig_r, data_out_04137500_r) %>%
+  # make norm a factor %>%
+  mutate(sample = factor(sample, levels = c("3 months", "6 months",
+                                            "1 year", "2 years", "4 years",
+                                            "7.5 years"))) %>%
+  # add names for plotting
+  mutate(run = factor(case_when(sample == "7.5 years" ~ "Original",
+                                TRUE ~ "Resample"),
+                      levels = c("Resample", "Original")))
+
+(fig_r <- ggplot(dat_r_both, aes(x = r_med, y = sample, color = run)) +
+    geom_point(size = 5, alpha = 0.75, position = position_dodge(width = -0.5)) +
+    geom_errorbarh(aes(xmin = `2.5%`, 
+                       xmax = `97.5%`), 
+                   height = 0.25,
+                   position = position_dodge(width = -0.5)) +
+    labs(y = "Length of Time Series", x = "r", color = "Run") +
+    scale_color_manual(values = c("grey", "black")) +
+    theme_bw() +
+    theme(legend.position = "none"))
+
+# Combine into a single figure.
+(fig_r_and_c <- fig_r + fig_c)
+
+# And export.
+# ggsave(fig_r_and_c,
+#        filename = "figures/beartooth_spring23/r_and_c_ts_length_04137500_fig.jpg",
+#        width = 20,
+#        height = 10,
+#        units = "cm")
 
 #### Reviewer 2 ####
 
