@@ -252,10 +252,14 @@ dat_amax_brms <- rownames_to_column(as.data.frame(dat_amax_brms1_scaled),
 dat_amax_Dam_HUC <- dat_amax %>%
   dplyr::select(site_name, Dam_binary, huc_2)
 
-dat_amax_brms <- left_join(dat_amax_brms, dat_amax_Dam_HUC) %>%
+dat_amax_brms <- full_join(dat_amax_brms, dat_amax_Dam_HUC) %>%
   dplyr::select(log_yield, meanTemp, NHD_RdDensWs, 
-                Dam_binary, log_width, exc_y, huc_2) %>%
+                Dam_binary, log_width, exc_y, huc_2,
+                site_name) %>%
   mutate(huc_2 = factor(huc_2))
+
+# Export this dataset for use in supplementary figure creation/reviewer responses.
+# saveRDS(dat_amax_brms, "data_posthoc_modelfits/accrual_datin_100323.rds")
 
 ##### Step 1: Create multi-level model.
 
@@ -977,8 +981,12 @@ dat_Qc_Dam_HUC <- dat_Qc %>%
 
 dat_Qc_brms <- left_join(dat_Qc_brms, dat_Qc_Dam_HUC) %>%
   dplyr::select(logQcQ2, NHD_RdDensWs, 
-                Dam_binary, log_width, huc_2) %>%
+                Dam_binary, log_width, huc_2,
+                site_name) %>%
   mutate(huc_2 = factor(huc_2))
+
+# Export this dataset for use in supplementary figure creation/reviewer responses.
+# saveRDS(dat_Qc_brms, "data_posthoc_modelfits/qc_datin_100323.rds")
 
 ##### Step 1: Create multi-level model.
 
