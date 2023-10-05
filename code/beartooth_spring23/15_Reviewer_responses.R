@@ -740,81 +740,114 @@ mcmc_plot(q1_ts)
 
 # For consistency, I will aim to use sites included in the Appendix Figure.
 
-# First, I will investigate which of those sites have the longest records,
-# and select 3.
+# First, I will investigate which of the sites have the longest records and
+# pass both amax and c filtering steps.
+dat_long <- left_join(dat_Qc, ts_lengths)
 
-my16sites <- c("nwis_13213000", "nwis_05435950", "nwis_03219500", 
-               "nwis_01648010", "nwis_04137500", "nwis_14211010", 
-               "nwis_07109500", "nwis_11044000", "nwis_05057200", 
-               "nwis_12102075", "nwis_05451210", "nwis_06893970",
-               "nwis_08447300", "nwis_02217643", "nwis_04059500", 
-               "nwis_03538830")
+# And create a list of these site names.
+dat_long10 <- dat_long %>%
+  filter(days > 2320)
 
-dat_in16 <- dat_in %>%
-  filter(site_name %in% my16sites)
+my10sites <- dat_long10$site_name
 
-dat_in16_days <- dat_in16 %>%
-  group_by(site_name) %>%
-  summarize(ndays = n()) %>%
-  ungroup()
-
-# These sites appear to be good candidates for the TS length analysis:
-# nwis_04137500 - 2788 days or ~ 7.6 years
-# nwis_07109500 - 2376 days or ~ 6.5 years
-# nwis_14211010 - 1603 days or ~ 4.4 years
-
-# Select these three sites and then further split them into 5 timeframes each:
-# 3 months, 6 months, 1 year, 2 years, and 4 years of data
+# Select these ten sites and then further split them into 5 timeframes each:
+# 6 months, 9 months, 1 year, 2 years, and 4 years of data
 # to compare parameter estimates when full timeseries is used.
 
-dat_in_04137500 <- dat_in %>%
-  filter(site_name == "nwis_04137500")
+dat_in_10 <- dat_in %>%
+  filter(site_name %in% my10sites)
 
-# select random indexes (to the nearest day) of timeframes to sample
-# with max values being based on the end of the data length
-mo3 <- round(runif(1, min=1, max=2698)) # 1936
-mo6 <- round(runif(1, min=1, max=2608)) # 1034
-yr1 <- round(runif(1, min=1, max=2423)) # 1393
-yr2 <- round(runif(1, min=1, max=2058)) # 668
-yr4 <- round(runif(1, min=1, max=1328)) # 584
+# And join with ts_length.
+dat_in_10 <- left_join(dat_in_10, ts_lengths)
 
-# select data according to these random indices
-# and add new columns for relative L and Q
-dat_in_04137500_mo3 <- dat_in_04137500[mo3:(mo3+90),] %>% 
-  mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
-         Q_rel = Q/max(Q, na.rm = TRUE),
-         sample = "3 months")
-dat_in_04137500_mo6 <- dat_in_04137500[mo6:(mo6+180),] %>% 
+# Function for re-sampling
+resample5 <- function(dat){
+  
+  # dat referring to input data from a single site
+  ts_length <- dat$days[1]
+  
+  # select random indexes (to the nearest day) of timeframes to sample
+  # with max values being based on the end of the data length
+  mo6 <- round(runif(1, min=1, max=ts_length - 180)) 
+  mo9 <- round(runif(1, min=1, max=ts_length - 270)) 
+  yr1 <- round(runif(1, min=1, max=ts_length - 365)) 
+  yr2 <- round(runif(1, min=1, max=ts_length - 730)) 
+  yr4 <- round(runif(1, min=1, max=ts_length - 1460)) 
+
+  # select data according to these randomly selected indices
+  # and add new columns for relative L and Q
+  dat_mo6 <- dat[mo6:(mo6+180),] %>% 
   mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
          Q_rel = Q/max(Q, na.rm = TRUE),
          sample = "6 months")
-dat_in_04137500_yr1 <- dat_in_04137500[yr1:(yr1+365),] %>% 
+
+  dat_mo9 <- dat[mo9:(mo9+270),] %>% 
+  mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+         Q_rel = Q/max(Q, na.rm = TRUE),
+         sample = "9 months")
+
+  dat_yr1 <- dat[yr1:(yr1+365),] %>% 
   mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
          Q_rel = Q/max(Q, na.rm = TRUE),
          sample = "1 year")
-dat_in_04137500_yr2 <- dat_in_04137500[yr2:(yr2+730),] %>% 
+
+  dat_yr2 <- dat[yr2:(yr2+730),] %>% 
   mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
          Q_rel = Q/max(Q, na.rm = TRUE),
          sample = "2 years")
-dat_in_04137500_yr4 <- dat_in_04137500[yr4:(yr4+1460),] %>% 
+
+  dat_yr4 <- dat[yr4:(yr4+1460),] %>% 
   mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
          Q_rel = Q/max(Q, na.rm = TRUE),
          sample = "4 years")
 
-# join into a single dataframe
-dat_in3 <- rbind(dat_in_04137500_mo3, dat_in_04137500_mo6)
-dat_in3 <- rbind(dat_in3, dat_in_04137500_yr1)
-dat_in3 <- rbind(dat_in3, dat_in_04137500_yr2)
-dat_in3 <- rbind(dat_in3, dat_in_04137500_yr4)
+  # join into a single dataframe
+  dat_resample <- rbind(dat_mo6, dat_mo9)
+  dat_resample <- rbind(dat_resample, dat_yr1)
+  dat_resample <- rbind(dat_resample, dat_yr2)
+  dat_resample <- rbind(dat_resample, dat_yr4)
+  
+  return(dat_resample)
 
-# Split into a list by ID
-l3 <- split(dat_in3, dat_in3$sample)
+}
+
+# Test to be sure this function works appropriately at one site.
+test <- resample5(dat_in_10 %>%
+                    filter(site_name == "nwis_01481000"))
+
+ggplot(test, aes(x = date, y = GPP)) +
+  geom_point() +
+  theme_bw() +
+  facet_wrap(.~sample, nrow = 5)
+
+# Split dat_in into a list by ID
+l10 <- split(dat_in_10, dat_in_10$site_name)
+
+# Apply function to list of all 10 sites
+l10_resample <- lapply(l10, function(dat) resample5(dat))
+
+# Test plot at one more site to be sure
+ggplot(l10_resample$nwis_08211200, aes(x = date, y = GPP)) +
+  geom_point() +
+  theme_bw() +
+  facet_wrap(.~sample, nrow = 5) # YIPEE :)
 
 # Export dataset for future use.
-saveRDS(l3, "data_working/list_1site_5ts_Qmaxnorm_SavoySL.rds")
+saveRDS(l10_resample, "data_working/list_10sites_5ts_Qmaxnorm_SavoySL.rds")
+
+# Join full list into dataframe.
+dat10_resample <- do.call(rbind.data.frame, l10_resample)
+
+# Create new column for new list ids.
+dat10_resample$site_sample <- paste(dat10_resample$site_name, 
+                                    dat10_resample$sample, 
+                                    sep = "_")
+
+# Split dat_in into a list by ID
+l10_5ts_resample <- split(dat10_resample, dat10_resample$site_sample)
 
 # Rename source data
-df <- l3
+df <- l10_5ts_resample
 
 # Stan data prep
 rstan_options(auto_write=TRUE)
@@ -841,7 +874,7 @@ init_Ricker <- function(...) {
   list(r = 0.2, lambda = -0.03, c = 0.5, s = 1.5) # values to match priors
 }
 
-## export results - started at 11:15am
+## export results - started at 2:34pm
 PM_outputlist_Ricker <- lapply(stan_data_l,
                                function(x) stan("code/beartooth_spring23/Stan_ProductivityModel.stan",
                                                 data = x, 
@@ -850,18 +883,18 @@ PM_outputlist_Ricker <- lapply(stan_data_l,
                                                 init = init_Ricker,
                                                 control = list(max_treedepth = 12)))
 
-# saveRDS(PM_outputlist_Ricker, "data_pinyon/pinyon_1river_5ts_output_2023_09_30.rds")
+saveRDS(PM_outputlist_Ricker, "data_pinyon/pinyon_10rivers_5ts_output_2023_10_03.rds")
 
 # Going to create a function to pull out all iterations.
 extract_params <- function(df){
   rstan::extract(df, c("r", "lambda", "c", "s"))
 }
 
-data_out_04137500 <- map(PM_outputlist_Ricker, extract_params)
+data10_out_resample <- map(PM_outputlist_Ricker, extract_params)
 
 # Save this out too
-# saveRDS(data_out_04137500,
-#        file = "data_working/pinyon_1river_5ts_params_all_iterations_093023.rds")
+saveRDS(data10_out_resample,
+       file = "data_working/pinyon_10rivers_5ts_params_all_iterations_100423.rds")
 
 # And now use a new function to calculate median and 95%tiles.
 # Obtain summary statistics using new "extract_summary" function.
@@ -875,36 +908,55 @@ extract_summary <- function(x){
 }
 
 # And now map this to the output list. 
-data_out_04137500_diags <- map(PM_outputlist_Ricker, extract_summary)
+data10_out_resample_diags <- map(PM_outputlist_Ricker, extract_summary)
 
 # Save this out too
-# saveRDS(data_out_04137500_diags,
-#        file = "data_working/pinyon_1river_5ts_params_diags_093023.rds")
+# saveRDS(data10_out_resample_diags,
+#         file = "data_working/pinyon_10rivers_5ts_params_diags_100523.rds")
 
 # Take list above and make into a df.
-data_out_04137500_c <- map_df(data_out_04137500_diags, 
-                                     ~as.data.frame(.x), .id="sample") %>%
+data_out_resample_c <- map_df(data10_out_resample_diags, 
+                                     ~as.data.frame(.x), .id="site_sample") %>%
   # and for now, I'm going to focus solely on "r" and "c" values
   filter(parameter %in% c("c")) %>%
   # and rename to match the other dataset
-  rename(c_med = `50%`)
+  rename(c_med = `50%`) %>%
+  # and split site_sample column up for joining
+  separate_wider_delim(site_sample, "_", names = c("nwis", "siteno", "sample")) %>%
+  # and make the site column again
+  mutate(site_name = paste(nwis, siteno, sep = "_")) %>%
+  select(-c(nwis, siteno))
 
 # Filter the larger dataset that includes values from the same site.
-dat_out_04137500_orig_c <- dat_Qc_all %>%
-  filter(site_name == "nwis_04137500")
+dat_out_orig_c <- dat_Qc_all %>%
+  filter(site_name %in% my10sites)
 
 # Join the two datasets.
-dat_out_04137500_orig_c$sample <- "7.5 years"
+dat_out_orig_c <- dat_out_orig_c %>%
+  mutate(sample = case_when(site_name == "nwis_01481000" ~ "5.1 years",
+                            site_name == "nwis_01608500" ~ "6.3 years",
+                            site_name == "nwis_02168504" ~ "8.7 years",
+                            site_name == "nwis_04137500" ~ "7.5 years",
+                            site_name == "nwis_05435943" ~ "6.4 years",
+                            site_name == "nwis_07109500" ~ "6.5 years",
+                            site_name == "nwis_08070200" ~ "6.6 years",
+                            site_name == "nwis_08211200" ~ "7.4 years",
+                            site_name == "nwis_10133800" ~ "7.4 years",
+                            site_name == "nwis_14206950" ~ "7.5 years"))
 
-dat_c_both <- full_join(dat_out_04137500_orig_c, data_out_04137500_c) %>%
-  # make norm a factor %>%
-  mutate(sample = factor(sample, levels = c("3 months", "6 months",
+dat_c_both <- full_join(dat_out_orig_c, data_out_resample_c) %>%
+  # make length a factor %>%
+  mutate(sample = factor(sample, levels = c("6 months", "9 months",
                                             "1 year", "2 years", "4 years",
-                                            "7.5 years"))) %>%
+                                            "5.1 years", "6.3 years", "6.4 years",
+                                            "6.5 years", "6.6 years", "7.4 years",
+                                            "7.5 years", "8.7 years"))) %>%
   # add names for plotting
-  mutate(run = factor(case_when(sample == "7.5 years" ~ "Original",
+  mutate(run = factor(case_when(sample %in% c("5.1 years", "6.3 years", "6.4 years",
+                                              "6.5 years", "6.6 years", "7.4 years",
+                                              "7.5 years", "8.7 years") ~ "Original",
                                 TRUE ~ "Resample"),
-                       levels = c("Resample", "Original")))
+                       levels = c("Original", "Resample")))
 
 (fig_c <- ggplot(dat_c_both, aes(x = c_med, y = sample, color = run)) +
     geom_point(size = 5, alpha = 0.75, position = position_dodge(width = -0.5)) +
@@ -913,31 +965,52 @@ dat_c_both <- full_join(dat_out_04137500_orig_c, data_out_04137500_c) %>%
                    height = 0.25,
                    position = position_dodge(width = -0.5)) +
     labs(y = "Length of Time Series", x = "c", color = "Run") +
-    scale_color_manual(values = c("grey", "black")) +
-    theme_bw())
+    scale_color_manual(values = c("black", "grey")) +
+    theme_bw() +
+    theme(legend.position = "none") +
+    facet_grid(site_name~., scales = "free"))
 
 # Take list above and make into a df.
-data_out_04137500_r <- map_df(data_out_04137500_diags, 
-                              ~as.data.frame(.x), .id="sample") %>%
+data_out_resample_r <- map_df(data10_out_resample_diags, 
+                              ~as.data.frame(.x), .id="site_sample") %>%
   filter(parameter %in% c("r")) %>%
-  rename(r_med = `50%`)
+  rename(r_med = `50%`) %>%
+  # and split site_sample column up for joining
+  separate_wider_delim(site_sample, "_", names = c("nwis", "siteno", "sample")) %>%
+  # and make the site column again
+  mutate(site_name = paste(nwis, siteno, sep = "_")) %>%
+  select(-c(nwis, siteno))
 
 # Filter the larger dataset that includes values from the same site.
-dat_out_04137500_orig_r <- dat_amax %>%
-  filter(site_name == "nwis_04137500")
+dat_out_orig_r <- dat_amax %>%
+  filter(site_name %in% my10sites)
 
 # Join the two datasets.
-dat_out_04137500_orig_r$sample <- "7.5 years"
+dat_out_orig_r <- dat_out_orig_r %>%
+  mutate(sample = case_when(site_name == "nwis_01481000" ~ "5.1 years",
+                            site_name == "nwis_01608500" ~ "6.3 years",
+                            site_name == "nwis_02168504" ~ "8.7 years",
+                            site_name == "nwis_04137500" ~ "7.5 years",
+                            site_name == "nwis_05435943" ~ "6.4 years",
+                            site_name == "nwis_07109500" ~ "6.5 years",
+                            site_name == "nwis_08070200" ~ "6.6 years",
+                            site_name == "nwis_08211200" ~ "7.4 years",
+                            site_name == "nwis_10133800" ~ "7.4 years",
+                            site_name == "nwis_14206950" ~ "7.5 years"))
 
-dat_r_both <- full_join(dat_out_04137500_orig_r, data_out_04137500_r) %>%
+dat_r_both <- full_join(dat_out_orig_r, data_out_resample_r) %>%
   # make norm a factor %>%
-  mutate(sample = factor(sample, levels = c("3 months", "6 months",
+  mutate(sample = factor(sample, levels = c("6 months", "9 months",
                                             "1 year", "2 years", "4 years",
-                                            "7.5 years"))) %>%
+                                            "5.1 years", "6.3 years", "6.4 years",
+                                            "6.5 years", "6.6 years", "7.4 years",
+                                            "7.5 years", "8.7 years"))) %>%
   # add names for plotting
-  mutate(run = factor(case_when(sample == "7.5 years" ~ "Original",
+  mutate(run = factor(case_when(sample %in% c("5.1 years", "6.3 years", "6.4 years",
+                                "6.5 years", "6.6 years", "7.4 years",
+                                "7.5 years", "8.7 years") ~ "Original",
                                 TRUE ~ "Resample"),
-                      levels = c("Resample", "Original")))
+                      levels = c("Original", "Resample")))
 
 (fig_r <- ggplot(dat_r_both, aes(x = r_med, y = sample, color = run)) +
     geom_point(size = 5, alpha = 0.75, position = position_dodge(width = -0.5)) +
@@ -946,18 +1019,19 @@ dat_r_both <- full_join(dat_out_04137500_orig_r, data_out_04137500_r) %>%
                    height = 0.25,
                    position = position_dodge(width = -0.5)) +
     labs(y = "Length of Time Series", x = "r", color = "Run") +
-    scale_color_manual(values = c("grey", "black")) +
+    scale_color_manual(values = c("black", "gray")) +
     theme_bw() +
-    theme(legend.position = "none"))
+    theme(legend.position = "none") +
+    facet_grid(site_name~., scales = "free"))
 
 # Combine into a single figure.
 (fig_r_and_c <- fig_r + fig_c)
 
 # And export.
 # ggsave(fig_r_and_c,
-#        filename = "figures/beartooth_spring23/r_and_c_ts_length_04137500_fig.jpg",
+#        filename = "figures/beartooth_spring23/r_and_c_ts_length_10sites_fig.jpg",
 #        width = 20,
-#        height = 10,
+#        height = 40,
 #        units = "cm")
 
 #### Reviewer 2 ####
