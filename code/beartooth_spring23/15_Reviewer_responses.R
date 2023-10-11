@@ -736,9 +736,420 @@ summary(q1_ts)
 
 mcmc_plot(q1_ts)
 
-###### Resampling approach ######
+####### 3-6 mos removed from amax #######
 
-# For consistency, I will aim to use sites included in the Appendix Figure.
+# Now, I will also examine posthoc model results with shorter (3-6 mos) time
+# series removed.
+
+# First, I need to create a dataset with the sites to be included listed.
+ts_lengths_6up <- ts_lengths %>%
+  filter(days > 180) # n = 172 sites remaining
+
+# Join raw dataset with time series lengths.
+dat_amax_ts6 <- left_join(dat_amax, ts_lengths_6up) %>%
+  # drop sites that have less than 180 days
+  drop_na(days) %>% # n = 143 sites remaining
+  # and drop remaining sites that have missing covariate data
+  drop_na(yield_med, meanTemp, NHD_RdDensWs, width_med, exc_y, 
+          Dam, huc_2) # n = 137 sites remaining
+
+dat_amax_ts6 <- dat_amax_ts6 %>%
+  mutate(log_yield = log10(yield_med)) %>% # log-transform yield
+  mutate(log_width = log10(width_med)) %>% # log-transform width
+  # Creating a new categorical dam column to model by.
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential = 5-50%
+    Dam == "0" ~ "1", # Certain = 100%
+    TRUE ~ NA)))
+
+# Necessary variables have already been log-transformed and
+# now just need to be scaled.
+dat_amax_ts6_brms1 <- dat_amax_ts6 %>%
+  # assigning sites to be rownames so that we can re-identify and add HUC2
+  # and Dams back in once we've scaled the remaining variables
+  column_to_rownames(var = "site_name") %>%
+  dplyr::select(log_yield, meanTemp, NHD_RdDensWs, 
+                log_width, exc_y)
+
+dat_amax_ts6_brms1_scaled <- scale(dat_amax_ts6_brms1) # scale variables
+
+# Pull sites back in so that we can match with HUC2 values.
+dat_amax_ts6_brms <- rownames_to_column(as.data.frame(dat_amax_ts6_brms1_scaled), 
+                                       var = "site_name")
+
+dat_amax_ts6_Dam_HUC <- dat_amax_ts6 %>%
+  dplyr::select(site_name, Dam_binary, huc_2)
+
+dat_amax_ts6_brms <- full_join(dat_amax_ts6_brms, dat_amax_ts6_Dam_HUC) %>%
+  dplyr::select(log_yield, meanTemp, NHD_RdDensWs, 
+                Dam_binary, log_width, exc_y, huc_2,
+                site_name) %>%
+  mutate(huc_2 = factor(huc_2))
+
+# Model fit for accrual.
+a1_ts6 <- brm(log_yield ~ log_width + NHD_RdDensWs +
+               Dam_binary + meanTemp + exc_y + (1|huc_2), 
+             data = dat_amax_ts6_brms, family = gaussian())
+
+# Examine model outputs.
+summary(a1_ts6)
+
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.23      0.16    -0.08     0.54 1.00     2262     1924
+# log_width        0.47      0.10     0.28     0.67 1.00     4100     3244
+# NHD_RdDensWs     0.01      0.10    -0.19     0.21 1.00     3669     2907
+# Dam_binary1     -0.40      0.16    -0.72    -0.09 1.00     5482     3184
+# meanTemp         0.01      0.09    -0.17     0.20 1.00     3214     3338
+# exc_y            0.18      0.08     0.03     0.33 1.00     6058     3159
+
+# All covariates remain as before.
+
+# Make summary plot.
+# Pull out the data.
+dat_a1_ts6 <- mcmc_intervals_data(a1_ts6,
+                                 point_est = "median", # default = "median"
+                                 prob = 0.66, # default = 0.5
+                                 prob_outer = 0.95) # default = 0.9
+
+# Making custom plot to change color of each interval.
+# Using core dataset "post_data" rather than canned function.
+(a_fig1_custom <- ggplot(dat_a1_ts6 %>%
+                          filter(parameter %in% c("b_log_width", "b_exc_y",
+                                                  "b_NHD_RdDensWs",
+                                                  "b_meanTemp", 
+                                                  "b_Dam_binary1")) %>%
+                          mutate(par_f = factor(parameter, 
+                                                levels = c("b_log_width",
+                                                           "b_exc_y",
+                                                           "b_NHD_RdDensWs",
+                                                           "b_meanTemp",
+                                                           "b_Dam_binary1"))), 
+                        aes(x = m, y = par_f, color = par_f)) +
+    geom_linerange(aes(xmin = ll, xmax = hh),
+                   size = 2, alpha = 0.5) +
+    geom_point(size = 3) +
+    vline_at(v = 0) +
+    scale_x_continuous(breaks = c(-0.5, 0, 0.5)) +
+    labs(x = "Posterior Estimates",
+         y = "Predictors",
+         title = "> 6mos. - amax") +
+    scale_y_discrete(labels = c("b_log_width" = "Width",
+                                "b_NHD_RdDensWs" = "Roads",
+                                "b_Dam_binary1" = "Dam",
+                                "b_meanTemp" = "Temperature",
+                                "b_exc_y" = "Exceedances")) +
+    theme_bw() +
+    scale_color_manual(values = c("#4B8FF7", "#F29F05", "#F29F05", 
+                                  "#4B8FF7", "#F29F05")) +
+    theme(text = element_text(size = 10),
+          legend.position = "none"))
+
+####### 3m-1y removed from amax #######
+
+# Now, I will examine more posthoc model results with shorter (3 mos - 1 year) time
+# series removed.
+
+# First, I need to create a dataset with the sites to be included listed.
+ts_lengths_1up <- ts_lengths %>%
+  filter(days > 365) # n = 134 sites remaining
+
+# Join raw dataset with time series lengths.
+dat_amax_ts1 <- left_join(dat_amax, ts_lengths_1up) %>%
+  # drop sites that have less than 365 days
+  drop_na(days) %>% # n = 107 sites remaining
+  # and drop remaining sites that have missing covariate data
+  drop_na(yield_med, meanTemp, NHD_RdDensWs, width_med, exc_y, 
+          Dam, huc_2) # n = 104 sites remaining
+
+dat_amax_ts1 <- dat_amax_ts1 %>%
+  mutate(log_yield = log10(yield_med)) %>% # log-transform yield
+  mutate(log_width = log10(width_med)) %>% # log-transform width
+  # Creating a new categorical dam column to model by.
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential = 5-50%
+    Dam == "0" ~ "1", # Certain = 100%
+    TRUE ~ NA)))
+
+# Necessary variables have already been log-transformed and
+# now just need to be scaled.
+dat_amax_ts1_brms1 <- dat_amax_ts1 %>%
+  # assigning sites to be rownames so that we can re-identify and add HUC2
+  # and Dams back in once we've scaled the remaining variables
+  column_to_rownames(var = "site_name") %>%
+  dplyr::select(log_yield, meanTemp, NHD_RdDensWs, 
+                log_width, exc_y)
+
+dat_amax_ts1_brms1_scaled <- scale(dat_amax_ts1_brms1) # scale variables
+
+# Pull sites back in so that we can match with HUC2 values.
+dat_amax_ts1_brms <- rownames_to_column(as.data.frame(dat_amax_ts1_brms1_scaled), 
+                                        var = "site_name")
+
+dat_amax_ts1_Dam_HUC <- dat_amax_ts1 %>%
+  dplyr::select(site_name, Dam_binary, huc_2)
+
+dat_amax_ts1_brms <- full_join(dat_amax_ts1_brms, dat_amax_ts1_Dam_HUC) %>%
+  dplyr::select(log_yield, meanTemp, NHD_RdDensWs, 
+                Dam_binary, log_width, exc_y, huc_2,
+                site_name) %>%
+  mutate(huc_2 = factor(huc_2))
+
+# Model fit for accrual.
+a1_ts1 <- brm(log_yield ~ log_width + NHD_RdDensWs +
+                Dam_binary + meanTemp + exc_y + (1|huc_2), 
+              data = dat_amax_ts1_brms, family = gaussian())
+
+# Examine model outputs.
+summary(a1_ts1)
+
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.24      0.18    -0.10     0.60 1.00     2009     2256
+# log_width        0.45      0.12     0.22     0.70 1.00     2931     2989
+# NHD_RdDensWs     0.04      0.13    -0.21     0.29 1.00     2566     2831
+# Dam_binary1     -0.30      0.17    -0.64     0.03 1.00     5066     3001
+# meanTemp        -0.00      0.11    -0.22     0.22 1.00     3176     2996
+# exc_y            0.23      0.08     0.06     0.40 1.00     4579     2987
+
+# All covariates remain as before.
+
+# Make summary plot.
+# Pull out the data.
+dat_a1_ts1 <- mcmc_intervals_data(a1_ts1,
+                                  point_est = "median", # default = "median"
+                                  prob = 0.66, # default = 0.5
+                                  prob_outer = 0.95) # default = 0.9
+
+# Making custom plot to change color of each interval.
+# Using core dataset "post_data" rather than canned function.
+(a_fig2_custom <- ggplot(dat_a1_ts1 %>%
+                           filter(parameter %in% c("b_log_width", "b_exc_y",
+                                                   "b_NHD_RdDensWs",
+                                                   "b_meanTemp", 
+                                                   "b_Dam_binary1")) %>%
+                           mutate(par_f = factor(parameter, 
+                                                 levels = c("b_log_width",
+                                                            "b_exc_y",
+                                                            "b_NHD_RdDensWs",
+                                                            "b_meanTemp",
+                                                            "b_Dam_binary1"))), 
+                         aes(x = m, y = par_f, color = par_f)) +
+    geom_linerange(aes(xmin = ll, xmax = hh),
+                   size = 2, alpha = 0.5) +
+    geom_point(size = 3) +
+    vline_at(v = 0) +
+    scale_x_continuous(breaks = c(-0.5, 0, 0.5)) +
+    labs(x = "Posterior Estimates",
+         y = "Predictors",
+         title = "> 1yr. - amax") +
+    scale_y_discrete(labels = c("b_log_width" = "Width",
+                                "b_NHD_RdDensWs" = "Roads",
+                                "b_Dam_binary1" = "Dam",
+                                "b_meanTemp" = "Temperature",
+                                "b_exc_y" = "Exceedances")) +
+    theme_bw() +
+    scale_color_manual(values = c("#4B8FF7", "#F29F05", "#F29F05", 
+                                  "#4B8FF7", "#F29F05")) +
+    theme(text = element_text(size = 10),
+          legend.position = "none"))
+
+######### 3-6 mos removed from Qc #########
+
+# And now for other model fit (Qc:Q2yr).
+# Join raw dataset with time series lengths for sites with less than 3 mos.
+dat_Qc_ts6 <- left_join(dat_Qc, ts_lengths_6up) %>%
+  # drop sites that have less than 180 days
+  drop_na(days) %>% # n = 130 sites remaining
+  # and drop remaining sites that have missing covariate data
+  drop_na(Qc_Q2yr, NHD_RdDensWs, width_med, Dam, huc_2) # n = 124 sites remaining
+
+# Going to log transform QcQ2yr too.
+dat_Qc_ts6 <- dat_Qc_ts6 %>%
+  mutate(logQcQ2 = log10(Qc_Q2yr),
+         log_width = log10(width_med)) %>%
+  # Creating the new categorical dam column to model by.
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential effect of dams
+    Dam == "0" ~ "1", # Certain effect of dams
+    TRUE ~ NA)))
+
+# Necessary variables have already been log-transformed and
+# now just need to be scaled.
+dat_Qc_ts6_brms1 <- dat_Qc_ts6 %>%
+  # assigning sites to be rownames so that we can re-identify and add HUC2
+  # back in once we've scaled the remaining variables
+  column_to_rownames(var = "site_name") %>%
+  dplyr::select(logQcQ2, NHD_RdDensWs, log_width)
+
+dat_Qc_ts6_brms1_scaled <- scale(dat_Qc_ts6_brms1)
+
+# Pull sites back in so that we can match with HUC2 values.
+dat_Qc_ts6_brms <- rownames_to_column(as.data.frame(dat_Qc_ts6_brms1_scaled), 
+                                     var = "site_name")
+
+dat_Qc_ts6_Dam_HUC <- dat_Qc_ts6 %>%
+  dplyr::select(site_name, Dam_binary, huc_2)
+
+dat_Qc_ts6_brms <- left_join(dat_Qc_ts6_brms, dat_Qc_ts6_Dam_HUC) %>%
+  dplyr::select(logQcQ2, NHD_RdDensWs, 
+                Dam_binary, log_width, huc_2,
+                site_name) %>%
+  mutate(huc_2 = factor(huc_2))
+
+# Model fit for critical disturbance threshold normalized to 2yr flood.
+q1_ts6 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + 
+               log_width + (1|huc_2), 
+             data = dat_Qc_ts6_brms, family = gaussian()) 
+
+# Examine model results.
+summary(q1_ts6)
+
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.15      0.19    -0.20     0.53 1.00     2192     2381
+# NHD_RdDensWs    -0.07      0.12    -0.30     0.18 1.00     3232     2908
+# Dam_binary1     -0.20      0.19    -0.58     0.18 1.00     5150     3248
+# log_width        0.01      0.12    -0.24     0.25 1.00     3174     3113
+
+# As above, all covariates remain as before - not significant.
+
+# Make summary plot.
+# Pull out the data.
+dat_q1_ts6 <- mcmc_intervals_data(q1_ts6,
+                                  point_est = "median", # default = "median"
+                                  prob = 0.66, # default = 0.5
+                                  prob_outer = 0.95) # default = 0.9
+
+# And plot.
+(q_fig1_custom <- ggplot(dat_q1_ts6 %>%
+                           filter(parameter %in% c("b_log_width",
+                                                   "b_NHD_RdDensWs",
+                                                   "b_Dam_binary1")) %>%
+                           mutate(par_f = factor(parameter, 
+                                                 levels = c("b_log_width",
+                                                            "b_NHD_RdDensWs",
+                                                            "b_Dam_binary1"))), 
+                         aes(x = m, y = par_f, color = par_f)) +
+    geom_linerange(aes(xmin = ll, xmax = hh),
+                   size = 2, alpha = 0.5) +
+    geom_point(size = 3) +
+    vline_at(v = 0) +
+    scale_x_continuous(breaks = c(-0.4,-0.2, 0, 0.2)) +
+    labs(x = "Posterior Estimates",
+         y = "Predictors",
+         title = "> 6mos. - Qc:Q2yr") +
+    scale_y_discrete(labels = c("b_log_width" = "Width",
+                                "b_NHD_RdDensWs" = "Roads",
+                                "b_Dam_binary1" = "Dam")) +
+    theme_bw() +
+    scale_color_manual(values = c("#4B8FF7", "#F29F05", "#F29F05")) +
+    theme(text = element_text(size = 10),
+          legend.position = "none"))
+
+######### 3m-1y removed from Qc #########
+
+# And now for other model fit (Qc:Q2yr).
+# Join raw dataset with time series lengths for sites with less than 3 mos.
+dat_Qc_ts1 <- left_join(dat_Qc, ts_lengths_1up) %>%
+  # drop sites that have less than 365 days
+  drop_na(days) %>% # n = 96 sites remaining
+  # and drop remaining sites that have missing covariate data
+  drop_na(Qc_Q2yr, NHD_RdDensWs, width_med, Dam, huc_2) # n = 92 sites remaining
+
+# Going to log transform QcQ2yr too.
+dat_Qc_ts1 <- dat_Qc_ts1 %>%
+  mutate(logQcQ2 = log10(Qc_Q2yr),
+         log_width = log10(width_med)) %>%
+  # Creating the new categorical dam column to model by.
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential effect of dams
+    Dam == "0" ~ "1", # Certain effect of dams
+    TRUE ~ NA)))
+
+# Necessary variables have already been log-transformed and
+# now just need to be scaled.
+dat_Qc_ts1_brms1 <- dat_Qc_ts1 %>%
+  # assigning sites to be rownames so that we can re-identify and add HUC2
+  # back in once we've scaled the remaining variables
+  column_to_rownames(var = "site_name") %>%
+  dplyr::select(logQcQ2, NHD_RdDensWs, log_width)
+
+dat_Qc_ts1_brms1_scaled <- scale(dat_Qc_ts1_brms1)
+
+# Pull sites back in so that we can match with HUC2 values.
+dat_Qc_ts1_brms <- rownames_to_column(as.data.frame(dat_Qc_ts1_brms1_scaled), 
+                                      var = "site_name")
+
+dat_Qc_ts1_Dam_HUC <- dat_Qc_ts1 %>%
+  dplyr::select(site_name, Dam_binary, huc_2)
+
+dat_Qc_ts1_brms <- left_join(dat_Qc_ts1_brms, dat_Qc_ts1_Dam_HUC) %>%
+  dplyr::select(logQcQ2, NHD_RdDensWs, 
+                Dam_binary, log_width, huc_2,
+                site_name) %>%
+  mutate(huc_2 = factor(huc_2))
+
+# Model fit for critical disturbance threshold normalized to 2yr flood.
+q1_ts1 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + 
+                log_width + (1|huc_2), 
+              data = dat_Qc_ts1_brms, family = gaussian()) 
+
+# Examine model results.
+summary(q1_ts1)
+
+#              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept        0.21      0.23    -0.22     0.68 1.00     2033     2140
+# NHD_RdDensWs    -0.16      0.15    -0.46     0.14 1.00     2757     2798
+# Dam_binary1     -0.28      0.20    -0.66     0.12 1.00     4733     2959
+# log_width       -0.10      0.14    -0.38     0.19 1.00     2902     3042
+
+# As above, all covariates remain as before - not significant.
+
+# Make summary plot.
+# Pull out the data.
+dat_q1_ts1 <- mcmc_intervals_data(q1_ts1,
+                                  point_est = "median", # default = "median"
+                                  prob = 0.66, # default = 0.5
+                                  prob_outer = 0.95) # default = 0.9
+
+# And plot.
+(q_fig2_custom <- ggplot(dat_q1_ts1 %>%
+                           filter(parameter %in% c("b_log_width",
+                                                   "b_NHD_RdDensWs",
+                                                   "b_Dam_binary1")) %>%
+                           mutate(par_f = factor(parameter, 
+                                                 levels = c("b_log_width",
+                                                            "b_NHD_RdDensWs",
+                                                            "b_Dam_binary1"))), 
+                         aes(x = m, y = par_f, color = par_f)) +
+    geom_linerange(aes(xmin = ll, xmax = hh),
+                   size = 2, alpha = 0.5) +
+    geom_point(size = 3) +
+    vline_at(v = 0) +
+    scale_x_continuous(breaks = c(-0.4,-0.2, 0, 0.2)) +
+    labs(x = "Posterior Estimates",
+         y = "Predictors",
+         title = "> 1yr. - QC:Q2yr") +
+    scale_y_discrete(labels = c("b_log_width" = "Width",
+                                "b_NHD_RdDensWs" = "Roads",
+                                "b_Dam_binary1" = "Dam")) +
+    theme_bw() +
+    scale_color_manual(values = c("#4B8FF7", "#F29F05", "#F29F05")) +
+    theme(text = element_text(size = 10),
+          legend.position = "none"))
+
+# Join all posthoc tests together.
+fig_all <- a_fig1_custom + a_fig2_custom +
+  q_fig1_custom + q_fig2_custom +
+  plot_layout(nrow = 2)
+
+# And export.
+# ggsave(fig_all,
+#        filename = "figures/beartooth_spring23/brms_ts_tests_101123.tiff",
+#        width = 12,
+#        height = 10,
+#        units = "cm",
+#        dpi = 300)
+
+###### Resampling approach ######
 
 # First, I will investigate which of the sites have the longest records and
 # pass both amax and c filtering steps.
