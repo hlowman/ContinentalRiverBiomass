@@ -1172,7 +1172,7 @@ dat_in_10 <- dat_in %>%
 dat_in_10 <- left_join(dat_in_10, ts_lengths)
 
 # Function for re-sampling
-resample5 <- function(dat){
+resample5_random <- function(dat){
   
   # dat referring to input data from a single site
   ts_length <- dat$days[1]
@@ -1222,8 +1222,50 @@ resample5 <- function(dat){
 
 }
 
+# Creating a second function that samples at non-random intervals.
+# Function for re-sampling
+resample5_build <- function(dat){
+  
+  # select data according to these randomly selected indices
+  # and add new columns for relative L and Q
+  # overwrites old columns of relative light and discharge
+  dat_mo6 <- dat[1:180,] %>% 
+    mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+           Q_rel = Q/max(Q, na.rm = TRUE),
+           sample = "6 months")
+  
+  dat_mo9 <- dat[1:270,] %>% 
+    mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+           Q_rel = Q/max(Q, na.rm = TRUE),
+           sample = "9 months")
+  
+  dat_yr1 <- dat[1:365,] %>% 
+    mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+           Q_rel = Q/max(Q, na.rm = TRUE),
+           sample = "1 year")
+  
+  dat_yr2 <- dat[1:730,] %>% 
+    mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+           Q_rel = Q/max(Q, na.rm = TRUE),
+           sample = "2 years")
+  
+  dat_yr4 <- dat[1:1460,] %>% 
+    mutate(light_rel = PAR_surface/max(PAR_surface, na.rm = TRUE),
+           Q_rel = Q/max(Q, na.rm = TRUE),
+           sample = "4 years")
+  
+  # join into a single dataframe
+  dat_resample <- rbind(dat_mo6, dat_mo9)
+  dat_resample <- rbind(dat_resample, dat_yr1)
+  dat_resample <- rbind(dat_resample, dat_yr2)
+  dat_resample <- rbind(dat_resample, dat_yr4)
+  
+  return(dat_resample)
+  
+}
+
 # Test to be sure this function works appropriately at one site.
-test <- resample5(dat_in_10 %>%
+test <- resample5_build(dat_in_10 %>%
                     filter(site_name == "nwis_01481000"))
 
 ggplot(test, aes(x = date, y = GPP)) +
@@ -1235,7 +1277,7 @@ ggplot(test, aes(x = date, y = GPP)) +
 l10 <- split(dat_in_10, dat_in_10$site_name)
 
 # Apply function to list of all 10 sites
-l10_resample <- lapply(l10, function(dat) resample5(dat))
+l10_resample <- lapply(l10, function(dat) resample5_build(dat))
 
 # Test plot at one more site to be sure
 ggplot(l10_resample$nwis_08211200, aes(x = date, y = GPP)) +
@@ -1244,7 +1286,7 @@ ggplot(l10_resample$nwis_08211200, aes(x = date, y = GPP)) +
   facet_wrap(.~sample, nrow = 5) # YIPEE :)
 
 # Export dataset for future use.
-saveRDS(l10_resample, "data_working/list_10sites_5ts_Qmaxnorm_SavoySL.rds")
+saveRDS(l10_resample, "data_working/list_10sites_5ts_Qmaxnorm_SavoySL_102523.rds")
 
 # Join full list into dataframe.
 dat10_resample <- do.call(rbind.data.frame, l10_resample)
@@ -1285,7 +1327,7 @@ init_Ricker <- function(...) {
   list(r = 0.2, lambda = -0.03, c = 0.5, s = 1.5) # values to match priors
 }
 
-## export results - started at 2:34pm
+## export results - started at 10:55am
 PM_outputlist_Ricker <- lapply(stan_data_l,
                                function(x) stan("code/beartooth_spring23/Stan_ProductivityModel.stan",
                                                 data = x, 
@@ -1294,7 +1336,7 @@ PM_outputlist_Ricker <- lapply(stan_data_l,
                                                 init = init_Ricker,
                                                 control = list(max_treedepth = 12)))
 
-saveRDS(PM_outputlist_Ricker, "data_pinyon/pinyon_10rivers_5ts_output_2023_10_03.rds")
+# saveRDS(PM_outputlist_Ricker, "data_pinyon/pinyon_10rivers_5ts_output_2023_10_25.rds")
 
 # Going to create a function to pull out all iterations.
 extract_params <- function(df){
@@ -1304,8 +1346,8 @@ extract_params <- function(df){
 data10_out_resample <- map(PM_outputlist_Ricker, extract_params)
 
 # Save this out too
-saveRDS(data10_out_resample,
-       file = "data_working/pinyon_10rivers_5ts_params_all_iterations_100423.rds")
+# saveRDS(data10_out_resample,
+#        file = "data_working/pinyon_10rivers_5ts_params_all_iterations_102623.rds")
 
 # And now use a new function to calculate median and 95%tiles.
 # Obtain summary statistics using new "extract_summary" function.
@@ -1318,12 +1360,12 @@ extract_summary <- function(x){
   as.data.frame(df1) %>% rownames_to_column("parameter")
 }
 
-# And now map this to the output list. 
+# And now map this to the output list. Be patient - this takes a minute.
 data10_out_resample_diags <- map(PM_outputlist_Ricker, extract_summary)
 
 # Save this out too
 # saveRDS(data10_out_resample_diags,
-#         file = "data_working/pinyon_10rivers_5ts_params_diags_100523.rds")
+#         file = "data_working/pinyon_10rivers_5ts_params_diags_102623.rds")
 
 # Take list above and make into a df.
 data_out_resample_c <- map_df(data10_out_resample_diags, 
@@ -1336,7 +1378,7 @@ data_out_resample_c <- map_df(data10_out_resample_diags,
   separate_wider_delim(site_sample, "_", names = c("nwis", "siteno", "sample")) %>%
   # and make the site column again
   mutate(site_name = paste(nwis, siteno, sep = "_")) %>%
-  select(-c(nwis, siteno))
+  dplyr::select(-c(nwis, siteno))
 
 # Filter the larger dataset that includes values from the same site.
 dat_out_orig_c <- dat_Qc_all %>%
@@ -1390,7 +1432,7 @@ data_out_resample_r <- map_df(data10_out_resample_diags,
   separate_wider_delim(site_sample, "_", names = c("nwis", "siteno", "sample")) %>%
   # and make the site column again
   mutate(site_name = paste(nwis, siteno, sep = "_")) %>%
-  select(-c(nwis, siteno))
+  dplyr::select(-c(nwis, siteno))
 
 # Filter the larger dataset that includes values from the same site.
 dat_out_orig_r <- dat_amax %>%
@@ -1439,11 +1481,11 @@ dat_r_both <- full_join(dat_out_orig_r, data_out_resample_r) %>%
 (fig_r_and_c <- fig_r + fig_c)
 
 # And export.
-# ggsave(fig_r_and_c,
-#        filename = "figures/beartooth_spring23/r_and_c_ts_length_10sites_fig.jpg",
-#        width = 20,
-#        height = 40,
-#        units = "cm")
+ggsave(fig_r_and_c,
+       filename = "figures/beartooth_spring23/r_and_c_ts_length_10sites_fig_102623.jpg",
+       width = 20,
+       height = 40,
+       units = "cm")
 
 #### Reviewer 2 ####
 
