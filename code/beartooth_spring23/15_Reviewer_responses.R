@@ -30,7 +30,7 @@ lapply(c("tidybayes", "brms", "tidyverse", "lubridate",
          "data.table", "GGally", "plotly", "bayesplot",
          "multcomp", "patchwork", "bayesplot", "shinystan",
          "modelsummary", "here", "nlme", "loo", "parallel",
-         "tidyverse", "rstan", "devtools"), 
+         "tidyverse", "rstan", "devtools", "moments"), 
        require, character.only=T)
 
 #### Data ####
@@ -1481,11 +1481,32 @@ dat_r_both <- full_join(dat_out_orig_r, data_out_resample_r) %>%
 (fig_r_and_c <- fig_r + fig_c)
 
 # And export.
-ggsave(fig_r_and_c,
-       filename = "figures/beartooth_spring23/r_and_c_ts_length_10sites_fig_102623.jpg",
-       width = 20,
-       height = 40,
-       units = "cm")
+# ggsave(fig_r_and_c,
+#        filename = "figures/beartooth_spring23/r_and_c_ts_length_10sites_fig_102623.jpg",
+#        width = 20,
+#        height = 40,
+#        units = "cm")
+
+# Also going to examine flow regimes at these ten sites.
+(fig_q <- ggplot(dat_in_10, aes(x = Q)) +
+    geom_histogram(bins = 20) +
+    labs(y = "Count", x = "Discharge") +
+    theme_bw() +
+    facet_wrap(site_name~., nrow = 2, scales = "free"))
+
+# And export.
+# ggsave(fig_q,
+#        filename = "figures/beartooth_spring23/q_10sites_hist_102623.jpg",
+#        width = 30,
+#        height = 10,
+#        units = "cm")
+
+dat_10_skew <- dat_in_10 %>%
+  group_by(site_name) %>%
+  summarize(skew = skewness(Q, na.rm=TRUE),
+            kurt = kurtosis(Q, na.rm=TRUE),
+            CV = sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE)) %>%
+  ungroup()
 
 #### Reviewer 2 ####
 
