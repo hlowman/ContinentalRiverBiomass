@@ -1501,6 +1501,19 @@ dat_r_both <- full_join(dat_out_orig_r, data_out_resample_r) %>%
 #        height = 10,
 #        units = "cm")
 
+(fig_q_ts <- ggplot(dat_in_10, aes(x = Date, y = Q, group = year)) +
+    geom_line() +
+    labs(x = "Date", y = "Discharge") +
+    theme_bw() +
+    facet_wrap(site_name~., nrow = 2, scales = "free"))
+
+# And export.
+# ggsave(fig_q_ts,
+#        filename = "figures/beartooth_spring23/q_10sites_ts_102623.jpg",
+#        width = 30,
+#        height = 10,
+#        units = "cm")
+
 dat_10_skew <- dat_in_10 %>%
   group_by(site_name) %>%
   summarize(skew = skewness(Q, na.rm=TRUE),
