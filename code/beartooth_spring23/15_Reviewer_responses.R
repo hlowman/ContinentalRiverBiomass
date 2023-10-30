@@ -1521,6 +1521,20 @@ dat_10_skew <- dat_in_10 %>%
             CV = sd(Q, na.rm = TRUE)/mean(Q, na.rm = TRUE)) %>%
   ungroup()
 
+# Also going to examine GPP at these ten sites.
+(fig_gpp_ts <- ggplot(dat_in_10, aes(x = Date, y = GPP, group = year)) +
+    geom_line(color = "chartreuse3") +
+    labs(x = "Date", y = "Discharge") +
+    theme_bw() +
+    facet_wrap(site_name~., nrow = 2, scales = "free"))
+
+# And export.
+# ggsave(fig_gpp_ts,
+#        filename = "figures/beartooth_spring23/gpp_10sites_hist_103023.jpg",
+#        width = 30,
+#        height = 10,
+#        units = "cm")
+
 #### Reviewer 2 ####
 
 ##### Less constrained priors 6 site example #####
