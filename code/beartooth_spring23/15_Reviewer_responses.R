@@ -1658,7 +1658,7 @@ data24_out_diags <- map(PM_outputlist_Ricker, extract_summary)
 
 # Save this out too
 # saveRDS(data24_out_diags,
-#         file = "data_working/pinyon_24rivers_3yr300d_params_diags_102623.rds")
+#         file = "data_working/pinyon_24rivers_3yr300d_params_diags_110323.rds")
 
 # Take lists and make into a df.
 dat24_out_df <- map_df(data24_out, ~as.data.frame(.x), .id="site_name")
@@ -1856,16 +1856,19 @@ a1_24 <- brm(log_yield ~ log_width + NHD_RdDensWs +
             Dam_binary + meanTemp + exc_y + (1|huc_2), 
           data = dat24_amax_brms, family = gaussian()) # 20 sites
 
+# Export model output.
+# saveRDS(a1_24, "data_posthoc_modelfits/accrual20_brms_110323.rds")
+
 # Examine model outputs.
 summary(a1_24)
 
 #              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept       -0.21      0.48    -1.18     0.76 1.00     2415     1652
-# log_width        0.05      0.39    -0.72     0.81 1.00     2522     2144
-# NHD_RdDensWs     0.03      0.37    -0.70     0.78 1.00     2841     2532
-# Dam_binary1      0.52      0.68    -0.82     1.89 1.00     3477     2617
-# meanTemp        -0.28      0.43    -1.15     0.58 1.00     2453     2064
-# exc_y           -0.17      0.37    -0.91     0.59 1.00     2667     2491
+# Intercept       -0.21      0.46    -1.19     0.69 1.00     1996     1441
+# log_width        0.06      0.37    -0.65     0.80 1.00     2687     2736
+# NHD_RdDensWs     0.04      0.37    -0.69     0.77 1.00     2714     1825
+# Dam_binary1      0.53      0.65    -0.72     1.81 1.00     2999     2632
+# meanTemp        -0.27      0.41    -1.09     0.53 1.00     1937     2164
+# exc_y           -0.16      0.37    -0.88     0.57 1.00     2408     2267
 
 # Make summary plot.
 # Pull out the data.
@@ -1894,8 +1897,7 @@ dat_a1_24 <- mcmc_intervals_data(a1_24,
     vline_at(v = 0) +
     #scale_x_continuous(breaks = c(-0.5, 0, 0.5)) +
     labs(x = "Posterior Estimates",
-         y = "Predictors",
-         title = "amax (n = 20)") +
+         y = "Predictors") +
     scale_y_discrete(labels = c("b_log_width" = "Width",
                                 "b_NHD_RdDensWs" = "Roads",
                                 "b_Dam_binary1" = "Dam",
@@ -1953,14 +1955,17 @@ dat24_Qc_brms <- left_join(dat24_Qc_brms, dat24_Qc_Dam_HUC) %>%
 q1_24 <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary + log_width + (1|huc_2), 
           data = dat24_Qc_brms, family = gaussian()) # 18 sites
 
+# Export model results.
+# saveRDS(q1_24, "data_posthoc_modelfits/qcq218_brms_110323.rds")
+
 # Examine model outputs.
 summary(q1_24)
 
 #              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept       -0.08      0.47    -1.02     0.86 1.00     1546      814
-# NHD_RdDensWs     0.02      0.36    -0.70     0.71 1.00     2272     1977
-# Dam_binary1      0.02      0.61    -1.20     1.27 1.00     2595     1358
-# log_width        0.13      0.38    -0.63     0.88 1.00     1822     1238
+# Intercept       -0.07      0.45    -0.94     0.85 1.00     1578     1571
+# NHD_RdDensWs     0.03      0.35    -0.66     0.72 1.00     1838     1675
+# Dam_binary1      0.01      0.60    -1.21     1.18 1.00     2221     2418
+# log_width        0.13      0.36    -0.58     0.85 1.00     1880     1588
 
 # Make summary plot.
 # Pull out the data.
@@ -1985,8 +1990,7 @@ dat_q1_24 <- mcmc_intervals_data(q1_24,
     vline_at(v = 0) +
     #scale_x_continuous(breaks = c(-0.4,-0.2, 0, 0.2)) +
     labs(x = "Posterior Estimates",
-         y = "Predictors",
-         title = "QC:Q2yr (n = 18)") +
+         y = "Predictors") +
     scale_y_discrete(labels = c("b_log_width" = "Width",
                                 "b_NHD_RdDensWs" = "Roads",
                                 "b_Dam_binary1" = "Dam")) +
@@ -2000,9 +2004,96 @@ fig24_all <- a24_fig_custom + q24_fig_custom
 
 # And export.
 # ggsave(fig24_all,
-#        filename = "figures/beartooth_spring23/brms_24site_tests_110123.tiff",
-#        width = 12,
-#        height = 5,
+#        filename = "figures/beartooth_spring23/brms_24site_tests_110323.tiff",
+#        width = 20,
+#        height = 8,
+#        units = "cm",
+#        dpi = 300)
+
+# Also going to create histograms to display the data coverage for contrasting
+# situations (full dataset of 152 sites and selected dataset of 24 sites)
+
+# Need to create a dataset of the original covariates.
+dat_amax_orig <- dat_amax %>%
+  dplyr::select(site_name, Dam, meanTemp, NHD_RdDensWs, exc_y, width_med) %>%
+  # And need to add categorical dam column we modeled by.
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential effect of dams
+    Dam == "0" ~ "1", # Certain effect of dams
+    TRUE ~ NA))) %>%
+  # As well as a new column to color by in the histograms.
+  mutate(dataset = "Full dataset")
+
+# And a dataset of the selected 20 sites that get fed into the model immediately
+# above here.
+dat_amax_20 <- dat24_amax %>%
+  dplyr::select(site_name, Dam, meanTemp, NHD_RdDensWs, exc_y, width_med,
+                Dam_binary) %>%
+  # Again add a new column to color by in the histgrams.
+  mutate(dataset = "Selected sites")
+
+# Join the two together.
+dat_amax_twosets <- rbind(dat_amax_orig, dat_amax_20)
+
+# Dam histogram.
+(fig_hist_dam <- ggplot(dat_amax_twosets %>%
+                          filter(Dam != "NA"), aes(x = Dam_binary)) +
+    geom_histogram(stat = "count", aes(fill = dataset), 
+                   color = "black", alpha = 0.8) +
+    scale_fill_manual(values = c("grey50", "grey15")) +
+    labs(x = "Likelihood of Dams",
+         y = "Number of Sites") +
+    theme_bw() +
+    theme(legend.position = "none"))
+
+# Temperature histogram.
+(fig_hist_temp <- ggplot(dat_amax_twosets, aes(x = meanTemp)) +
+    geom_histogram(binwidth = 1, aes(fill = dataset), 
+                   color = "black", alpha = 0.8) +
+    scale_fill_manual(values = c("grey50", "grey15")) +
+    labs(x = "Temperature") +
+    theme_bw() +
+    theme(legend.position = "none",
+          axis.title.y = element_blank()))
+
+# Roads histogram.
+(fig_hist_road <- ggplot(dat_amax_twosets, aes(x = NHD_RdDensWs)) +
+    geom_histogram(binwidth = 1, aes(fill = dataset), 
+                   color = "black", alpha = 0.8) +
+    scale_fill_manual(values = c("grey50", "grey15")) +
+    labs(x = "Road Density") +
+    theme_bw() +
+    theme(legend.position = "none",
+          axis.title.y = element_blank()))
+
+# Exceedances histogram.
+(fig_hist_exc <- ggplot(dat_amax_twosets, aes(x = exc_y)) +
+    geom_histogram(binwidth = 2, aes(fill = dataset), 
+                   color = "black", alpha = 0.8) +
+    scale_fill_manual(values = c("grey50", "grey15")) +
+    labs(x = "Annual Exceedances") +
+    theme_bw() +
+    theme(legend.position = "none",
+          axis.title.y = element_blank()))
+
+# Width histogram.
+(fig_hist_width <- ggplot(dat_amax_twosets, aes(x = width_med)) +
+    geom_histogram(binwidth = 20, aes(fill = dataset), 
+                   color = "black", alpha = 0.8) +
+    scale_fill_manual(values = c("grey50", "grey15")) +
+    labs(x = "River Width") +
+    theme_bw() +
+    theme(legend.title = element_blank(),
+          axis.title.y = element_blank()))
+
+# Combine plots into one.
+(fig_hist_all <- (fig_hist_dam | fig_hist_temp | fig_hist_road | fig_hist_exc | fig_hist_width))
+
+# And export.
+# ggsave(fig_hist_all,
+#        filename = "figures/beartooth_spring23/hist_24site_tests_110323.tiff",
+#        width = 30,
+#        height = 8,
 #        units = "cm",
 #        dpi = 300)
 
