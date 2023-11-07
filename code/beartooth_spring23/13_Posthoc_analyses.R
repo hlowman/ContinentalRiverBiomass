@@ -1115,8 +1115,8 @@ View(post_data3)
                                                    "b_Dam_binary1")) %>%
                            mutate(par_f = factor(parameter, 
                                                  levels = c("b_log_width",
-                                                            "b_Dam_binary1",
-                                                            "b_NHD_RdDensWs"))), 
+                                                            "b_NHD_RdDensWs",
+                                                            "b_Dam_binary1"))), 
                          aes(x = m, y = par_f, color = par_f)) +
     geom_linerange(aes(xmin = ll, xmax = hh),
                    size = 2, alpha = 0.5) +
