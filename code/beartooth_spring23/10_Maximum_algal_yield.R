@@ -34,7 +34,7 @@ lapply(c("lubridate","tidyverse", "here", "viridis",
 dat_out <- readRDS("data_working/beartooth_181rivers_model_params_all_iterations_050823.rds")
 
 # And filtered rmax dataset for joining.
-dat_rmax <- readRDS("data_working/rmax_filtered_152sites_051023.rds")
+dat_rmax <- readRDS("data_working/rmax_filtered_143sites_110723.rds")
 
 #### Format Data ####
 
@@ -77,6 +77,6 @@ hist(dat_out_yield_med$yield_med) # still some negative values hmmm...
 dat_out_yield_rmax <- left_join(dat_rmax, dat_out_yield_med)
 
 # Export for future use.
-saveRDS(dat_out_yield_rmax, "data_working/maxalgalyield_152sites_051023.rds")
+saveRDS(dat_out_yield_rmax, "data_working/maxalgalyield_143sites_110723.rds")
 
 # End of script.

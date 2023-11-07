@@ -23,8 +23,8 @@
 #### Setup ####
 
 # Load necessary packages.
-lapply(c("tidyverse", "lubridate", "data.table",
-         "here"), require, character.only=T)
+lapply(c("tidyverse", "lubridate", 
+         "data.table", "here"), require, character.only=T)
 
 # Load necessary datasets.
 
@@ -42,10 +42,10 @@ dat_diag <- readRDS("data_working/beartooth_181rivers_model_diags_050923.rds")
 dat_out <- readRDS("data_working/beartooth_181rivers_model_params_all_iterations_050823.rds")
 
 # Load filtered maximum accrual (yield) dataset.
-dat_amax <- readRDS("data_working/maxalgalyield_152sites_051023.rds")
+dat_amax <- readRDS("data_working/maxalgalyield_143sites_110723.rds")
 
 # Load filtered Qc:q2yr dataset.
-dat_Qc <- readRDS("data_working/QcQ2_filtered_138sites_051023.rds")
+dat_Qc <- readRDS("data_working/QcQ2_filtered_130sites_110723.rds")
 
 # Load in nutrient data downloaded from USGS.
 dat_nuts <- readRDS("data_working/USGS_WQP_nuts_aggsite_050923.rds")
@@ -56,7 +56,7 @@ site_HUC <- readRDS("data_working/NWIS_Info_181riv_HUC2_df_050923.rds")
 # And the dataset with Qc exceedances/year.
 dat_exc <- readRDS("data_working/Qc_exceedances_181sites_051123.rds")
 
-#### Calculate site statistics ####
+#### Calculate covariate site statistics ####
 
 # Take list containing all input data and make into a df.
 dat_in_df <- map_df(dat_in, ~as.data.frame(.x), .id="site_name")
@@ -76,8 +76,10 @@ dat_in_daily_means <- dat_in_df %>%
 # from Blaszczak dataset:
 dat_site_info <- site_info %>%
   mutate(Order = factor(NHD_STREAMORDE)) %>%
-  dplyr::select(SiteID, Lat_WGS84, Lon_WGS84, Order, NHD_AREASQKM, LU_category,
-                NHD_RdDensCat, NHD_RdDensWs, NHD_PctImp2011Cat, NHD_PctImp2011Ws)
+  dplyr::select(SiteID, Lat_WGS84, Lon_WGS84, Order, 
+                NHD_AREASQKM, LU_category, NHD_RdDensCat, NHD_RdDensWs,
+                NHD_PctImp2011Cat, NHD_PctImp2011Ws)
+
 # from Appling dataset:
 dat_site <- site %>%
   mutate(Canal = factor(struct.canal_flag),
@@ -131,16 +133,16 @@ saveRDS(dat_join7, "data_working/covariate_data_181sites_070523.rds")
 
 #### Join datasets for amax and Qc:Q2 separately ####
 
-# Yield/maximum accrual (n = 152 sites)
+# Yield/maximum accrual (n = 143 sites)
 dat_join_amax <- left_join(dat_amax, dat_join7)
 
 # Export dataset.
-saveRDS(dat_join_amax, "data_working/amax_covariates_152sites_070523.rds")
+saveRDS(dat_join_amax, "data_working/amax_covariates_143sites_110723.rds")
 
-# Discharge threshold (Qc) (n = 138 sites)
+# Discharge threshold (Qc) (n = 130 sites)
 dat_join_Qc <- left_join(dat_Qc, dat_join7)
 
 # Export dataset.
-saveRDS(dat_join_Qc, "data_working/Qc_covariates_138sites_070523.rds")
+saveRDS(dat_join_Qc, "data_working/Qc_covariates_130sites_110723.rds")
 
 # End of script.

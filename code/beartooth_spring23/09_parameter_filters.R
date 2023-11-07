@@ -51,6 +51,13 @@ dat_in_df <- map_df(dat_in, ~as.data.frame(.x), .id="site_name")
 # Take list containing all iterations of parameters and make into a df.
 dat_out_df <- map_df(dat_out, ~as.data.frame(.x), .id="site_name")
 
+# Create list of time series lengths to impose length filter.
+# Create a dataset with only site-names and lengths of ts
+ts_lengths <- dat_in_df %>%
+  group_by(site_name) %>%
+  summarize(days = n()) %>% # count the number of rows/days
+  ungroup()
+
 #### Value filter for rmax ####
 
 # Negative rmax values are not biologically reasonable, so I'm removing them. 
@@ -79,8 +86,26 @@ dat_diag_rfilter1 <- dat_diag %>%
 dat_out_rmed_Rhat <- inner_join(dat_diag_rfilter1, dat_out_rmed_pos) 
 # 152 sites remaining
 
+#### Length filter ####
+
+# Finally, as of the second round of revisions to this manuscript, we have
+# agreed to remove all sites that are shorter than 6 months in length due
+# to the lack of seasonality represented at these sites.
+
+# First, I need to create a list of sites longer than 6 months.
+ts_lengths_6mo <- ts_lengths %>%
+  filter(days > 180) # n = 172 sites
+
+# And now to create a list that I can filter my r-filtered data with.
+records_over_6mo <- ts_lengths_6mo$site_name
+
+# And use this to filter the above created dataset.
+dat_out_rmed_Rhat_6mo <- dat_out_rmed_Rhat %>%
+  filter(site_name %in% records_over_6mo)
+# 143 sites remaining
+
 # Export for future use.
-saveRDS(dat_out_rmed_Rhat, "data_working/rmax_filtered_152sites_051023.rds")
+saveRDS(dat_out_rmed_Rhat_6mo, "data_working/rmax_filtered_143sites_110723.rds")
 
 #### Conversion of c to Qc ####
 
@@ -125,11 +150,11 @@ saveRDS(dat_out_cmed_2yrQ, "data_working/QcQ2_unfiltered_181sites_051023.rds")
 #### Value filter for c ####
 
 # Negative c values are not biologically reasonable, so I'm removing them. 
-# Begin by using filtered rmax dataset above.
-my_152_site_list <- dat_out_rmed_Rhat$site_name
+# Begin by using NEW filtered rmax dataset above.
+my_143_site_list <- dat_out_rmed_Rhat_6mo$site_name
 
 dat_out_cmed_rmax <- dat_out_cmed_2yrQ %>%
-  filter(site_name %in% my_152_site_list) 
+  filter(site_name %in% my_143_site_list) 
 
 # And remove negative values.
 dat_out_cmed_pos <- dat_out_cmed_rmax %>%
@@ -142,9 +167,9 @@ dat_out_cmed_pos <- dat_out_cmed_rmax %>%
 # Sites with Rhat > 1.05 will not pass muster.
 
 dat_out_cmed_Rhat <- dat_out_cmed_pos %>%
-  filter(Rhat < 1.05) # An additional 14 sites drop off.
+  filter(Rhat < 1.05) # An additional 13 sites drop off.
 
 # Export for future use.
-saveRDS(dat_out_cmed_Rhat, "data_working/QcQ2_filtered_138sites_051023.rds")
+saveRDS(dat_out_cmed_Rhat, "data_working/QcQ2_filtered_130sites_110723.rds")
 
 # End of script.
