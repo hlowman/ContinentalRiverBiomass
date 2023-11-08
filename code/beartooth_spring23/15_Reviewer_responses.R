@@ -1299,7 +1299,7 @@ ggplot(l10_resample$nwis_08211200, aes(x = date, y = GPP)) +
   facet_wrap(.~sample, nrow = 5) # YIPEE :)
 
 # Export dataset for future use.
-saveRDS(l10_resample, "data_working/list_10sites_5ts_Qmaxnorm_SavoySL_102523.rds")
+# saveRDS(l10_resample, "data_working/list_10sites_5ts_Qmaxnorm_SavoySL_102523.rds")
 
 # Join full list into dataframe.
 dat10_resample <- do.call(rbind.data.frame, l10_resample)
@@ -1488,7 +1488,14 @@ dat_r_both <- full_join(dat_out_orig_r, data_out_resample_r) %>%
     scale_color_manual(values = c("black", "gray")) +
     theme_bw() +
     theme(legend.position = "none") +
-    facet_grid(site_name~., scales = "free"))
+    facet_wrap(vars(site_name), nrow = 2, scales = "free_y"))
+
+# And export.
+ggsave(fig_r,
+       filename = "figures/beartooth_spring23/r_ts_length_10sites_fig_110823.jpg",
+       width = 30,
+       height = 10,
+       units = "cm")
 
 # Combine into a single figure.
 (fig_r_and_c <- fig_r + fig_c)
