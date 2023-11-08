@@ -31,13 +31,16 @@ lapply(c("tidybayes", "brms", "tidyverse", "lubridate",
 # Import necessary datasets.
 
 # First, the data for the maximum accrual (amax) models.
-dat_amax <- readRDS("data_working/amax_covariates_152sites_070523.rds")
+dat_amax <- readRDS("data_working/amax_covariates_143sites_110723.rds")
 
 # Next, the data for the Qc:Q2yr models.
-dat_Qc <- readRDS("data_working/Qc_covariates_138sites_070523.rds")
+dat_Qc <- readRDS("data_working/Qc_covariates_130sites_110723.rds")
 
 # And, the original data used in modeling.
-dat_in <- readRDS("data_working/df_181sites_Qmaxnorm_SavoySL.rds")
+dat_in_list <- readRDS("data_working/list_181sites_Qmaxnorm_SavoySL.rds")
+
+# Take list containing all input data and make into a df.
+dat_in <- map_df(dat_in_list, ~as.data.frame(.x), .id="site_name")
 
 # As well as the model outputs.
 dat_out <- readRDS("data_working/beartooth_181rivers_model_params_all_iterations_050823.rds")
@@ -138,8 +141,21 @@ sites_sf <- st_as_sf(dat_cov,
 
 #### Accrual Appendix Figure ####
 
+# Going to remove those sites that were not included in the model fit due
+# to missing covariate data.
+dat_amax137 <- dat_amax %>%
+  # create appropriate Dam column
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential = 5-50%
+    Dam == "0" ~ "1", # Certain = 100%
+    TRUE ~ NA))) %>%
+  # and drop NAs
+  drop_na(yield_med, meanTemp, NHD_RdDensWs, 
+          width_med, exc_y,
+          Dam_binary, huc_2)
+
 # MAY vs. GPP:
-(figa1 <- ggplot(dat_amax, aes(x = meanGPP, y = yield_med)) +
+(figa1 <- ggplot(dat_amax137, aes(x = meanGPP, y = yield_med)) +
     geom_point(alpha = 0.9, size = 3,
                color = "#96AA8B") +
     geom_linerange(alpha = 0.8, 
@@ -152,7 +168,7 @@ sites_sf <- st_as_sf(dat_cov,
     theme_bw())
 
 # MAY vs. cvQ:
-(figa2 <- ggplot(dat_amax, aes(x = cvQ, y = yield_med)) +
+(figa2 <- ggplot(dat_amax137, aes(x = cvQ, y = yield_med)) +
     geom_point(alpha = 0.9, size = 3,
                color = "#8A9C7E") +
     geom_linerange(alpha = 0.8, 
@@ -165,7 +181,7 @@ sites_sf <- st_as_sf(dat_cov,
     theme_bw())
 
 # MAY vs. daily light:
-(figa3 <- ggplot(dat_amax, aes(x = meanLight, y = yield_med)) +
+(figa3 <- ggplot(dat_amax137, aes(x = meanLight, y = yield_med)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#7B8B6E") +
     geom_linerange(alpha = 0.8, 
@@ -177,7 +193,7 @@ sites_sf <- st_as_sf(dat_cov,
     theme_bw())
 
 # MAY vs. annual exceedances:
-(figa4 <- ggplot(dat_amax, aes(x = exc_y, y = yield_med)) +
+(figa4 <- ggplot(dat_amax137, aes(x = exc_y, y = yield_med)) +
     geom_point(alpha = 0.9, size = 3,
                color = "#6C7A5D") +
     geom_linerange(alpha = 0.8, 
@@ -189,7 +205,7 @@ sites_sf <- st_as_sf(dat_cov,
     theme_bw())
 
 # MAY vs. HUC: 
-(figa5 <- ggplot(dat_amax, aes(x = huc_2, y = yield_med)) +
+(figa5 <- ggplot(dat_amax137, aes(x = huc_2, y = yield_med)) +
     geom_boxplot(alpha = 0.6, color = "black", fill = "#6C7A5D") +
     scale_y_log10() +
     labs(x = expression(Regional~Hydrologic~Unit~Code),
@@ -197,7 +213,7 @@ sites_sf <- st_as_sf(dat_cov,
     theme_bw())
 
 # MAY vs. mean temp:
-(figa6 <- ggplot(dat_amax, aes(x = meanTemp, y = yield_med)) +
+(figa6 <- ggplot(dat_amax137, aes(x = meanTemp, y = yield_med)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#5C694C") +
     geom_linerange(alpha = 0.8, 
@@ -209,14 +225,7 @@ sites_sf <- st_as_sf(dat_cov,
     theme_bw())
 
 # MAY vs. dams:
-(figa7 <- ggplot(dat_amax %>%
-                    # Creating the new categorical dam column we modeled by.
-                    mutate(Dam_binary = factor(case_when(
-                      Dam %in% c("50", "80", "95") ~ "0", # Potential
-                      Dam == "0" ~ "1", # Certain
-                      TRUE ~ NA))) %>%
-                    drop_na(Dam_binary), 
-                   aes(x = Dam_binary, y = yield_med)) +
+(figa7 <- ggplot(dat_amax137, aes(x = Dam_binary, y = yield_med)) +
     geom_boxplot(alpha = 0.6, 
                  fill = "#4D583C", color = "black") +
     scale_y_log10() +
@@ -226,7 +235,7 @@ sites_sf <- st_as_sf(dat_cov,
     theme_bw())
 
 # MAY vs. river width:
-(figa8 <- ggplot(dat_amax, aes(x = width_med, y = yield_med)) +
+(figa8 <- ggplot(dat_amax137, aes(x = width_med, y = yield_med)) +
     geom_point(alpha = 0.8, size = 3, color = "#454F34") +
     geom_linerange(alpha = 0.8, 
                    color = "#454F34",
@@ -238,8 +247,7 @@ sites_sf <- st_as_sf(dat_cov,
     theme_bw())
 
 # MAY vs. Road density:
-(figa9 <- ggplot(dat_amax, 
-                  aes(x = NHD_RdDensWs, y = yield_med)) +
+(figa9 <- ggplot(dat_amax137, aes(x = NHD_RdDensWs, y = yield_med)) +
     geom_point(alpha = 0.8, size = 3, 
                color = "#3A422D") +
     geom_linerange(alpha = 0.8, 
@@ -251,7 +259,20 @@ sites_sf <- st_as_sf(dat_cov,
     theme_bw())
 
 # MAY vs. NO3:
-(figa10 <- ggplot(dat_amax, aes(x = Nitrate, y = yield_med)) +
+
+# Also need to create a dataset that was used for nutrient model fitting.
+dat_amax50 <- dat_amax %>%
+  # create appropriate Dam column
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential = 5-50%
+    Dam == "0" ~ "1", # Certain = 100%
+    TRUE ~ NA))) %>%
+  # and drop NAs
+  drop_na(yield_med, meanTemp, NHD_RdDensWs, 
+          width_med, exc_y, Dam_binary,
+          huc_2, Nitrate, Phosphorus)
+
+(figa10 <- ggplot(dat_amax50, aes(x = Nitrate, y = yield_med)) +
     geom_point(alpha = 0.8, size = 3, color = "#343B29") +
     geom_linerange(alpha = 0.8, 
                    color = "#343B29",
@@ -263,7 +284,7 @@ sites_sf <- st_as_sf(dat_cov,
     theme_bw())
 
 # MAY vs. P:
-(figa11 <- ggplot(dat_amax, aes(x = Phosphorus, y = yield_med)) +
+(figa11 <- ggplot(dat_amax50, aes(x = Phosphorus, y = yield_med)) +
     geom_point(alpha = 0.8, size = 3, 
                color = "#2F3525") +
     geom_linerange(alpha = 0.8, 
@@ -284,23 +305,29 @@ sites_sf <- st_as_sf(dat_cov,
     plot_layout(nrow = 4))
 
 # And export for use in the appendix.
-# ggsave(fig_yield_med,
-#        filename = "figures/beartooth_spring23/amax_11panel_081723.tiff",
-#        width = 22,
-#        height = 22,
-#        units = "cm",
-#        dpi = 300) # n = 152
+ggsave(fig_yield_med,
+       filename = "figures/beartooth_spring23/amax_11panel_110823.tiff",
+       width = 22,
+       height = 22,
+       units = "cm",
+       dpi = 300) # n = 137/50
 
 #### Qc Appendix Figure ####
 
-# Create columns necessary for plotting.
-dat_Qc <- dat_Qc %>%
+# Create columns necessary for plotting and filter for data used in models.
+dat_Qc124 <- dat_Qc %>%
   mutate(Qc_Q2yr = Qc/RI_2yr_Q_cms,
          Qc_Q2yr2.5 = Qc2.5/RI_2yr_Q_cms,
-         Qc_Q2yr97.5 = Qc97.5/RI_2yr_Q_cms)
+         Qc_Q2yr97.5 = Qc97.5/RI_2yr_Q_cms) %>%
+  mutate(Dam_binary = factor(case_when(
+    Dam %in% c("50", "80", "95") ~ "0", # Potential effect of dams
+    Dam == "0" ~ "1", # Certain effect of dams
+    TRUE ~ NA))) %>%
+  drop_na(Qc_Q2yr, NHD_RdDensWs, width_med,
+          Dam_binary, huc_2)
 
 # Mean daily GPP vs. Qc:Q2: X axis LOG SCALED
-(figq1 <- ggplot(dat_Qc, aes(x = meanGPP, y = Qc_Q2yr)) +
+(figq1 <- ggplot(dat_Qc124, aes(x = meanGPP, y = Qc_Q2yr)) +
    geom_point(alpha = 0.8, size = 3,
               color = "#486999") +
    geom_linerange(alpha = 0.8, 
@@ -314,7 +341,7 @@ dat_Qc <- dat_Qc %>%
    theme_bw())
 
 # CV of Discharge vs. Qc:Q2: note, x axis on LOG SCALE
-(figq2 <- ggplot(dat_Qc, aes(x = cvQ, y = Qc_Q2yr)) +
+(figq2 <- ggplot(dat_Qc124, aes(x = cvQ, y = Qc_Q2yr)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#405F8A") +
     geom_linerange(alpha = 0.8, 
@@ -328,7 +355,7 @@ dat_Qc <- dat_Qc %>%
     theme_bw())
 
 # Mean annual exceedances vs. Qc:Q2
-(figq3 <- ggplot(dat_Qc, aes(x = exc_y, y = Qc_Q2yr)) +
+(figq3 <- ggplot(dat_Qc124, aes(x = exc_y, y = Qc_Q2yr)) +
     geom_point(alpha = 0.8, size = 3,
                color = "#38557A") +
     geom_linerange(alpha = 0.8, 
@@ -342,7 +369,7 @@ dat_Qc <- dat_Qc %>%
     theme_bw())
 
 # HUC vs. Qc:Q2: 
-(figq4 <- ggplot(dat_Qc, aes(x = huc_2, y = Qc_Q2yr)) +
+(figq4 <- ggplot(dat_Qc124, aes(x = huc_2, y = Qc_Q2yr)) +
     geom_boxplot(alpha = 0.6, color = "black", fill = "#38557A") +
     geom_hline(yintercept = 1, linetype = "dashed") +
     scale_y_log10() +
@@ -351,14 +378,7 @@ dat_Qc <- dat_Qc %>%
     theme_bw())
 
 # Effect of Dams vs. Qc:Q2
-(figq5 <- ggplot(dat_Qc %>%
-                       # Creating the new categorical dam column we modeled by.
-                       mutate(Dam_binary = factor(case_when(
-                         Dam %in% c("50", "80", "95") ~ "0", # Potential
-                         Dam == "0" ~ "1", # Certain
-                         TRUE ~ NA))) %>%
-                       drop_na(Dam_binary), 
-                     aes(x = Dam_binary, y = Qc_Q2yr)) +
+(figq5 <- ggplot(dat_Qc124, aes(x = Dam_binary, y = Qc_Q2yr)) +
     geom_boxplot(alpha = 0.6, 
                  fill = "#273C57", color = "black") +
     geom_hline(yintercept = 1, linetype = "dashed") +
@@ -369,7 +389,7 @@ dat_Qc <- dat_Qc %>%
     theme_bw())
 
 # River Width vs. Qc:Q2: note, x axis LOG SCALED
-(figq6 <- ggplot(dat_Qc, aes(x = width_med, y = Qc_Q2yr)) +
+(figq6 <- ggplot(dat_Qc124, aes(x = width_med, y = Qc_Q2yr)) +
     geom_point(alpha = 0.6, size = 3, color = "#1E2F46") +
     geom_linerange(alpha = 0.8, 
                    color = "#1E2F46",
@@ -382,7 +402,7 @@ dat_Qc <- dat_Qc %>%
     theme_bw())
 
 # Road density in the watershed vs. Qc:Q2
-(figq7 <- ggplot(dat_Qc, aes(x = NHD_RdDensWs, y = Qc_Q2yr)) +
+(figq7 <- ggplot(dat_Qc124, aes(x = NHD_RdDensWs, y = Qc_Q2yr)) +
     geom_point(alpha = 0.6, size = 3, color = "#304969") +
     geom_linerange(alpha = 0.8, 
                    color = "#304969",
@@ -401,11 +421,11 @@ dat_Qc <- dat_Qc %>%
 
 # And export for inclusion in SI.
 # ggsave(fig_qcq2_supp,
-#        filename = "figures/beartooth_spring23/QcQ2_7panel_081723.tiff",
+#        filename = "figures/beartooth_spring23/QcQ2_7panel_110823.tiff",
 #        width = 22,
 #        height = 16.5,
 #        units = "cm",
-#        dpi = 300) # n = 138
+#        dpi = 300) # n = 124
 
 #### GPP Appendix Figure ####
 

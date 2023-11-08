@@ -1004,7 +1004,7 @@ dat_Qc_brms1 <- dat_Qc %>%
   # assigning sites to be rownames so that we can re-identify and add HUC2
   # back in once we've scaled the remaining variables
   column_to_rownames(var = "site_name") %>%
-  # and drop any NAs prior to scaling - this removes 6 records
+  # and drop any NAs prior to scaling - this again removes 6 records
   drop_na(logQcQ2, NHD_RdDensWs, log_width,
           Dam_binary, huc_2) %>%
   dplyr::select(logQcQ2, NHD_RdDensWs, log_width)
