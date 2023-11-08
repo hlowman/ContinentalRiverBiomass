@@ -44,10 +44,10 @@ dat_out <- readRDS("data_working/beartooth_181rivers_model_params_all_iterations
 dat_in <- readRDS("data_working/df_181sites_Qmaxnorm_SavoySL.rds")
 
 # Then, the data for the maximum accrual (amax) models.
-dat_amax <- readRDS("data_working/amax_covariates_152sites_070523.rds")
+dat_amax <- readRDS("data_working/amax_covariates_143sites_110723.rds")
 
 # Next, the data for the Qc:Q2yr models.
-dat_Qc <- readRDS("data_working/Qc_covariates_138sites_070523.rds") %>%
+dat_Qc <- readRDS("data_working/Qc_covariates_130sites_110723.rds") %>%
   mutate(Qc_Q2yr = Qc/RI_2yr_Q_cms)
 
 # And Qc data at *all* sites.
@@ -69,12 +69,12 @@ dat_2yrQ <- read_csv("data_working/RI_2yr_flood_180riv_050923.csv")
 dat_10yr <- read_csv("data_working/RI_10yr_flood_206riv.csv")
 
 # Import data used to fit posthoc models.
-dat_a1 <- readRDS("data_posthoc_modelfits/accrual_datin_100323.rds")
-dat_q1 <- readRDS("data_posthoc_modelfits/qc_datin_100323.rds")
+dat_a1 <- readRDS("data_posthoc_modelfits/accrual_datin_110723.rds")
+dat_q1 <- readRDS("data_posthoc_modelfits/qc_datin_110723.rds")
 
 # As well as posthoc model fits from step 13 script.
-a1 <- readRDS("data_posthoc_modelfits/accrual_brms_070623.rds")
-q1 <- readRDS("data_posthoc_modelfits/qcq2_brms_070623.rds")
+a1 <- readRDS("data_posthoc_modelfits/accrual_brms_110723.rds")
+q1 <- readRDS("data_posthoc_modelfits/qcq2_brms_110723.rds")
 
 #### Reviewer 1 ####
 
@@ -552,6 +552,9 @@ dat_r_Qc_plus <- left_join(dat_Qc, dat_amax %>% dplyr::select(site_name, yield_m
 # Note, the revised version of the Supplementary figure displaying predicted 
 # GPP at multiple sites can be found in the "14_Appendix_figures.R" script.
 
+# Additional note, these sites are all longer than 180 days so they do not
+# need to be revised given the new time series length filter imposed Nov 2023.
+
 ##### Effects of Variation in TS Length #####
 
 ###### Posthoc model residuals ######
@@ -565,44 +568,42 @@ ts_lengths <- dat_in %>%
   summarize(days = n()) %>% # count the number of rows/days
   ungroup()
 
-# Extract residuals for first amax posthoc model.
+# Extract residuals for first amax posthoc model per code found here:
+# http://paul-buerkner.github.io/brms/reference/residuals.brmsfit.html
 ra1 <- residuals(a1,
                  method = "posterior_predict",
-                 summary = TRUE)
-
-# Generate dataframe initially used to fit accrual posthoc model.
-dat_a1_144 <- tidyr::drop_na(dat_a1)
+                 summary = TRUE,
+                 probs = c(0.025, 0.975))
 
 # Join with ts length.
-dat_a1_144 <- left_join(dat_a1_144, ts_lengths)
+dat_a1_137 <- left_join(dat_a1, ts_lengths)
 
 # And join with residuals
-dat_a1_144 <- cbind(dat_a1_144, ra1)
+dat_a1_137 <- cbind(dat_a1_137, ra1)
 
 # Plot residuals of accrual posthoc model vs. time series length
-(fig_resids_a <- ggplot(dat_a1_144, aes(x = days, y = Estimate)) +
+(fig_resids_a <- ggplot(dat_a1_137, aes(x = days, y = Estimate)) +
   geom_point(size = 3, alpha = 0.75) +
   geom_errorbar(aes(ymin = Q2.5, ymax = Q97.5), alpha = 0.75) +
   labs(x = "Time Series Length (days)",
        y = "Accrual Model Residual Estimate") +
   theme_bw())
 
-# Extract residuals for second QcQ2yr posthoc model.
+# Extract residuals for second QcQ2yr posthoc model using same protocol
+# as described above.
 rq1 <- residuals(q1,
                  method = "posterior_predict",
-                 summary = TRUE)
-
-# Generate dataframe initially used to fit accrual posthoc model.
-dat_q1_130 <- tidyr::drop_na(dat_q1)
+                 summary = TRUE,
+                 probs = c(0.025, 0.975))
 
 # Join with ts length.
-dat_q1_130 <- left_join(dat_q1_130, ts_lengths)
+dat_q1_124 <- left_join(dat_q1, ts_lengths)
 
 # And join with residuals
-dat_q1_130 <- cbind(dat_q1_130, rq1)
+dat_q1_124 <- cbind(dat_q1_124, rq1)
 
 # Plot residuals of accrual posthoc model vs. time series length
-(fig_resids_q <- ggplot(dat_q1_130, aes(x = days, y = Estimate)) +
+(fig_resids_q <- ggplot(dat_q1_124, aes(x = days, y = Estimate)) +
     geom_point(size = 3, alpha = 0.75) +
     geom_errorbar(aes(ymin = Q2.5, ymax = Q97.5), alpha = 0.75) +
     labs(x = "Time Series Length (days)",
@@ -610,14 +611,17 @@ dat_q1_130 <- cbind(dat_q1_130, rq1)
     theme_bw())
 
 # Join figures together.
-fig_resids <- fig_resids_a + fig_resids_q
+(fig_resids <- fig_resids_a + fig_resids_q +
+  plot_annotation(tag_levels = 'A'))
 
 # And export.
 # ggsave(fig_resids,
-#        filename = "figures/beartooth_spring23/resids_and_ts_length_fig.jpg",
+#        filename = "figures/beartooth_spring23/resids_ts_length_110823.jpg",
 #        width = 20,
 #        height = 10,
 #        units = "cm")
+
+###### Model fit with days as covariate ######
 
 # And as an added gut check, I will re-run the model fits to examine
 # time series length as covariate.
@@ -641,6 +645,10 @@ dat_amax_ts_brms1 <- dat_amax_ts %>%
   # assigning sites to be rownames so that we can re-identify and add HUC2
   # and Dams back in once we've scaled the remaining variables
   column_to_rownames(var = "site_name") %>%
+  # and removing sites with NAs
+  drop_na(log_yield, meanTemp, NHD_RdDensWs,
+          log_width, exc_y, log_days,
+          Dam_binary, huc_2) %>%
   dplyr::select(log_yield, meanTemp, NHD_RdDensWs, 
                 log_width, exc_y, log_days)
 
@@ -653,7 +661,7 @@ dat_amax_ts_brms <- rownames_to_column(as.data.frame(dat_amax_ts_brms1_scaled),
 dat_amax_ts_Dam_HUC <- dat_amax_ts %>%
   dplyr::select(site_name, Dam_binary, huc_2)
 
-dat_amax_ts_brms <- full_join(dat_amax_ts_brms, dat_amax_ts_Dam_HUC) %>%
+dat_amax_ts_brms <- left_join(dat_amax_ts_brms, dat_amax_ts_Dam_HUC) %>%
   dplyr::select(log_yield, meanTemp, NHD_RdDensWs, 
                 Dam_binary, log_width, exc_y, huc_2,
                 log_days, site_name) %>%
@@ -669,15 +677,15 @@ a1_ts <- brm(log_yield ~ log_width + NHD_RdDensWs +
 summary(a1_ts)
 
 #              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept        0.24      0.16    -0.06     0.56 1.00     2653     1823
-# log_width        0.48      0.11     0.27     0.69 1.00     3567     3047
-# NHD_RdDensWs     0.02      0.10    -0.19     0.22 1.00     3740     3305
-# Dam_binary1     -0.40      0.15    -0.70    -0.09 1.00     5746     3163
-# meanTemp         0.04      0.10    -0.15     0.24 1.00     3010     2770
-# exc_y            0.17      0.07     0.03     0.32 1.00     5397     3392
-# log_days         0.14      0.09    -0.03     0.31 1.00     4017     3148
+# Intercept        0.22      0.16    -0.09     0.54 1.00     2748     2532
+# log_width        0.44      0.11     0.23     0.64 1.00     3630     3321
+# NHD_RdDensWs     0.00      0.10    -0.20     0.20 1.00     3110     3044
+# Dam_binary1     -0.38      0.16    -0.69    -0.06 1.00     5383     2703
+# meanTemp         0.04      0.10    -0.16     0.24 1.00     3197     3070
+# exc_y            0.19      0.08     0.03     0.34 1.00     5577     2817
+# log_days         0.11      0.08    -0.05     0.28 1.00     3673     2831
 
-# All covariates remain as before, and no. of days is not significant.
+# No. of days is not significant.
 
 mcmc_plot(a1_ts)
 
@@ -702,6 +710,9 @@ dat_Qc_ts_brms1 <- dat_Qc_ts %>%
   # assigning sites to be rownames so that we can re-identify and add HUC2
   # back in once we've scaled the remaining variables
   column_to_rownames(var = "site_name") %>%
+  # and removing records with NAs 
+  drop_na(logQcQ2, NHD_RdDensWs, log_width, log_days,
+          Dam_binary, huc_2) %>%
   dplyr::select(logQcQ2, NHD_RdDensWs, log_width, log_days)
 
 dat_Qc_ts_brms1_scaled <- scale(dat_Qc_ts_brms1)
@@ -728,14 +739,13 @@ q1_ts <- brm(logQcQ2 ~ NHD_RdDensWs + Dam_binary +
 summary(q1_ts)
 
 #              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-# Intercept        0.20      0.20    -0.17     0.62 1.00     1586     1675
-# NHD_RdDensWs    -0.08      0.12    -0.31     0.16 1.00     3438     3060
-# Dam_binary1     -0.21      0.18    -0.56     0.14 1.00     4751     3101
-# log_width        0.03      0.12    -0.20     0.26 1.00     3401     3205
-# log_days         0.11      0.10    -0.07     0.29 1.00     4234     2798
+# Intercept        0.13      0.19    -0.22     0.51 1.00     2024     2248
+# NHD_RdDensWs    -0.10      0.12    -0.33     0.13 1.00     3096     2762
+# Dam_binary1     -0.17      0.19    -0.53     0.20 1.00     4340     3240
+# log_width       -0.02      0.12    -0.26     0.22 1.00     3340     2676
+# log_days         0.12      0.10    -0.07     0.30 1.00     4333     2993
 
-# As above, all covariates remain as before, and no. of days is 
-# not significant.
+# As above, no. of days is not significant.
 
 mcmc_plot(q1_ts)
 
@@ -1538,7 +1548,7 @@ dat_10_skew <- dat_in_10 %>%
 #        height = 10,
 #        units = "cm")
 
-##### Overlap approach #####
+###### Overlapping TS ######
 
 # Instead of resampling, this code chunk will explore model estimates based
 # on maximizing data overlap.
@@ -1664,7 +1674,7 @@ data24_out_diags <- map(PM_outputlist_Ricker, extract_summary)
 dat24_out_df <- map_df(data24_out, ~as.data.frame(.x), .id="site_name")
 dat24_diag <- map_df(data24_out_diags, ~as.data.frame(.x), .id="site_name")
 
-###### posthoc  models #####
+####### posthoc  models ######
 
 # Annotating this as well as I can since it includes steps across multiple 
 # scripts in my typical workflow.
