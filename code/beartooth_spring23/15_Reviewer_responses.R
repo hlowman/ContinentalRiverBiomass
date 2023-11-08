@@ -1464,6 +1464,9 @@ dat_out_orig_r <- dat_out_orig_r %>%
                             site_name == "nwis_10133800" ~ "7.4 years",
                             site_name == "nwis_14206950" ~ "7.5 years"))
 
+dat_10names <- dat_names %>%
+  filter(site_no %in% unique(dat_out_orig_r$site_no))
+
 dat_r_both <- full_join(dat_out_orig_r, data_out_resample_r) %>%
   # make norm a factor %>%
   mutate(sample = factor(sample, levels = c("6 months", "9 months",
@@ -1476,7 +1479,27 @@ dat_r_both <- full_join(dat_out_orig_r, data_out_resample_r) %>%
                                 "6.5 years", "6.6 years", "7.4 years",
                                 "7.5 years", "8.7 years") ~ "Original",
                                 TRUE ~ "Resample"),
-                      levels = c("Original", "Resample")))
+                      levels = c("Original", "Resample"))) %>%
+  mutate(long_name = factor(case_when(site_name == "nwis_01481000" ~ "Brandywine Creek, PA",
+                               site_name == "nwis_01608500" ~ "S. Branch Potomac River, WV",
+                               site_name == "nwis_02168504" ~ "Saluda River, SC",
+                               site_name == "nwis_04137500" ~ "Au Sable River, MI",
+                               site_name == "nwis_05435943" ~ "Badger Mill Creek, WI",
+                               site_name == "nwis_07109500" ~ "Arkansas River, CO",
+                               site_name == "nwis_08070200" ~ "E. Fork San Jacinto River, TX",
+                               site_name == "nwis_08211200" ~ "Nueces River, TX",
+                               site_name == "nwis_10133800" ~ "E. Canyon Creek, UT",
+                               site_name == "nwis_14206950" ~ "Fanno Creek, OR"),
+                            levels = c("Brandywine Creek, PA",
+                                       "S. Branch Potomac River, WV",
+                                       "Saluda River, SC",
+                                       "Au Sable River, MI",
+                                       "Badger Mill Creek, WI",
+                                       "Arkansas River, CO",
+                                       "E. Fork San Jacinto River, TX",
+                                       "Nueces River, TX",
+                                       "E. Canyon Creek, UT",
+                                       "Fanno Creek, OR")))
 
 (fig_r <- ggplot(dat_r_both, aes(x = r_med, y = sample, color = run)) +
     geom_point(size = 5, alpha = 0.75, position = position_dodge(width = -0.5)) +
@@ -1488,14 +1511,14 @@ dat_r_both <- full_join(dat_out_orig_r, data_out_resample_r) %>%
     scale_color_manual(values = c("black", "gray")) +
     theme_bw() +
     theme(legend.position = "none") +
-    facet_wrap(vars(site_name), nrow = 2, scales = "free_y"))
+    facet_wrap(vars(long_name), nrow = 2, scales = "free_y"))
 
 # And export.
-ggsave(fig_r,
-       filename = "figures/beartooth_spring23/r_ts_length_10sites_fig_110823.jpg",
-       width = 30,
-       height = 10,
-       units = "cm")
+# ggsave(fig_r,
+#        filename = "figures/beartooth_spring23/r_ts_length_10sites_fig_110823.jpg",
+#        width = 30,
+#        height = 10,
+#        units = "cm")
 
 # Combine into a single figure.
 (fig_r_and_c <- fig_r + fig_c)
@@ -1554,6 +1577,16 @@ dat_10_skew <- dat_in_10 %>%
 #        width = 30,
 #        height = 10,
 #        units = "cm")
+
+saluda_gpp <- dat_in_10 %>%
+  filter(site_name == "nwis_02168504") %>%
+  group_by(year) %>%
+  summarize(meanGPP = mean(GPP, na.rm = TRUE),
+            sdGPP = sd(GPP, na.rm = TRUE),
+            minGPP = min(GPP, na.rm = TRUE),
+            maxGPP = max(GPP, na.rm = TRUE),
+            cvGPP = sd(GPP, na.rm = TRUE)/mean(GPP, na.rm = TRUE)) %>%
+  ungroup()
 
 ###### Overlapping TS ######
 
