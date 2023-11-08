@@ -1835,7 +1835,10 @@ dat24_amax <- dat24_amax %>%
   mutate(Dam_binary = factor(case_when(
     Dam %in% c("50", "80", "95") ~ "0", # Potential = 5-50%
     Dam == "0" ~ "1", # Certain = 100%
-    TRUE ~ NA)))
+    TRUE ~ NA))) %>%
+  # and drop NAs
+  drop_na(log_yield, meanTemp, NHD_RdDensWs, log_width, exc_y,
+          Dam_binary, huc_2)
 
 # Ok, and making the final dataset with which to build models
 # where necessary variables have already been log-transformed and
@@ -1935,7 +1938,10 @@ dat24_Qc <- dat24_Qc %>%
   mutate(Dam_binary = factor(case_when(
     Dam %in% c("50", "80", "95") ~ "0", # Potential effect of dams
     Dam == "0" ~ "1", # Certain effect of dams
-    TRUE ~ NA)))
+    TRUE ~ NA))) %>%
+  # and drop NAs
+  drop_na(logQcQ2, NHD_RdDensWs, log_width,
+          Dam_binary, huc_2)
 
 # Ok, and making the final dataset with which to build models
 # where necessary variables have already been log-transformed and
@@ -2010,18 +2016,20 @@ dat_q1_24 <- mcmc_intervals_data(q1_24,
           legend.position = "none"))
 
 # Join all posthoc tests together.
-fig24_all <- a24_fig_custom + q24_fig_custom
+(fig24_all <- a24_fig_custom + q24_fig_custom +
+  plot_annotation(tag_levels = "A"))
 
 # And export.
 # ggsave(fig24_all,
-#        filename = "figures/beartooth_spring23/brms_24site_tests_110323.tiff",
+#        filename = "figures/beartooth_spring23/brms_24site_tests_110823.tiff",
 #        width = 20,
 #        height = 8,
 #        units = "cm",
 #        dpi = 300)
 
 # Also going to create histograms to display the data coverage for contrasting
-# situations (full dataset of 152 sites and selected dataset of 24 sites)
+# situations (full dataset of 137 sites and selected dataset of 20 sites that
+# pass model diagnostics and have complete covariate data available)
 
 # Need to create a dataset of the original covariates.
 dat_amax_orig <- dat_amax %>%
@@ -2034,16 +2042,17 @@ dat_amax_orig <- dat_amax %>%
   # As well as a new column to color by in the histograms.
   mutate(dataset = "Full dataset")
 
-# And a dataset of the selected 20 sites that get fed into the model immediately
+# And a dataset of the selected sites that get fed into the model immediately
 # above here.
-dat_amax_20 <- dat24_amax %>%
+dat_amax_select <- dat24_amax %>%
   dplyr::select(site_name, Dam, meanTemp, NHD_RdDensWs, exc_y, width_med,
                 Dam_binary) %>%
-  # Again add a new column to color by in the histgrams.
+  # Again add a new column to color by in the histograms.
   mutate(dataset = "Selected sites")
 
-# Join the two together.
-dat_amax_twosets <- rbind(dat_amax_orig, dat_amax_20)
+# Join the two together (n = 137 + n = 20).
+dat_amax_twosets <- rbind(dat_amax_orig, dat_amax_20) %>%
+  drop_na(meanTemp, NHD_RdDensWs, exc_y, width_med, Dam_binary)
 
 # Dam histogram.
 (fig_hist_dam <- ggplot(dat_amax_twosets %>%
@@ -2097,11 +2106,12 @@ dat_amax_twosets <- rbind(dat_amax_orig, dat_amax_20)
           axis.title.y = element_blank()))
 
 # Combine plots into one.
-(fig_hist_all <- (fig_hist_dam | fig_hist_temp | fig_hist_road | fig_hist_exc | fig_hist_width))
+(fig_hist_all <- (fig_hist_dam | fig_hist_temp | fig_hist_road | fig_hist_exc | fig_hist_width) +
+    plot_annotation(tag_levels = 'A'))
 
 # And export.
 # ggsave(fig_hist_all,
-#        filename = "figures/beartooth_spring23/hist_24site_tests_110323.tiff",
+#        filename = "figures/beartooth_spring23/hist_24site_tests_110823.tiff",
 #        width = 30,
 #        height = 8,
 #        units = "cm",
