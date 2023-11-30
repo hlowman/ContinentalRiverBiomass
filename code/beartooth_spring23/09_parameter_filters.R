@@ -107,6 +107,25 @@ dat_out_rmed_Rhat_6mo <- dat_out_rmed_Rhat %>%
 # Export for future use.
 saveRDS(dat_out_rmed_Rhat_6mo, "data_working/rmax_filtered_143sites_110723.rds")
 
+# Create figure for presentation purposes.
+(r_hist <- ggplot(dat_out_rmed_Rhat_6mo %>%
+                    # make new column of doubling times
+                    mutate(doub = log(2)/r_med), 
+                  aes(x = doub)) + # base plot
+  geom_histogram(fill = "#7AC9B7", alpha = 0.75) + # spread of 143 site values
+  theme_classic() + # remove grid
+  scale_x_log10() +
+  geom_vline(xintercept = 7.3, linewidth = 1.5, color = "#2A3927") +
+  labs(x = "Median Doubling Time (days)",
+       y = "Number of Sites"))
+
+ggsave(plot = r_hist,
+       filename = "figures/beartooth_spring23/hist_143sites_113023.tiff",
+       width = 17.8,
+       height = 10,
+       units = "cm",
+       dpi = 300)
+
 #### Conversion of c to Qc ####
 
 # Now, before performing any filtering for c values, I'm first going to calculate
