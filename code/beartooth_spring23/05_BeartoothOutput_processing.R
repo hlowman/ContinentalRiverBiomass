@@ -12,7 +12,7 @@
 
 # Please note, the data loaded in this script is too large to be posted to GitHub.
 # Instead, the outputs of this script are those that will be published with the
-# manuscript at this link: INSERT ZENODO LINK HERE.
+# manuscript.
 
 # Note - I CRASHED the desktop trying to run this, so only do the below
 # using the Pinyon SERVER!!!

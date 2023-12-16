@@ -146,8 +146,9 @@ two_year_flood <- function(data){
   mod <- lm(exceed_prob ~ ln_Q_max, data = sorted.maximas)
   l <- as.data.frame(t(as.matrix(coefficients(mod))))
   colnames(l) <- c("int","slope")
-  yr_2 <- exp((0.5 - l$int)/l$slope) # Adjust depending on timeframe of flood examined.
-  # was previously 0.5 for 2 year flood, 0.1 for 10 year flood
+  yr_2 <- exp((0.5 - l$int)/l$slope) 
+  # Adjust depending on time frame of flood examined.
+  # 0.5 for 2 year flood, 0.1 for 10 year flood
   
   return(yr_2)
   

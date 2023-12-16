@@ -26,7 +26,7 @@ Note: Daily discharge data for each river from 1970-01-01 to 2020-12-31 measured
 
 ###
 
-Scripts/code (software)
+Code: All of the following scripts were written and run using R in RStudio.
 
 #
 File name: 01_NWIS_RiverSelection.R
@@ -38,83 +38,83 @@ Data Files Generated: NWIS_198sites_050423.rds, NWIS_198sitesinfo_050423.rds, NW
 
 #
 File name: 02_StreamLight_processing.R
-File description: Code to merge GPP time series with existing surface light data estimates from Bernhardt et al. (2022). All URLs to download published, raw data files required by this script are provided in comments.
+File description: Code to use GPP time series to filter existing surface light data estimates from Bernhardt et al. (2022). All URLs to download published, raw data files required by this script are provided in comments.
 Category: Data Preparation
 Scripting Language: R
 Data Files Required: NWIS_198sites_050423.rds, NWIS_198sitesinfo_050423.rds, NWIS_198sitesNdays_050423.rds, lotic_standardized_full.rds
 Data Files Generated: StreamLight_daily_df_182sites_050423.rds, StreamLight_daily_list_182sites_050423.rds
 
 #
-File name:
-File description:
-Category:
+File name: 03_DataSource_181rivers_StreamLight.R
+File description: Code to compile and format time series for rivers with StreamLight PAR. This generates four separate data files that were used to fit models in parallel.
+Category: Data Preparation
 Scripting Language: R
-Data Files Required:
-Data Files Generated:
+Data Files Required: NWIS_198sites_050423.rds, NWIS_198sitesinfo_050423.rds, StreamLight_daily_df_182sites_050423.rds
+Data Files Generated: list_181sites_Qmaxnorm_SavoySL.rds, df_181sites_Qmaxnorm_SavoySL.rds, list_181sites_Qmaxnorm_SavoySL_pt1.rds, list_181sites_Qmaxnorm_SavoySL_pt2.rds, list_181sites_Qmaxnorm_SavoySL_pt3.rds, list_181sites_Qmaxnorm_SavoySL_pt4.rds
 
 #
-File name:
-File description:
-Category:
+File name: 04_Biomass_fit_model_pt1.R
+File description: Code to compile data and call "Stan_ProductivityModel.stan" to fit latent biomass model. Note, this script was run on the University of Wyoming's Beartooth High Performance Computing Cluster so the final file directory included points to the UW server.
+Category: Model Fit
 Scripting Language: R
-Data Files Required:
-Data Files Generated:
+Data Files Required: list_181sites_Qmaxnorm_SavoySL_pt1.rds
+Data Files Generated: beartooth_181rivers_output_pt1_2023_05_05.rds
 
 #
-File name:
-File description:
-Category:
+File name: 04_Biomass_fit_model_pt2.R
+File description: Code to compile data and call "Stan_ProductivityModel.stan" to fit latent biomass model. Note, this script was run on the University of Wyoming's Beartooth High Performance Computing Cluster so the final file directory included points to the UW server.
+Category: Model Fit
 Scripting Language: R
-Data Files Required:
-Data Files Generated:
+Data Files Required: list_181sites_Qmaxnorm_SavoySL_pt2.rds
+Data Files Generated: beartooth_181rivers_output_pt2_2023_05_05.rds
 
 #
-File name:
-File description:
-Category:
+File name: 04_Biomass_fit_model_pt3.R
+File description: Code to compile data and call "Stan_ProductivityModel.stan" to fit latent biomass model. Note, this script was run on the University of Wyoming's Beartooth High Performance Computing Cluster so the final file directory included points to the UW server.
+Category: Model Fit
 Scripting Language: R
-Data Files Required:
-Data Files Generated:
+Data Files Required: list_181sites_Qmaxnorm_SavoySL_pt3.rds
+Data Files Generated: beartooth_181rivers_output_pt3_2023_05_05.rds
 
 #
-File name:
-File description:
-Category:
+File name: 04_Biomass_fit_model_pt4.R
+File description: Code to compile data and call "Stan_ProductivityModel.stan" to fit latent biomass model. Note, this script was run on the University of Wyoming's Beartooth High Performance Computing Cluster so the final file directory included points to the UW server.
+Category: Model Fit
 Scripting Language: R
-Data Files Required:
-Data Files Generated:
+Data Files Required: list_181sites_Qmaxnorm_SavoySL_pt4.rds
+Data Files Generated: beartooth_181rivers_output_pt4_2023_05_05.rds
 
 #
-File name:
-File description:
-Category:
-Scripting Language: R
-Data Files Required:
-Data Files Generated:
+File name: Stan_ProductivityModel.stan
+File description: Code for the latent biomass time series model.
+Category: Model Fit
+Scripting Language: STAN
+Data Files Required: NA
+Data Files Generated: NA
 
 #
-File name:
-File description:
-Category:
+File name: 05_BeartoothOutput_processing.R
+File description: Code to extract all iterations for daily and site-level parameter estimates.
+Category: Model Output Preparation
 Scripting Language: R
-Data Files Required:
-Data Files Generated:
+Data Files Required: beartooth_181rivers_output_pt1_2023_05_05.rds, beartooth_181rivers_output_pt2_2023_05_05.rds, beartooth_181rivers_output_pt3_2023_05_05.rds, beartooth_181rivers_output_pt4_2023_05_05.rds
+Data Files Generated: beartooth_181rivers_model_all_params_all_iterations_050823pt1.rds, beartooth_181rivers_model_all_params_all_iterations_050823pt2.rds, beartooth_181rivers_model_all_params_all_iterations_050823pt3.rds, beartooth_181rivers_model_all_params_all_iterations_050823pt4.rds, beartooth_181rivers_model_params_all_iterations_050823.rds, beartooth_181rivers_model_diags_050923.rds, beartooth_181rivers_model_divs_050923.rds
 
 #
-File name:
-File description:
-Category:
+File name: 06_Discharge_2yearflood.R
+File description: Code to estimate the 2-year flood for each river using USGS daily discharge data.
+Category: Data Preparation
 Scripting Language: R
-Data Files Required:
-Data Files Generated:
+Data Files Required: beartooth_181rivers_model_diags_050923.rds
+Data Files Generated: NWIS_Info_181riv_050923.rds, RI_2yr_flood_180riv_050923.csv
 
 #
-File name:
-File description:
-Category:
+File name: 07_HUC2_delineation.R
+File description: Code to delineate HUC2 values for each river.
+Category: Data Preparation
 Scripting Language: R
-Data Files Required:
-Data Files Generated:
+Data Files Required: NWIS_Info_181riv_050923.rds
+Data Files Generated: NWIS_Info_181riv_HUC2_df_050923.rds
 
 #
 File name:
