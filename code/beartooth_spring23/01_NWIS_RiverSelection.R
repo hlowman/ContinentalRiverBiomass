@@ -31,6 +31,7 @@ site <- fread("data_raw/site_data.tsv")
 # https://www.sciencebase.gov/catalog/item/606f60afd34ef99870188ee5
 ## and subsetted to Appling (PC)
 hyp <- fread("data_raw/GRDO_GEE_HA_NHD_2021_02_07.csv")
+# Also called "GRDO_GEE_HA_NHD.csv" in .zip file downloaded at linke above.
 hyp <- hyp[which(hyp$DB_Source == "PC"), c("SiteID","ORD_STRA","NHD_STREAMORDE")]
 colnames(hyp)[which(colnames(hyp) == "SiteID")] <- "site_name"
 

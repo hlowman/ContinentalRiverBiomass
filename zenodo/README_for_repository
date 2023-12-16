@@ -1,0 +1,175 @@
+Dataset title: Data and Code for Lowman et al. "Macroscale controls determine the recovery of river ecosystem productivity following flood disturbances" 
+
+Creators: Heili E. Lowman (University of Nevada Reno), Robert Shriver (University of Nevada Reno), Robert O. Hall Jr. (Flathead Lake Biological Station), Judson Harvey (USGS), Phil Savoy (USGS), Charles Yackulic (USGS), Joanna R. Blaszczak (University of Nevada Reno)
+
+Contact: Heili Lowman (heili.lowman@gmail.com)
+
+Keywords: Ecosystem recovery, disturbance, river, algae, ecosystem metabolism
+
+Funding: This research was supported by the Modelscape Consortium, funded by the National Science Foundation’s Established Program to Stimulate Competitive Research (EPSCoR) award #OIA-2019528.
+
+Timeframe of Data: January 2007 - December 2017
+
+Geographic Location of Data: United States of America
+
+###
+
+Data Provenance: Data for this project were downloaded from multiple published data sources including:
+
+Appling, A.P., Read, J.S., Winslow, L.A., Arroita, M., Bernhardt, E.S., Griffiths, N.A., Hall, R.O., Jr., Harvey, J.W., Heffernan, J.B., Stanley, E.H., Stets, E.G., and Yackulic, C.B., 2018, Metabolism estimates for 356 U.S. rivers (2007-2017): U.S. Geological Survey data release, https://doi.org/10.5066/F70864KX.
+
+Blaszczak, J.R., Koenig, L.E., Mejia, F.H., Gómez-Gener, L., Dutton, C.L., Carter, A.M., Grimm, N.B., Harvey, J.W., Helton, A.M., Cohen, M.J., Anyanwu, E.D., Pokrovsky, O.S., Krickov, I.V., Manasypov, R.M., Vorobyev, S.N., and Serikova, S., 2021, Distribution, frequency, and global extent of hypoxia in rivers: U.S. Geological Survey data release, https://doi.org/10.5066/P99X6SIR.
+
+Bernhardt, E.S., Savoy, P., Vlah, M.J., Appling, A.P., Koenig, L.E., Hall Jr., R.O., Arroita, M., Blaszczak, J.R., Carter, A.C., Cohen, M., Harvey, J.W., Heffernan, J.B., Helton, A.M., Hosen, J.D., Kirk, L., McDowell, W.H., Stanley, E.H., Yackulic, C., and Grimm, N.B., 2022 Light and flow regimes regulate the metabolism of rivers. Proc. Natl. Acad. Sci. U.S.A. 119, e2121976119. (Data repository at https://github.com/streampulse/metabolism_synthesis)
+
+Note: Daily discharge data for each river from 1970-01-01 to 2020-12-31 measured by the USGS was downloaded using the 'dataRetrieval' package in R.
+
+###
+
+Scripts/code (software)
+
+#
+File name: 01_NWIS_RiverSelection.R
+File description: Code to filter and select rivers based on the completeness and quality of their GPP time series from Appling et al. (2018). All URLs to download published, raw data files required by this script are provided in comments.
+Category: Data Preparation
+Scripting Language: R
+Data Files Required: site_data.tsv, GRDO_GEE_HA_NHD.csv, diagnostics.tsv, daily_predictions.tsv
+Data Files Generated: NWIS_198sites_050423.rds, NWIS_198sitesinfo_050423.rds, NWIS_198sitesNdays_050423.rds
+
+#
+File name: 02_StreamLight_processing.R
+File description: Code to merge GPP time series with existing surface light data estimates from Bernhardt et al. (2022). All URLs to download published, raw data files required by this script are provided in comments.
+Category: Data Preparation
+Scripting Language: R
+Data Files Required: NWIS_198sites_050423.rds, NWIS_198sitesinfo_050423.rds, NWIS_198sitesNdays_050423.rds, lotic_standardized_full.rds
+Data Files Generated: StreamLight_daily_df_182sites_050423.rds, StreamLight_daily_list_182sites_050423.rds
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+#
+File name:
+File description:
+Category:
+Scripting Language: R
+Data Files Required:
+Data Files Generated:
+
+End of metadata file.
