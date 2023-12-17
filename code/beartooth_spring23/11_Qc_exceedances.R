@@ -129,7 +129,7 @@ dat_exc_y <- inner_join(dat_exceed_sum, dat_years)
 dat_exc_y <- dat_exc_y %>%
   mutate(exc_y = total_exc_events/years)
 
-# And export the exceedance data for use in the linear models.
+# And export the exceedance data for use in the regression models.
 saveRDS(dat_exc_y, "data_working/Qc_exceedances_181sites_051123.rds")
 
 # End of script.

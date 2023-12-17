@@ -2172,7 +2172,7 @@ dat_in6.2 <- dat_in %>%
 l6.2 <- split(dat_in6.2, dat_in6.2$site_name)
 
 # Export dataset for future use.
-saveRDS(l6.2, "data_working/list_6sites_Qmaxnorm_SavoySL.rds")
+# saveRDS(l6.2, "data_working/list_6sites_Qmaxnorm_SavoySL.rds")
 
 # Rename source data
 df2 <- l6.2
@@ -2229,8 +2229,8 @@ extract_summary2 <- function(x){
 data_out6_diags2 <- map(PM_outputlist_Ricker2, extract_summary2)
 
 # Save this out too
-saveRDS(data_out6_diags2,
-       file = "data_working/pinyon_6rivers_model_rc_params_diags_071323.rds")
+# saveRDS(data_out6_diags2,
+#        file = "data_working/pinyon_6rivers_model_rc_params_diags_071323.rds")
 
 # Take list above and make into a df.
 data_out6_diags2_df <- map_df(data_out6_diags2, ~as.data.frame(.x), .id="site_name")
