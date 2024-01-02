@@ -1,6 +1,6 @@
 # ContinentalRiverBiomass
 
-Scripts written to support the following publication -- H.E. Lowman, R.K. Shriver, R.O. Hall Jr., J.W. Harvey, P. Savoy, C.B. Yackulic, J.R.Blaszczak. In Press. Macroscale controls determine the recovery of river ecosystem productivity following flood disturbances.**Proceedings of the National Academy of Sciences.**
+Scripts written to support the following publication -- H.E. Lowman, R.K. Shriver, R.O. Hall Jr., J.W. Harvey, P. Savoy, C.B. Yackulic, J.R.Blaszczak. In Press. Macroscale controls determine the recovery of river ecosystem productivity following flood disturbances. *Proceedings of the National Academy of Sciences.*
 
 Data for this project were downloaded from multiple published data sources including:
 
