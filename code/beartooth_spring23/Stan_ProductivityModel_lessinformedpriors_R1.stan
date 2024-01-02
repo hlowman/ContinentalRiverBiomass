@@ -5,7 +5,7 @@ data {
   vector [Ndays] light; // relativized to max value
   vector [Ndays] GPP; // mean estimates from posterior probability distributions
   vector [Ndays] GPP_sd; // sd estimates from posterior probability distributions
-  vector [Ndays] tQ; // standardized discharge (to 10 yr flood)
+  vector [Ndays] tQ; // standardized discharge (to max Q)
   int new_e [Ndays]; // 0/1s denoting new time sequences
 }
 
