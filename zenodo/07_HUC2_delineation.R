@@ -5,17 +5,18 @@
 #### READ ME ####
 
 # The following set of scripts will walk through the steps necessary to
-# prep and send data to Beartooth as well as process the model outputs.
-
-# Much of this code has been modified from the RiverBiomass repository
-# found at: https://github.com/jrblaszczak/RiverBiomass 
+# prep and send data to the University of Wyoming's Beartooth High Performance
+# Computing Cluster as well as process the model outputs.
 
 # Please note, the "data_XX" folders have been ignored using git.ignore.
-# Links to the raw data sets are provided in the 01_NWIS_RiverSelection.R file.
+# Links to the raw data sets are provided in the 01_NWIS_RiverSelection.R file
+# and 02_StreamLight_processing files.
 
-# If you are accessing the code via GitHub, these will need to be 
+# If you are accessing the code via GitHub or Zenodo, these will need to be 
 # downloaded and added to a folder of the appropriate name prior to running the 
 # code below.
+
+# This script adds information regarding the HUC2 identifier for each site.
 
 #### Setup ####
 

@@ -5,17 +5,20 @@
 #### READ ME ####
 
 # The following set of scripts will walk through the steps necessary to
-# prep and send data to Beartooth as well as process the model outputs.
+# prep and send data to the University of Wyoming's Beartooth High Performance
+# Computing Cluster as well as process the model outputs.
 
-# Much of this code has been modified from the RiverBiomass repository
+# Much of this code has been adapted from the RiverBiomass repository
 # found at: https://github.com/jrblaszczak/RiverBiomass 
 
 # Please note, the data loaded in this script is too large to be posted to GitHub.
 # Instead, the outputs of this script are those that will be published with the
-# manuscript.
+# manuscript on Zenodo.
 
-# Note - I CRASHED the desktop trying to run this, so only do the below
-# using the Pinyon SERVER!!!
+# This script extracts estimates of site-level parameters for the latent biomass models.
+
+# The following script was run using the Pinyon server at the University of 
+# Nevada Reno for speed.
 
 #### Setup ####
 

@@ -1,28 +1,33 @@
-## Resilience of Stream Productivity to Disturbance
+## Recovery of Stream Productivity following Disturbance
 ## Originally created: October 12, 2022
 ## Heili Lowman
 
 #### READ ME ####
 
 # The following set of scripts will walk through the steps necessary to
-# prep and send data to Beartooth as well as process the model outputs.
+# prep and send data to the University of Wyoming's Beartooth High Performance
+# Computing Cluster as well as process the model outputs.
 
-# Much of this code has been modified from the RiverBiomass repository
+# Much of this code has been adapted from the RiverBiomass repository
 # found at: https://github.com/jrblaszczak/RiverBiomass 
 
 # Please note, the "data_XX" folders have been ignored using git.ignore.
-# Links to the raw data sets are provided in the 01_NWIS_RiverSelection.R file.
+# Links to the raw data sets are provided in the 01_NWIS_RiverSelection.R
+# and 02_StreamLight_processing files.
 
-# If you are accessing the code via GitHub, these will need to be 
+# If you are accessing the code via GitHub or Zenodo, these will need to be 
 # downloaded and added to a folder of the appropriate name prior to running the 
 # code below.
 
 # Please also note, all file directories below are for the Beartooth HPC hosted
 # by the University of Wyoming ARCC. All models are run there with outputs then
-# transferred back to this working directory.
+# transferred back to their working directory.
 
 # Note, the script was run on Beartooth as "step4_Biomass_fit_model_pt1.R" due
 # to filename protocol.
+
+# This script fits the latent biomass model to the first set of sites (the
+# larger dataset was split into four to allow them to run in parallel on the HPC).
 
 #### Setup ####
 
