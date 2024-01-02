@@ -8,7 +8,7 @@ Keywords: Ecosystem recovery, disturbance, river, algae, ecosystem metabolism
 
 Funding: This research was supported by the Modelscape Consortium, funded by the National Science Foundation’s Established Program to Stimulate Competitive Research (EPSCoR) award #OIA-2019528.
 
-Timeframe of Data: January 2007 - December 2017
+Timeframe of Data: January 2007 - December 2016
 
 Geographic Location of Data: United States of America
 
@@ -34,19 +34,56 @@ Data Files
 
 #
 File name: list_181sites_Qmaxnorm_SavoySL.rds
-File description: The assembled raw data, including daily gross primary production estimates, light at the stream surface, and USGS discharge measurements, used to fit the latent biomass model at 181 stream sites.
+File description: List of the assembled raw data, including daily gross primary production estimates, light at the stream surface, and USGS discharge measurements, used to fit the latent biomass model at 181 stream sites.
 
 Column name | Description | Unit or Code explanation or date format | missing value code
 
-XX | XX | XX | XX
+site_name | USGS NWIS Site Identifier | NA | NA
+date | Date | yyyy-mm-dd | NA
+GPP | Daily gross primary productivity estimates | gO2 m^-2 d^-1 | NA
+GPP.lower | 2.5th quantile of daily gross primary productivity estimate | gO2 m^-2 d^-1 | NA
+GPP.upper | 97.5th quantile of daily gross primary productivity estimate | gO2 m^-2 d^-1 | NA
+GPP.Rhat | Gelman-Rubin convergence statistic | NA | NA
+ER | Daily ecosystem respiration estimate | gO2 m^-2 d^-1 | NA
+ER.lower | 2.5th quantile of daily ecosystem respiration estimate | gO2 m^-2 d^-1 | NA
+ER.upper | 97.5th quantile of daily ecosystem respiration estimate | gO2 m^-2 d^-1 | NA
+K600 | Daily reaeration rate coefficient estimate | d^-1 | NA
+K600.lower | 2.5th quantile of daily reaeration rate coefficient estimate | d^-1 | NA
+K600.upper | 97.5th quantile of daily reaeration rate coefficient estimate | d^-1 | NA
+temp | Mean daily water temperature | degrees Celsius | NA
+Q | Mean daily discharge | m^3 s^-1 | NA
+light | Mean daily downwards shortwave radiation flux | W m^-2 | NA
+velocity | Mean daily water velocity | m s^-1 | NA
+doy | Julian day | NA | NA
+year | Year | yyyy | NA
+site_year | Year appended to the NWIS code | NA | NA
+GPP_temp | duplicate of GPP column | gO2 m^-2 d^-1 | NA
+long_name | Full USGS Site Name | NA | NA
+Date | Date-time | yyyy-mm-dd hh:mm:ss | NA
+DOY | duplicate of doy column | NA | NA
+Year | duplicate of year column | yyyy | NA
+PAR_surface | Daily sum of PAR estimated at the stream surface | mol m^-2 d^-1 | NA
+GPP_sd | Standard deviation of gross primary productivity estimate | gO2 m^-2 d^-1 | NA
+diff_time | Number of days since last day of data available | d | NA
+seq | Time frame sequence assignment based on day to day differences | NA | NA
+new_e | Delineation of new time frame events based on sequence assignments | | NA
+index | Additional site index number | NA | NA
+Ndays | Number of days in site record | d | NA
+light_rel | Daily light relative to maximum light in record | NA | NA
+Q_rel | Daily discharge relative to maximum discharge in record | NA | NA
 
 #
 File name: beartooth_181rivers_model_params_all_iterations_050823.rds
-File description: Latent biomass model outputs including all iterations (n = 7500) for all site-level parameters (r, lambda, c, s) for all stream sites (n = 181). Estimated daily parameters not included due to file size concerns.
+File description: List of latent biomass model outputs including all iterations (n = 7500) for all site-level parameters (r, lambda, c, s) for all stream sites (n = 181). Estimated daily parameters not included due to file size concerns.
 
 Column name | Description | Unit or Code explanation or date format | missing value code
 
-XX | XX | XX | XX
+r | Maximum growth rate parameter estimate | NA | NA
+lambda | Lambda parameter estimate | NA | NA
+s | Sensitivity parameter estimate | NA | NA
+c | Critical disturbance flow threshold parameter estimate | NA | NA
+sig_p | Process error estimate | NA | NA
+sig_o | Observation error estimate | NA | NA
 
 #
 File name: beartooth_181rivers_model_diags_050923.rds
@@ -54,7 +91,15 @@ File description: Latent biomass model diagnostics (Rhat) for all site-level par
 
 Column name | Description | Unit or Code explanation or date format | missing value code
 
-XX | XX | XX | XX
+site_name | USGS NWIS Site Identifier | NA | NA
+parameter | Site-level parameter estimated | NA | NA
+mean | Mean estimated parameter value | NA | NA
+se_mean | Standard error of estimated parameter value | NA | NA
+sd | Standard deviation of estimated parameter value | NA | NA
+2.5% | 2.5th quantile of estimated parameter value | NA | NA
+97.5% | 97.5th quantile of estimated parameter value | NA | NA
+n_eff | Estimated effective sample size of estimated parameter value | NA | NA
+Rhat | Gelman-Rubin convergence statistic of estimated parameter value | NA | NA
 
 #
 File name: amax_covariates_143sites_110723.rds
