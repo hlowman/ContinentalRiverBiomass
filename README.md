@@ -2,6 +2,8 @@
 
 Scripts written to support the following publication -- H.E. Lowman, R.K. Shriver, R.O. Hall Jr., J.W. Harvey, P. Savoy, C.B. Yackulic, J.R.Blaszczak. In Press. Macroscale controls determine the recovery of river ecosystem productivity following flood disturbances. *Proceedings of the National Academy of Sciences.*
 
+**Please visit the Zenodo webpage for this project to access the most relevant and annotated versions of data and code - [https://zenodo.org/doi/10.5281/zenodo.10455822](https://zenodo.org/doi/10.5281/zenodo.10455822)**
+
 Data for this project were downloaded from multiple published data sources including:
 
 Appling, A.P., Read, J.S., Winslow, L.A., Arroita, M., Bernhardt, E.S., Griffiths, N.A., Hall, R.O., Jr., Harvey, J.W., Heffernan, J.B., Stanley, E.H., Stets, E.G., and Yackulic, C.B., 2018, Metabolism estimates for 356 U.S. rivers (2007-2017): U.S. Geological Survey data release, [https://doi.org/10.5066/F70864KX](https://doi.org/10.5066/F70864KX).
@@ -12,4 +14,4 @@ Bernhardt, E.S., Savoy, P., Vlah, M.J., Appling, A.P., Koenig, L.E., Hall Jr., R
 
 Note: Daily discharge data for each river from 1970-01-01 to 2020-12-31 and dissolved nutrient data for available rivers from 2007-01-01 to 2017-12-31 measured by the USGS were downloaded using the 'dataRetrieval' package in R.
 
-Please direct any data requests or questions regarding these analyses to Heili Lowman (heili dot lowman at duke dot edu).
+Please direct any data requests or questions regarding these analyses to Heili Lowman (h dot lowman at unr dot edu).
